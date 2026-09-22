@@ -126,7 +126,7 @@ $filter_params = http_build_query(array_filter([
     <?php include "pwa_head.php"; ?>
 
     <link rel="icon" type="image/png" href="assets/images/favicon/favicon.png">
-    <link rel="stylesheet" href="assets/css/style.css?v=<?= filemtime(__DIR__.'/style.css') ?>">
+    <link rel="stylesheet" href="assets/css/style.css?v=<?= filemtime(__DIR__.'/assets/css/style.css') ?>">
     <title>Laporan Harian - Shankara Dev</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
@@ -162,7 +162,7 @@ $filter_params = http_build_query(array_filter([
             <p class="text-muted small mb-0">Catatan aktivitas harian Admin & Marketing Agent Property.</p>
         </div>
         <div class="d-flex gap-2">
-            <a href="cetak_laporan_harian.php?<?= $filter_params ?>" target="_blank" class="btn btn-outline-danger rounded-pill px-3">
+            <a href="print/cetak_laporan_harian.php?<?= $filter_params ?>" target="_blank" class="btn btn-outline-danger rounded-pill px-3">
                 <i class="bi bi-file-earmark-pdf me-1"></i> Unduh PDF
             </a>
             <button class="btn btn-green" style="color:#fff !important" data-bs-toggle="modal" data-bs-target="#modalTambah">
@@ -477,7 +477,7 @@ $filter_params = http_build_query(array_filter([
     }
 
     function poll() {
-        fetch('auto_update_laporan.php', { credentials: 'same-origin' })
+        fetch('includes/auto_update_laporan.php', { credentials: 'same-origin' })
             .then(function(r) { return r.json(); })
             .then(function(d) { updateStats(d); })
             .catch(function() {});

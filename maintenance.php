@@ -161,7 +161,7 @@
 <div class="bg-overlay"></div>
 
 <div class="container">
-    <img src="favicon/favicon.png" alt="Shankara Dev" class="logo-img">
+    <img src="assets/images/favicon/favicon.png" alt="Shankara Dev" class="logo-img">
     <div class="brand-name">Shankara Dev</div>
 
     <div class="card">
@@ -170,7 +170,7 @@
         <p>Sistem sedang dalam proses pembaruan atau pemeliharaan. Silakan coba kembali beberapa saat lagi.</p>
 
         <?php
-        $msg_file = __DIR__ . '/.maintenance';
+        $msg_file = __DIR__ . '/includes/.maintenance';
         if (file_exists($msg_file)) {
             $msg = trim(file_get_contents($msg_file));
             if (!empty($msg)) {

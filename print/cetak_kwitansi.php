@@ -3,7 +3,7 @@
 session_start();
 // Jika belum login atau status login tidak valid, lempar paksa kembali ke halaman login
 if (!isset($_SESSION['status_login']) || $_SESSION['status_login'] !== true) {
-    header("Location: login.php");
+    header("Location: ../login.php");
     exit();
 }
 include "../includes/cek_sesi.php";

@@ -29,10 +29,10 @@ if (isset($_POST['simpan'])) {
         mysqli_query($koneksi, "UPDATE data_rumah SET status_unit = '$status_unit' WHERE id_rumah = '$id_rumah'");
 
         // Redirect kembali ke dashboard utama
-        header("Location: index.php");
+        header("Location: ../index.php");
         exit();
     } else {
-        echo "<script>alert('Gagal menyimpan transaksi!'); window.location.href='index.php';</script>";
+        echo "<script>alert('Gagal menyimpan transaksi!'); window.location.href='../index.php';</script>";
     }
 }
 ?>

@@ -2,10 +2,10 @@
 require_once __DIR__ . '/security.php';
 session_start();
 if (!isset($_SESSION['status_login']) || $_SESSION['status_login'] !== true) {
-    header("Location: login.php");
+    header("Location: ../login.php");
     exit();
 }
-include "cek_sesi.php";
+include __DIR__ . "/cek_sesi.php";
 
 // Proteksi CSRF global untuk semua aksi POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrf_verify()) {
@@ -47,7 +47,7 @@ if ($is_on && file_exists($mfile)) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="favicon/favicon.png">
+    <link rel="icon" type="image/png" href="../assets/images/favicon/favicon.png">
     <title>Toggle Maintenance Mode - Shankara Dev</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">

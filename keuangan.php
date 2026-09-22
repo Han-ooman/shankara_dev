@@ -94,7 +94,7 @@ while ($cl = mysqli_fetch_assoc($qcl)) $clusters[] = $cl;
     <?php include "pwa_head.php"; ?>
 
     <link rel="icon" type="image/png" href="assets/images/favicon/favicon.png">
-    <link rel="stylesheet" href="assets/css/style.css?v=<?= filemtime(__DIR__.'/style.css') ?>">
+    <link rel="stylesheet" href="assets/css/style.css?v=<?= filemtime(__DIR__.'/assets/css/style.css') ?>">
     <title>Keuangan Perusahaan - Shankara Dev</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
@@ -412,7 +412,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 var val = el.value.trim();
                 if (val) params.set('f' + el.dataset.col, val);
             });
-            window.open('cetak_keuangan.php?' + params.toString(), '_blank');
+            window.open('print/cetak_keuangan.php?' + params.toString(), '_blank');
         });
     }
 });

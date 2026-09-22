@@ -85,7 +85,7 @@ include "includes/cek_sesi.php";
 
     <?php include "pwa_head.php"; ?>
 
-    <link rel="icon" type="image/png" href="assets/images/favicon/favicon.png">    <link rel="stylesheet" href="assets/css/style.css?v=<?= filemtime(__DIR__.'/style.css') ?>">    <title>Tracking Pemberkasan KPR - Shankara Dev</title>
+    <link rel="icon" type="image/png" href="assets/images/favicon/favicon.png">    <link rel="stylesheet" href="assets/css/style.css?v=<?= filemtime(__DIR__.'/assets/css/style.css') ?>">    <title>Tracking Pemberkasan KPR - Shankara Dev</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
@@ -831,7 +831,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 const sel = Array.from(widget.querySelectorAll('.ms-cb:checked')).map(cb => cb.value);
                 if (sel.length) params.set('c' + widget.dataset.col, sel.join(','));
             });
-            window.open('cetak_pemberkasan.php?' + params.toString(), '_blank');
+            window.open('print/cetak_pemberkasan.php?' + params.toString(), '_blank');
         });
     }
 

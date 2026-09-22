@@ -96,7 +96,7 @@ $lh_count = count($lh_rows);
     <?php include "pwa_head.php"; ?>
 
     <link rel="icon" type="image/png" href="assets/images/favicon/favicon.png">
-    <link rel="stylesheet" href="assets/css/style.css?v=<?= filemtime(__DIR__.'/style.css') ?>">
+    <link rel="stylesheet" href="assets/css/style.css?v=<?= filemtime(__DIR__.'/assets/css/style.css') ?>">
     <title>Shankara Admin Dashboard</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -540,7 +540,7 @@ $lh_count = count($lh_rows);
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 
-                <form action="proses_transaksi.php" method="POST">
+                <form action="includes/proses_transaksi.php" method="POST">
                     <?= csrf_field() ?>
                     <div class="modal-body p-4" style="background-color: #f8f9fa;">
                         <div class="row g-3">

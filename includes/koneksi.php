@@ -7,7 +7,7 @@ $_self = basename($_SERVER['SCRIPT_FILENAME'] ?? '');
 if ($_self !== 'maintenance.php' && $_self !== 'toggle_maintenance.php') {
     $mfile = __DIR__ . '/.maintenance';
     if (file_exists($mfile)) {
-        include __DIR__ . '/maintenance.php';
+        include __DIR__ . '/../maintenance.php';
         exit();
     }
 }

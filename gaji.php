@@ -107,7 +107,7 @@ function nama_bulan($ym) {
     <?php include "pwa_head.php"; ?>
 
     <link rel="icon" type="image/png" href="assets/images/favicon/favicon.png">
-    <link rel="stylesheet" href="assets/css/style.css?v=<?= filemtime(__DIR__.'/style.css') ?>">
+    <link rel="stylesheet" href="assets/css/style.css?v=<?= filemtime(__DIR__.'/assets/css/style.css') ?>">
     <title>Slip Gaji - Shankara Dev</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
@@ -218,7 +218,7 @@ function nama_bulan($ym) {
                             <td class="text-end fw-bold" style="color:var(--primary-blue);"><?= rp($total) ?></td>
                             <td class="text-center">
                                 <div class="d-flex justify-content-center gap-1">
-                                    <a href="cetak_slip_gaji.php?id=<?= $g['id_gaji'] ?>&token=<?= urlencode(csrf_token()) ?>" target="_blank" class="btn btn-sm btn-outline-secondary border-0" title="Cetak Slip"><i class="bi bi-printer"></i></a>
+                                    <a href="print/cetak_slip_gaji.php?id=<?= $g['id_gaji'] ?>&token=<?= urlencode(csrf_token()) ?>" target="_blank" class="btn btn-sm btn-outline-secondary border-0" title="Cetak Slip"><i class="bi bi-printer"></i></a>
                                     <button type="button" class="btn btn-sm btn-outline-secondary border-0" data-bs-toggle="modal" data-bs-target="#modalEdit<?= $g['id_gaji'] ?>" title="Edit"><i class="bi bi-pencil"></i></button>
                                     <button type="button" class="btn btn-sm btn-outline-danger border-0" data-bs-toggle="modal" data-bs-target="#modalHapus" data-id="<?= $g['id_gaji'] ?>" data-info="<?= htmlspecialchars(($g['nama_lengkap'] ?? '') . ' - ' . nama_bulan($g['periode'])) ?>" title="Hapus"><i class="bi bi-trash"></i></button>
                                 </div>

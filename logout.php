@@ -1,7 +1,7 @@
 <?php
 session_start();
 include "includes/koneksi.php";
-require_once __DIR__ . '/helper_log.php';
+require_once __DIR__ . '/includes/helper_log.php';
 
 // Catat aktivitas logout (manual) sebelum sesi dihancurkan
 if (isset($_SESSION['user_id']) && isset($_SESSION['username'])) {

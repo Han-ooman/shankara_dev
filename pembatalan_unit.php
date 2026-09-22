@@ -9,7 +9,7 @@ if (!isset($_SESSION['status_login']) || $_SESSION['status_login'] !== true) {
 include "includes/cek_sesi.php";
 
 include "includes/koneksi.php";
-require_once __DIR__ . '/helper_log.php';
+require_once __DIR__ . '/includes/helper_log.php';
 
 // Proteksi CSRF global untuk semua aksi POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrf_verify()) {
@@ -122,7 +122,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
     <?php include "pwa_head.php"; ?>
 
     <link rel="icon" type="image/png" href="assets/images/favicon/favicon.png">
-    <link rel="stylesheet" href="assets/css/style.css?v=<?= filemtime(__DIR__.'/style.css') ?>">
+    <link rel="stylesheet" href="assets/css/style.css?v=<?= filemtime(__DIR__.'/assets/css/style.css') ?>">
     <title>Pembatalan Unit - Shankara Dev</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
@@ -200,7 +200,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
                             <td class="text-center">
                                 <div class="d-flex justify-content-center align-items-center gap-1">
                                     <!-- Cetak -->
-                                    <a href="cetak_pembatalan.php?id=<?= $r['id_pembatalan'] ?>" target="_blank" class="btn btn-sm btn-outline-primary border-0" title="Cetak / Simpan PDF">
+                                    <a href="print/cetak_pembatalan.php?id=<?= $r['id_pembatalan'] ?>" target="_blank" class="btn btn-sm btn-outline-primary border-0" title="Cetak / Simpan PDF">
                                         <i class="bi bi-file-earmark-pdf"></i>
                                     </a>
                                     <?php if ($draft): ?>

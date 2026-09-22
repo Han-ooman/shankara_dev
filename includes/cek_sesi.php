@@ -7,7 +7,7 @@
 $TIMEOUT_MENIT = 30;
 
 if (isset($_SESSION['status_login']) && $_SESSION['status_login'] === true && !empty($_SESSION['user_id'])) {
-    include_once "koneksi.php";
+    include_once __DIR__ . "/koneksi.php";
     require_once __DIR__ . '/helper_log.php';
     $uid = intval($_SESSION['user_id']);
     $sid = mysqli_real_escape_string($koneksi, session_id());

@@ -120,7 +120,7 @@ if ($q_ang) { while ($r = mysqli_fetch_assoc($q_ang)) { $data_ang[$r['id_tipe']]
     <?php include "pwa_head.php"; ?>
 
     <link rel="icon" type="image/png" href="assets/images/favicon/favicon.png">
-    <link rel="stylesheet" href="assets/css/style.css?v=<?= filemtime(__DIR__.'/style.css') ?>">
+    <link rel="stylesheet" href="assets/css/style.css?v=<?= filemtime(__DIR__.'/assets/css/style.css') ?>">
     <title>Tipe Rumah & Paket Pembayaran - Shankara Dev</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
@@ -269,7 +269,7 @@ if ($q_ang) { while ($r = mysqli_fetch_assoc($q_ang)) { $data_ang[$r['id_tipe']]
                 <p class="text-muted small mb-0">Kelola harga, DP, skema angsuran multi-tenor, dan persyaratan administrasi per tipe rumah.</p>
             </div>
             <div class="d-flex gap-2">
-                <a href="cetak_tipe_rumah.php" target="_blank" class="btn btn-outline-success px-4 py-2 rounded-3"><i class="bi bi-filetype-pdf me-1"></i> Cetak PDF</a>
+                <a href="print/cetak_tipe_rumah.php" target="_blank" class="btn btn-outline-success px-4 py-2 rounded-3"><i class="bi bi-filetype-pdf me-1"></i> Cetak PDF</a>
                 <button class="btn text-white px-4 py-2 rounded-3" style="background-color: var(--primary-blue);" data-bs-toggle="modal" data-bs-target="#modalTambah">+ Tambah Tipe / Paket</button>
             </div>
         </div>

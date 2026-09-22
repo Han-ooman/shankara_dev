@@ -84,7 +84,7 @@ if (isset($_POST['simpan_pembayaran'])) {
     <?php include "pwa_head.php"; ?>
 
     <link rel="icon" type="image/png" href="assets/images/favicon/favicon.png">
-    <link rel="stylesheet" href="assets/css/style.css?v=<?= filemtime(__DIR__.'/style.css') ?>">
+    <link rel="stylesheet" href="assets/css/style.css?v=<?= filemtime(__DIR__.'/assets/css/style.css') ?>">
     <title>Tagihan & Kwitansi - Shankara Dev</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
@@ -142,7 +142,7 @@ if (isset($_POST['simpan_pembayaran'])) {
 							<td class="text-center">
 								<div class="d-flex gap-1 justify-content-center">
 									<!-- TOMBOL CETAK PDF -->
-									<a href="cetak_kwitansi.php?id=<?= $r['id_pembayaran'] ?>" target="_blank" class="btn btn-sm btn-outline-danger rounded-3">
+									<a href="print/cetak_kwitansi.php?id=<?= $r['id_pembayaran'] ?>" target="_blank" class="btn btn-sm btn-outline-danger rounded-3">
 										<i class="bi bi-file-earmark-pdf-fill me-1"></i> Cetak PDF
 									</a>
 									<!-- TOMBOL HAPUS -->

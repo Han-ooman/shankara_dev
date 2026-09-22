@@ -1,9 +1,9 @@
 <?php
-require_once __DIR__ . '/security.php';   // memuat harden_session + csrf + rate-limit
+require_once __DIR__ . '/includes/security.php';   // memuat harden_session + csrf + rate-limit
 harden_session();                          // atur cookie sesi aman SEBELUM session_start
 session_start();
 include "includes/koneksi.php";
-require_once __DIR__ . '/helper_log.php';
+require_once __DIR__ . '/includes/helper_log.php';
 
 $pesan_error = "";
 
@@ -56,8 +56,8 @@ if (isset($_POST['login'])) {
                     // Batas perangkat login: default 1 device, khusus Trainee (id 5) boleh 2
                     $limit_device = (intval($user['id']) === 5) ? 2 : 1;
 
-                    // Bersihkan sesi yang sudah basi (terakhir aktif lebih dari 10 menit lalu)
-                    mysqli_query($koneksi, "DELETE FROM user_sesi WHERE user_id = " . intval($user['id']) . " AND last_active < (NOW() - INTERVAL 10 MINUTE)");
+                    // Bersihkan sesi yang sudah basi (terakhir aktif lebih dari 30 menit lalu)
+                    mysqli_query($koneksi, "DELETE FROM user_sesi WHERE user_id = " . intval($user['id']) . " AND last_active < (NOW() - INTERVAL 30 MINUTE)");
 
                     // Hitung jumlah sesi aktif untuk akun ini
                     $count_result = mysqli_query($koneksi, "SELECT COUNT(*) AS jml FROM user_sesi WHERE user_id = " . intval($user['id']));
@@ -541,7 +541,7 @@ document.addEventListener('DOMContentLoaded', function () {
     </style>
 
     <div class="brand-logo">
-        <img src="favicon/favicon.png" alt="Shankara Dev" style="width: 56px; height: 56px; object-fit: contain;">
+        <img src="assets/images/favicon/favicon.png" alt="Shankara Dev" style="width: 56px; height: 56px; object-fit: contain;">
         <span>Shankara Dev</span>
     </div>
     
@@ -554,7 +554,7 @@ document.addEventListener('DOMContentLoaded', function () {
         </div>
     <?php elseif (isset($_GET['pesan']) && $_GET['pesan'] === 'timeout'): ?>
         <div class="alert alert-warning alert-dismissible fade show rounded-4 small mb-3" role="alert">
-            <i class="bi bi-hourglass-split me-1"></i> Sesi Anda berakhir karena tidak ada aktivitas selama 10 menit. Silakan masuk kembali.
+            <i class="bi bi-hourglass-split me-1"></i> Sesi Anda berakhir karena tidak ada aktivitas selama 30 menit. Silakan masuk kembali.
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     <?php endif; ?>

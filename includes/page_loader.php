@@ -232,7 +232,7 @@
         <div class="pl-logo-wrap">
             <div class="pl-arc"></div>
             <div class="pl-arc"></div>
-            <img src="favicon/favicon.png" alt="Shankara Dev" class="pl-logo">
+            <img src="../assets/images/favicon/favicon.png" alt="Shankara Dev" class="pl-logo">
         </div>
 
         <div class="pl-brand">Shankara Dev</div>
