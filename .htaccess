@@ -1,0 +1,68 @@
+ErrorDocument 404 /shandev/404.php
+ErrorDocument 403 /shandev/404.php
+
+# === NONAKTIFKAN LISTING DIREKTORI ===
+Options -Indexes
+
+# === BLOKIR AKSES LANGSUNG KE FILE SENSITIF ===
+# koneksi.php & security.php tetap bisa di-include lewat PHP; aturan ini
+# hanya memblokir akses HTTP langsung ke file tersebut.
+# toggle_maintenance.php sengaja TIDAK diblokir karena dipakai admin via halaman.
+<FilesMatch "^(koneksi\.php|security\.php|php_errors\.log|\.maintenance|.*\.csv|.*\.bak|.*\.sql)$">
+    Require all denied
+</FilesMatch>
+
+# === GZIP COMPRESSION ===
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript application/javascript application/json image/svg+xml
+    AddOutputFilterByType DEFLATE application/xml text/xml
+</IfModule>
+
+# === BROWSER CACHING ===
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 0 seconds"
+    ExpiresByType application/javascript "access plus 0 seconds"
+    ExpiresByType text/javascript "access plus 0 seconds"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/gif "access plus 1 month"
+    ExpiresByType image/svg+xml "access plus 1 month"
+    ExpiresByType image/x-icon "access plus 1 year"
+    ExpiresByType font/woff2 "access plus 1 year"
+    ExpiresByType font/woff "access plus 1 year"
+    ExpiresByType application/font-woff2 "access plus 1 year"
+</IfModule>
+
+# === CACHE CONTROL ===
+<IfModule mod_headers.c>
+    <FilesMatch "\.(css|js)$">
+        Header set Cache-Control "no-cache, no-store, must-revalidate"
+        Header set Pragma "no-cache"
+        Header set Expires "0"
+    </FilesMatch>
+    <FilesMatch "\.(png|jpe?g|gif|svg|ico|woff|woff2)$">
+        Header set Cache-Control "public, max-age=2592000"
+    </FilesMatch>
+    <FilesMatch "\.(php)$">
+        Header set Cache-Control "no-cache, must-revalidate"
+    </FilesMatch>
+</IfModule>
+
+# === SECURITY HEADERS ===
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    Header set Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=()"
+    # HSTS: aktifkan hanya bila sudah memakai HTTPS penuh (Tailscale Funnel)
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    # CSP baseline: izinkan CDN yang dipakai (Bootstrap Icons/JS via jsdelivr) & inline yang sudah ada
+    Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data:; font-src 'self' https://cdn.jsdelivr.net; connect-src 'self'"
+</IfModule>
+
+# === DISABLE UNUSED MODULES ===
+<IfModule mod_mime.c>
+    AddType application/javascript .js
+    AddType text/css .css
+</IfModule>

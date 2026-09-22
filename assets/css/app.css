@@ -1,0 +1,431 @@
+/* ============ RESPONSIVE OFF-CANVAS SIDEBAR + PWA ============ */
+.app-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(30, 58, 138, 0.45);
+    z-index: 1040;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease;
+}
+
+body.sidebar-open .app-overlay {
+    opacity: 1;
+    visibility: visible;
+}
+
+.sidebar {
+    transition: transform 0.3s ease;
+}
+
+.sidebar-toggle-btn {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 1050;
+    width: 42px;
+    height: 42px;
+    border: none;
+    border-radius: 12px;
+    background: var(--primary-blue, #1e3a8a);
+    color: #fff;
+    font-size: 1.15rem;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 14px rgba(30, 58, 138, 0.35);
+    cursor: pointer;
+}
+
+.main-wrapper {
+    transition: margin-left 0.3s ease;
+}
+
+@media (min-width: 768px) and (max-width: 1199.98px) {
+    .sidebar {
+        width: 78px !important;
+        padding: 24px 10px !important;
+    }
+    .main-wrapper {
+        margin-left: 78px !important;
+    }
+    .sidebar-toggle-btn {
+        display: none !important;
+    }
+    .app-overlay {
+        display: none !important;
+    }
+    .sidebar .brand-logo {
+        flex-direction: column;
+        justify-content: center;
+        gap: 6px;
+        padding-left: 0;
+        margin-bottom: 20px;
+    }
+    .sidebar .brand-logo span {
+        font-size: 0;
+        height: 0;
+        overflow: hidden;
+    }
+    .sidebar .brand-logo img {
+        width: 34px;
+        height: 34px;
+    }
+    .sidebar-content {
+        margin: 0 !important;
+        padding: 0 !important;
+        scrollbar-width: none !important;
+        scrollbar-color: transparent transparent !important;
+    }
+    .sidebar-content::-webkit-scrollbar {
+        display: none !important;
+        width: 0 !important;
+    }
+    .sidebar-content > .text-uppercase {
+        visibility: hidden;
+        height: 0;
+        overflow: hidden;
+        margin: 6px 0 2px !important;
+        padding: 0 !important;
+    }
+    .nav-link-custom {
+        font-size: 0 !important;
+        gap: 0 !important;
+        justify-content: center !important;
+        padding: 12px 0 !important;
+        margin: 2px 0;
+    }
+    .nav-link-custom i {
+        font-size: 1.2rem !important;
+    }
+    .nav-link-custom:hover {
+        transform: none;
+    }
+    .nav-link-custom.active::before {
+        left: -5px;
+    }
+    .sidebar-footer {
+        display: none;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .sidebar {
+        transform: translateX(-100%);
+        z-index: 1045 !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        bottom: 0 !important;
+        height: auto !important;
+        max-height: none !important;
+        overflow: hidden !important;
+        justify-content: flex-start !important;
+        box-shadow: 6px 0 24px rgba(0, 0, 0, 0.18);
+    }
+    body.sidebar-open .sidebar {
+        transform: translateX(0);
+    }
+    .main-wrapper {
+        margin-left: 0 !important;
+        padding: 16px;
+    }
+    .sidebar-toggle-btn {
+        display: inline-flex;
+    }
+    .sidebar-content {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+    }
+    .main-wrapper {
+        padding-top: 64px;
+    }
+    /* Kartu & tabel rapat di layar kecil */
+    .table-responsive {
+        overflow-x: auto;
+    }
+    .table-responsive table {
+        font-size: 0.8rem;
+    }
+    .table-responsive th,
+    .table-responsive td {
+        padding: 5px 6px;
+        white-space: nowrap;
+    }
+    /* Header dengan tombol aksi: bungkuk di HP */
+    .main-wrapper .d-flex.justify-content-between.align-items-center {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .main-wrapper .d-flex.justify-content-between.align-items-center .btn,
+    .main-wrapper .d-flex.justify-content-between.align-items-center a.btn {
+        font-size: 0.8rem;
+        padding: 6px 14px;
+    }
+    .btn {
+        white-space: normal;
+    }
+    h4, .h4 {
+        font-size: 1.15rem;
+    }
+    h5, .h5 {
+        font-size: 1rem;
+    }
+    .small, small {
+        font-size: 0.78rem;
+    }
+    .content-card {
+        padding: 16px;
+        border-radius: 12px;
+    }
+
+    /* ===== LOGIN HALAMAN ===== */
+    body.login-bg {
+        height: auto;
+        min-height: 100vh;
+        overflow: visible;
+    }
+    .login-card {
+        padding: 28px;
+        max-width: 92vw;
+        margin: 0 auto;
+    }
+    .login-card .brand-logo {
+        margin-bottom: 20px;
+    }
+    .login-card .brand-logo img {
+        width: 48px;
+        height: 48px;
+    }
+    .btn-login {
+        padding: 11px;
+        font-size: 0.9rem;
+    }
+    .form-control-custom, .input-icon {
+        font-size: 0.85rem;
+        padding: 10px 14px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .main-wrapper {
+        padding: 12px;
+        padding-top: 60px;
+    }
+    .content-card {
+        padding: 16px;
+    }
+    .sidebar {
+        width: 280px;
+    }
+}
+
+/* ============ BLUE-WHITE THEME OVERRIDES (Bootstrap success => blue) ============ */
+:root {
+    --bs-success: #2563eb !important;
+    --bs-success-rgb: 37, 99, 235 !important;
+    --bs-success-text-emphasis: #1e3a8a !important;
+    --bs-success-bg-subtle: #eff6ff !important;
+    --bs-success-border-subtle: #bfdbfe !important;
+}
+
+.text-success {
+    --bs-text-opacity: 1;
+    color: var(--bs-success-text-emphasis) !important;
+}
+
+.bg-success {
+    --bs-bg-opacity: 1;
+    background-color: rgba(var(--bs-success-rgb), var(--bs-bg-opacity)) !important;
+}
+
+.bg-success-subtle {
+    background-color: var(--bs-success-bg-subtle) !important;
+}
+
+.border-success {
+    border-color: rgba(var(--bs-success-rgb), var(--bs-border-opacity, 1)) !important;
+}
+
+.btn-success {
+    --bs-btn-color: #fff !important;
+    --bs-btn-bg: #2563eb !important;
+    --bs-btn-border-color: #2563eb !important;
+    --bs-btn-hover-color: #fff !important;
+    --bs-btn-hover-bg: #1d4ed8 !important;
+    --bs-btn-hover-border-color: #1d4ed8 !important;
+    --bs-btn-active-color: #fff !important;
+    --bs-btn-active-bg: #1e3a8a !important;
+    --bs-btn-active-border-color: #1e3a8a !important;
+    --bs-btn-disabled-color: #fff !important;
+    --bs-btn-disabled-bg: #93c5fd !important;
+    --bs-btn-disabled-border-color: #93c5fd !important;
+}
+
+.progress-bar.bg-success {
+    background-color: #2563eb !important;
+}
+
+.badge.bg-success {
+    background-color: #2563eb !important;
+}
+
+/* ==========================================
+   MODAL TEMA BIRU (mengikuti tema utama)
+   Menimpa bg-danger/success/warning & inline biru
+========================================== */
+.modal .modal-header {
+    background-color: var(--primary-blue) !important;
+    color: #ffffff !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+.modal .modal-header .modal-title {
+    color: #ffffff !important;
+}
+
+.modal .modal-header .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+.modal .modal-header[style*="background-color"] {
+    background-color: var(--primary-blue) !important;
+}
+
+.modal .modal-footer {
+    border-top: 1px solid #e2e8f0 !important;
+}
+
+/* ==========================================
+   TABEL MODE KARTU DI LAYAR KECIL (HP)
+   Diaktifkan otomatis oleh app.js (class .table-card-mode)
+========================================== */
+@media (max-width: 767.98px) {
+    .table-responsive.table-card-mode table,
+    .table-responsive.table-card-mode thead,
+    .table-responsive.table-card-mode tbody,
+    .table-responsive.table-card-mode tr,
+    .table-responsive.table-card-mode th,
+    .table-responsive.table-card-mode td {
+        display: block;
+        box-sizing: border-box;
+    }
+
+    .table-responsive.table-card-mode table,
+    .table-responsive.table-card-mode tbody,
+    .table-responsive.table-card-mode tr {
+        width: 100% !important;
+    }
+
+    .table-responsive.table-card-mode td {
+        width: auto !important;
+        max-width: none !important;
+    }
+
+    /* Baris label kolom disembunyikan; baris filter (jika ada) tetap tampil */
+    .table-responsive.table-card-mode thead {
+        display: block;
+    }
+    .table-responsive.table-card-mode thead > tr:not(.filters-row) {
+        display: none;
+    }
+    .table-responsive.table-card-mode thead tr.filters-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 0 0 12px;
+        padding: 10px 12px;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        background: #f8fafc;
+    }
+    .table-responsive.table-card-mode thead tr.filters-row th {
+        display: block;
+        flex: 1 1 calc(50% - 6px);
+        min-width: 120px;
+        padding: 2px;
+        border: 0;
+        background: transparent;
+        vertical-align: middle;
+    }
+    .table-responsive.table-card-mode thead tr.filters-row th:empty,
+    .table-responsive.table-card-mode thead tr.filters-row th:has(> span):not(:has(input, select)) {
+        display: none;
+    }
+    .table-responsive.table-card-mode thead tr.filters-row .form-control,
+    .table-responsive.table-card-mode thead tr.filters-row .form-select {
+        width: 100%;
+    }
+
+    .table-responsive.table-card-mode tbody {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .table-responsive.table-card-mode tbody tr {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        box-shadow: 0 1px 6px rgba(15, 23, 42, 0.06);
+        padding: 12px 14px;
+    }
+
+    .table-responsive.table-card-mode tbody tr:hover {
+        background: #f8fafc;
+    }
+
+    .table-responsive.table-card-mode tbody td {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border: none;
+        border-bottom: 1px dashed #e2e8f0;
+        padding: 8px 0;
+        white-space: normal;
+    }
+
+    .table-responsive.table-card-mode tbody td:last-child {
+        border-bottom: none;
+    }
+
+    .table-responsive.table-card-mode tbody td::before {
+        content: attr(data-label);
+        font-size: 0.72rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        color: #64748b;
+        flex-shrink: 0;
+        margin-right: 8px;
+    }
+
+    /* Kolom checkbox (data-label kosong) disembunyikan */
+    .table-responsive.table-card-mode tbody td.col-check {
+        display: none;
+    }
+
+    /* Elemen multifield dalam kartu tidak saling tumpang tindih */
+    .table-responsive.table-card-mode tbody td .progress {
+        min-width: 80px;
+    }
+
+    .table-responsive.table-card-mode tbody td[data-label="Progres"] .d-flex,
+    .table-responsive.table-card-mode tbody td[data-label="Progress"] .d-flex,
+    .table-responsive.table-card-mode tbody td[data-label*="Progres"] .d-flex,
+    .table-responsive.table-card-mode tbody td[data-label*="Progress"] .d-flex {
+        width: 100%;
+    }
+
+    .table-responsive.table-card-mode tbody td .badge {
+        flex-shrink: 0;
+    }
+
+    .table-responsive.table-card-mode tbody td .btn-group {
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+}

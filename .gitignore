@@ -1,0 +1,72 @@
+# Dependencies & Runtime
+/vendor/
+/node_modules/
+composer.lock
+package-lock.json
+
+# Environment & Config
+.env
+.env.local
+.env.*.local
+config/local.php
+
+# Logs & Cache
+logs/*.log
+*.log
+storage/logs/*
+bootstrap/cache/*
+var/cache/*
+var/logs/*
+
+# Session & Temp
+/tmp/
+sess_*
+session_*
+*.session
+
+# IDE & Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# OS
+ehthumbs.db
+Desktop.ini
+
+# Build & Dist
+dist/
+build/
+*.phar
+
+# Test Coverage
+coverage/
+.phpunit.result.cache
+
+# Database / Backup
+*.sql
+*.sqlite
+*.bak
+backup/
+
+# Data exports (CSV bisa besar)
+data/*.csv
+!data/.gitkeep
+
+# XAMPP specific
+php_errors.log
+funnel_log.txt
+
+# Keep empty dirs
+!includes/.gitkeep
+!print/.gitkeep
+!assets/css/.gitkeep
+!assets/js/.gitkeep
+!assets/images/favicon/.gitkeep
+!format_bast/logo/.gitkeep
+!api/controllers/.gitkeep
+!api/helpers/.gitkeep
+!api/routes/.gitkeep
