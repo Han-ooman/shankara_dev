@@ -53,8 +53,8 @@ if (isset($_POST['login'])) {
                 // Verifikasi Password Hash yang Aman
                 else if (password_verify($password, $user['password'])) {
 
-                    // Batas perangkat login: default 1 device, khusus Trainee (id 5) boleh 2
-                    $limit_device = (intval($user['id']) === 5) ? 2 : 1;
+                    // Batas perangkat login: default 1 device, admin (id 1) & Trainee (id 5) boleh 2
+                    $limit_device = in_array(intval($user['id']), [1, 5], true) ? 2 : 1;
 
                     // Bersihkan sesi yang sudah basi (terakhir aktif lebih dari 30 menit lalu)
                     mysqli_query($koneksi, "DELETE FROM user_sesi WHERE user_id = " . intval($user['id']) . " AND last_active < (NOW() - INTERVAL 30 MINUTE)");
