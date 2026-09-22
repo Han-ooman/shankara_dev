@@ -100,7 +100,7 @@ class TransaksiController extends BaseController {
             $id = $this->db->insertId();
 
             // Update status rumah jadi booking
-            $this->db->execute("UPDATE data_rumah SET status_unit = 'booking' WHERE id_rumah = ?", [$data['id_rumah']]);
+            Database::execute("UPDATE data_rumah SET status_unit = 'booking' WHERE id_rumah = ?", [$data['id_rumah']]);
 
             $this->db->commit();
             $this->logActivity('CREATE', 'Transaksi', "Booking baru: {$data['id_rumah']} untuk konsumen {$data['id_konsumen']}", ['id_transaksi' => $id]);
@@ -175,7 +175,7 @@ class TransaksiController extends BaseController {
                 $stmt->bind_param('i', $idRumah);
                 $stmt->execute();
                 if ($stmt->get_result()->num_rows === 0) {
-                    $this->db->execute("UPDATE data_rumah SET status_unit = 'tersedia' WHERE id_rumah = ?", [$idRumah]);
+                    Database::execute("UPDATE data_rumah SET status_unit = 'tersedia' WHERE id_rumah = ?", [$idRumah]);
                 }
             }
 

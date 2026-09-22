@@ -11,6 +11,7 @@ $routes = [
 // Auth
 $routes['POST']['/auth/login'] = ['AuthController', 'login'];
 $routes['POST']['/auth/logout'] = ['AuthController', 'logout'];
+$routes['POST']['/auth/refresh'] = ['AuthController', 'refresh'];
 $routes['GET']['/auth/me'] = ['AuthController', 'me'];
 $routes['GET']['/auth/check'] = ['AuthController', 'checkSession'];
 

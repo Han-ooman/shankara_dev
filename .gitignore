@@ -9,6 +9,7 @@ package-lock.json
 .env.local
 .env.*.local
 config/local.php
+api/config/jwt_secret.php
 
 # Logs & Cache
 logs/*.log

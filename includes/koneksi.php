@@ -7,6 +7,18 @@ $_self = basename($_SERVER['SCRIPT_FILENAME'] ?? '');
 if ($_self !== 'maintenance.php' && $_self !== 'toggle_maintenance.php') {
     $mfile = __DIR__ . '/.maintenance';
     if (file_exists($mfile)) {
+        // Request API (mobile): jawab JSON 503, jangan halaman HTML maintenance
+        $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+        if (strpos($scriptName, '/api/') !== false) {
+            http_response_code(503);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => false,
+                'message' => 'Sistem sedang dalam mode maintenance. Coba lagi nanti.',
+                'timestamp' => date('c')
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            exit();
+        }
         include __DIR__ . '/../maintenance.php';
         exit();
     }

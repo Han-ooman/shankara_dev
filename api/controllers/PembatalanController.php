@@ -87,10 +87,10 @@ class PembatalanController extends BaseController {
             $id = $this->db->insertId();
 
             // Update transaksi status BATAL
-            $this->db->execute("UPDATE data_transaksi SET status_konsumen = 'BATAL' WHERE id_transaksi = ?", [$data['id_transaksi']]);
+            Database::execute("UPDATE data_transaksi SET status_konsumen = 'BATAL' WHERE id_transaksi = ?", [$data['id_transaksi']]);
 
             // Update rumah kembali tersedia
-            $this->db->execute("UPDATE data_rumah SET status_unit = 'tersedia' WHERE id_rumah = ?", [$trx['id_rumah']]);
+            Database::execute("UPDATE data_rumah SET status_unit = 'tersedia' WHERE id_rumah = ?", [$trx['id_rumah']]);
 
             $this->db->commit();
             $this->logActivity('CREATE', 'Pembatalan', "Pembatalan unit {$trx['no_blok']}", ['id_pembatalan' => $id, 'transaksi' => $data['id_transaksi']]);

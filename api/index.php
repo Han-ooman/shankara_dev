@@ -1,7 +1,8 @@
 <?php
 // api/index.php - API Entry Point
 
-require_once __DIR__ . '/../koneksi.php';
+require_once __DIR__ . '/../includes/koneksi.php';
+require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/helpers/Database.php';
 require_once __DIR__ . '/helpers/Response.php';
 require_once __DIR__ . '/helpers/Auth.php';
