@@ -25,7 +25,20 @@ class AuthController extends BaseController {
         $accessToken = JwtAuth::generateAccessToken($user);
         $refreshToken = JwtAuth::generateRefreshToken((int)$user['id']);
 
-        // Simpan refresh token hash ke DB (opsional, untuk revoke)
+        // Batasi device: hapus sesi lama user ini (kecuali yang paling baru)
+        // supaya max device = 2 (admin & trainee) / 1 (lainnya)
+        $limit_device = in_array((int)$user['id'], [1, 5], true) ? 2 : 1;
+        Database::execute(
+            "DELETE FROM user_sesi
+             WHERE user_id = ? AND id NOT IN (
+                 SELECT id FROM (
+                     SELECT id FROM user_sesi WHERE user_id = ? ORDER BY last_active DESC LIMIT ?
+                 ) AS t
+             )",
+            [$user['id'], $user['id'], $limit_device - 1]
+        );
+
+        // Simpan refresh token hash ke DB
         $refreshHash = password_hash($refreshToken, PASSWORD_DEFAULT);
         Database::execute(
             "INSERT INTO user_sesi (user_id, session_id, login_at, last_active) VALUES (?, ?, NOW(), NOW())
