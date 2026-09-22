@@ -17,27 +17,79 @@
 
 ---
 
+## STRUKTUR FOLDER PROJECT
+
+```
+shandev/
+├── index.php, login.php, *.php          # 27 halaman utama
+├── .htaccess, manifest.json, pwa_head.php, sidebar.php
+├── PANDUAN.md                           # File ini
+├── api/                                 # REST API (endpoint /api/)
+│   ├── index.php                        # Router
+│   ├── controllers/ (11)                # Auth, Cluster, TipeRumah, Rumah, Konsumen,
+│   │                                     # Transaksi, Pembayaran, Pembatalan, Pemberkasan, Laporan
+│   ├── helpers/ (5)                     # Database, Response, Auth, Request, Log
+│   └── routes/api.php                   # Definisi route
+├── includes/ (9)                        # Shared PHP
+│   ├── koneksi.php, cek_sesi.php, security.php
+│   ├── berkas_helper.php, helper_log.php, page_loader.php
+│   ├── proses_transaksi.php, toggle_maintenance.php, auto_update_laporan.php
+├── print/ (8)                           # Cetak PDF
+│   ├── cetak_bast.php, cetak_keuangan.php, cetak_kwitansi.php
+│   ├── cetak_laporan_harian.php, cetak_pembatalan.php
+│   ├── cetak_pemberkasan.php, cetak_slip_gaji.php, cetak_tipe_rumah.php
+├── assets/                              # Static assets
+│   ├── css/app.css, style.css
+│   ├── js/app.js, idle.js, sw.js
+│   └── images/favicon/
+├── data/                                # CSV import/export (di-ignore git)
+├── format_bast/                         # Template PDF & logo kop
+└── logs/                                # php_errors.log, funnel_log.txt
+```
+
+---
+
+## REST API ENDPOINT
+
+Base URL: `http://localhost/shandev/api` (atau IP Tailscale)
+
+| Modul | Endpoint |
+|-------|----------|
+| **Auth** | `POST /auth/login`, `POST /auth/logout`, `GET /auth/me` |
+| **Cluster** | `GET/POST /clusters`, `GET/PUT/DELETE /clusters/{id}`, `GET /clusters/options`, `GET /clusters/stats` |
+| **Tipe Rumah** | `GET/POST /tipe-rumah`, `GET/PUT/DELETE /tipe-rumah/{id}`, `GET /tipe-rumah/by-cluster/{clusterId}` |
+| **Rumah** | `GET/POST /rumah`, `GET/PUT/DELETE /rumah/{id}`, `GET /rumah/available`, `PUT /rumah/{id}/status` |
+| **Konsumen** | `GET/POST /konsumen`, `GET/PUT/DELETE /konsumen/{id}`, `GET /konsumen/search`, `GET /konsumen/{id}/transaksi` |
+| **Transaksi** | `GET/POST /transaksi`, `GET/PUT/DELETE /transaksi/{id}`, `GET /transaksi/stats`, `GET /transaksi/konsumen/{id}`, `PUT /transaksi/{id}/status` |
+| **Pembayaran** | `GET/POST /pembayaran`, `GET/PUT/DELETE /pembayaran/{id}`, `GET /pembayaran/transaksi/{id}`, `GET /pembayaran/transaksi/{id}/summary` |
+| **Pembatalan** | `GET/POST /pembatalan`, `GET/PUT/DELETE /pembatalan/{id}`, `GET /pembatalan/{id}/print` |
+| **Pemberkasan** | `GET/PUT /pemberkasan`, `GET /pemberkasan/stats`, `GET/PUT /pemberkasan/{id}`, `PUT /pemberkasan/{id}/berkas` |
+| **Laporan** | `GET /laporan/dashboard`, `GET /laporan/penjualan`, `GET /laporan/pembayaran`, `GET /laporan/pembangunan`, `GET /laporan/harian` |
+
+**Fitur API:** Session-based auth (PHPSESSID), role-based access, pagination standar, validasi input, logging aktivitas, prepared statements.
+
+---
+
 ## MENU & FITUR
 
 ### 1. Dashboard (`index.php`)
-Halaman utama yang menampilkan ringkasan seluruh data:
-
+Halaman utama menampilkan ringkasan seluruh data:
 - **4 Kartu Statistik:** Total Unit, Terjual, Terbooking, Tersedia
 - **4 Widget BI Checking:** Total, Lulus, Dalam Proses, Tidak Lulus
-- **Notifikasi Deadline Pemberkasan:** Daftar konsumen yang deadline dokumennya kurang dari 7 hari, beserta progress bar dan countdown
-- **10 Transaksi Terbaru:** Daftar booking terakhir dengan link WhatsApp langsung
-- **Input Transaksi Cepat:** Tombol "Input Transaksi" di pojok kanan atas
+- **Notifikasi Deadline Pemberkasan:** Daftar konsumen deadline < 7 hari + progress bar & countdown
+- **10 Transaksi Terbaru:** Booking terakhir dengan link WhatsApp
+- **Input Transaksi Cepat:** Tombol "Input Transaksi" pojok kanan atas
 
 ---
 
 ### 2. Transaksi (`transaksi.php`)
-Mengelola data booking, status akad, dan skema pembiayaan.
+Mengelola data booking, status akad, skema pembiayaan.
 
 **Fitur utama:**
-- **Tambah Transaksi:** Isi tanggal booking, pilih konsumen, pilih unit rumah, pilih skema bayar (KPR Subsidi/Komersil, Cash Bertahap/Keras), status konsumen
-- **Edit Transaksi:** Klik tombol pensil pada baris data untuk mengubah semua field
-- **Hapus Transaksi:** Klik tombol tempat sampah, konfirmasi di modal — unit otomatis kembali ke status TERSEDIA
-- **Filter Kolom:** Setiap kolom tabel bisa difilter (tanggal, konsumen, blok, cluster, skema bayar, status)
+- **Tambah Transaksi:** Tanggal booking, pilih konsumen, pilih unit, skema bayar (KPR Subsidi/Komersil, Cash Bertahap/Keras), status konsumen
+- **Edit Transaksi:** Klik pensil pada baris
+- **Hapus Transaksi:** Klik tempat sampah — unit otomatis kembali TERSEDIA
+- **Filter Kolom:** Setiap kolom difilter (tanggal, konsumen, blok, cluster, skema, status)
 
 **Status Otomatis:**
 | Status Konsumen | Efek ke Unit |
@@ -53,179 +105,126 @@ Tracking kelengkapan dokumen KPR konsumen.
 
 **Fitur utama:**
 - **29 Dokumen:** Checklist per kategori (Identitas, Pekerjaan, Keuangan, Properti, dll.)
-- **Progress otomatis:** Persentase kelengkapan berdasarkan skema bayar dan pekerjaan konsumen
+- **Progress otomatis:** Persentase kelengkapan berdasarkan skema bayar & pekerjaan
 - **Status Bank:** Pipeline Pemberkasan → Wawancara → OTS → ACC SP3K / Ditolak
-- **Deadline & Wawancara:** Tanggal jatuh tempo dan jadwal interview
+- **Deadline & Wawancara:** Tanggal jatuh tempo & jadwal interview
 - **Filter Lanjutan:** Cluster, Status Bank, Bank Tujuan (multi-select dropdown), filter chip
-- **Export PDF:** Klik "Unduh PDF" untuk cetak laporan pemberkasan
-
-**Cara mengisi checklist:**
-1. Klik tombol checklist pada baris konsumen
-2. Centang dokumen yang sudah lengkap
-3. Klik "Simpan" — progress otomatis terhitung
+- **Export PDF:** Klik "Unduh PDF" untuk cetak laporan
 
 ---
 
 ### 4. BI Checking (`bi_checking.php`)
 Memantau hasil pengecekan kredit konsumen (SLIK/OJK/Bank).
 
-**Fitur utama:**
-- **Tambah Data:** Pilih konsumen, marketing, tanggal cek, lembaga, nomor pengajuan, hasil (Lulus/Dalam Proses/Dipertimbangkan/Tidak Lulus)
-- **Edit Data:** Klik ikon pensil pada baris
-- **Hapus Data:** Klik ikon tempat sampah
-- **Filter:** Keyword, hasil, marketing, urutan (A-Z/Z-A/Terbaru/Terlama)
-- **Link dari Konsumen:** Bisa diakses langsung dari halaman Konsumen via tombol "Cek BI"
+**Fitur:** Tambah/Edit/Hapus data BI, filter keyword/hasil/marketing/urutan, link dari halaman Konsumen.
 
 ---
 
 ### 5. Pembangunan (`pembangunan.php`)
 Tracking progress pembangunan fisik per unit.
 
-**Fitur utama:**
-- **Update Satuan:** Klik "Update" → isi persentase, status pembangunan, catatan lapangan
-- **Update Massal:** Centang beberapa unit → klik "Update Massal" → isi nilai yang sama untuk semua
-- **Visual Progress Bar:** Setiap unit menampilkan progress bar animasi
-- **Filter:** Keyword, cluster, status pembangunan
-- **Cetak PDF:** Klik "Cetak Laporan" untuk export ke PDF
+**Fitur:** Update satuan/massal, visual progress bar animasi, filter keyword/cluster/status, cetak PDF.
 
-**Status pembangunan:** Belum Dikerjakan, Pondasi, Struktur, Dinding, Atap, Finishing, Selesai
+**Status:** Belum Dikerjakan, Pondasi, Struktur, Dinding, Atap, Finishing, Selesai
 
 ---
 
 ### 6. Data Konsumen (`konsumen.php`)
-Mengelola data identitas dan kontak konsumen.
+Mengelola identitas & kontak konsumen.
 
-**Fitur utama:**
-- **Tambah/Edit/Hapus:** CRUD lengkap via modal
-- **Edit Massal:** Centang beberapa konsumen → ubah pekerjaan secara bersamaan
-- **Filter:** Keyword, pekerjaan, status WhatsApp
-- **Badge BI Checking:** Status pengecekan kredit terakhir per konsumen
-- **Link WhatsApp:** Klik nomor WA untuk chat langsung
-- **Tombol "Cek BI":** Langsung menuju halaman BI Checking dengan konsumen terpilih
+**Fitur:** CRUD via modal, edit massal pekerjaan, filter keyword/pekerjaan/status WA, badge BI Checking, link WhatsApp, tombol "Cek BI".
 
 ---
 
 ### 7. Data Unit Rumah (`unit.php`)
-Master data unit rumah (blok, tipe, SHM, luas, harga, status).
+Master data unit (blok, tipe, SHM, luas, harga, status).
 
-**Fitur utama:**
-- **Tambah/Edit/Hapus:** CRUD lengkap via modal
-- **Filter:** Keyword (blok/tipe/SHM/cluster), cluster, status, tipe rumah
-- **Status Badge:** TERSEDIA (hijau), TERBOOKING (kuning), TERJUAL (merah)
-- **Harga:** Ditampilkan dalam format Rupiah
+**Fitur:** CRUD via modal, filter keyword/cluster/status/tipe, status badge (TERSEDIA/TERBOOKING/TERJUAL), harga format Rupiah.
 
 ---
 
 ### 8. Data Cluster (`cluster.php`)
-Mengelola cluster perumahan beserta siteplan interaktif.
+Mengelola cluster perumahan + siteplan interaktif.
 
-**Fitur utama:**
-- **Tambah/Edit/Hapus:** CRUD lengkap
-- **Siteplan Interaktif:** Grid visual berwarna — hijau (tersedia), kuning (terbooking), merah (terjual)
-- **Tooltip:** Arahkan kursor ke kotak unit untuk melihat detail
-- **Klik Kotak:** Menuju halaman unit dengan filter cluster tersebut
-- **Statistik Per-Cluster:** Total, Tersedia, Terbooking, Terjual
-- **Status Proyek:** On Going / Done / Not Started
+**Fitur:** CRUD, siteplan grid berwarna (hijau/kuning/merah), tooltip detail, klik kotak → filter unit, statistik per-cluster, status proyek (On Going/Done/Not Started).
 
 ---
 
 ### 9. Data Karyawan (`karyawan.php`)
-Mengelola data karyawan tetap, kontrak, dan magang.
+Mengelola karyawan tetap, kontrak, magang.
 
-**Fitur utama:**
-- **Tambah/Edit/Hapus:** CRUD lengkap
-- **Tipe Karyawan:** Tetap, Kontrak, Magang
-- **Auto Magang:** Durasi bulan otomatis → tanggal selesai otomatis → status berubah ke "Selesai Magang"
-- **Countdown Magang:** Progress bar sisa hari magang
-- **6 Kartu Statistik:** Total karyawan, per tipe, aktif, nonaktif
-- **Filter:** Keyword, tipe, status
+**Fitur:** CRUD, tipe karyawan, auto magang (durasi → tanggal selesai otomatis), countdown magang, 6 kartu statistik, filter.
 
 ---
 
 ### 10. Keuangan Perusahaan (`keuangan.php`)
-Buku besar pemasukan dan pengeluaran perusahaan.
+Buku besar pemasukan & pengeluaran.
 
-**Fitur utama:**
-- **Tambah/Edit/Hapus:** CRUD lengkap
-- **Jenis:** Pemasukan / Pengeluaran
-- **Kategori Dinamis:** Berubah otomatis berdasarkan jenis (contoh: Fee Broker, Komisi Marketing untuk pemasukan; Gaji Karyawan, Perawatan untuk pengeluaran)
-- **Kluster:** Tag transaksi ke cluster tertentu
-- **4 Kartu Statistik:** Total Pemasukan, Pengeluaran, Saldo, Jumlah Transaksi
-- **Filter Kolom:** Tanggal, jenis, kategori, cluster, no referensi
-- **Export PDF:** Klik "Unduh PDF" untuk cetak laporan keuangan
+**Fitur:** CRUD, jenis Pemasukan/Pengeluaran, kategori dinamis per jenis, tag cluster, 4 kartu statistik, filter kolom, export PDF.
 
 ---
 
 ### 11. Pembayaran & Kwitansi (`pembayaran.php`)
-Mencatat penerimaan pembayaran dari konsumen.
+Mencatat penerimaan pembayaran konsumen.
 
-**Fitur utama:**
-- **Tambah Pembayaran:** Pilih transaksi, isi tanggal bayar, jenis (Booking Fee/DP/Cicilan/Pelunasan), nominal, metode bayar, no kwitansi
-- **Hapus Pembayaran:** Konfirmasi di modal — data keuangan terkait otomatis terhapus
-- **Auto-Sync ke Keuangan:** Setiap pembayaran otomatis masuk ke data keuangan sebagai Pemasukan
-- **Cetak Kwitansi:** Klik ikon printer untuk cetak kwitansi PDF per pembayaran
+**Fitur:** Tambah pembayaran (pilih transaksi, jenis, nominal, metode, no kwitansi), hapus (auto-hapus keuangan terkait), auto-sync ke Keuangan, cetak kwitansi PDF.
 
 ---
 
 ### 12. Laporan (`laporan.php`)
-Dashboard laporan penjualan dan performa proyek.
+Dashboard laporan penjualan & performa.
 
-**Fitur utama:**
-- **3 Chart:**
-  - Diagram Batang: Jualan per cluster
-  - Donut: Status unit (Tersedia/Terbooking/Terjual)
-  - Donut: Distribusi skema bayar
-- **Tabel Rekap Per-Cluster:** Total unit, tersedia, booking, terjual, dana masuk
-- **Export PDF:**
-  - "Unduh PDF" — generate otomatis via html2canvas + jsPDF
-  - "Cetak Laporan" — via browser print dialog
+**Fitur:** 3 chart (batang jualan per cluster, donut status unit, donut skema bayar), tabel rekap per-cluster, export PDF (html2canvas+jsPDF / browser print).
 
 ---
 
 ### 13. Tim Marketing (`marketing.php`)
-Mengelola data tim penjualan/marketing.
+Mengelola data tim penjualan.
 
-**Fitur utama:**
-- **Tambah Marketing:** Isi nama, email, no WhatsApp — status otomatis "Aktif"
-- **Link WhatsApp:** Klik nomor WA untuk chat langsung
-- **Catatan:** Saat ini hanya bisa tambah, belum ada edit/hapus
+**Fitur:** Tambah marketing (nama, email, WA, status otomatis Aktif), link WhatsApp. *Catatan: Belum ada edit/hapus.*
 
 ---
 
 ### 14. Tipe Rumah (`tipe_rumah.php`)
-Mengelola tipe rumah dan paket pembayaran cicilan.
+Mengelola tipe rumah & paket cicilan.
 
-**Fitur utama:**
-- **Tambah/Edit/Hapus:** CRUD lengkap dengan layout kartu
-- **Harga & DP:** Input harga jual, auto-hitung nominal DP dari persentase
-- **Paket Cicilan Dinamis:** Tambah/hapus baris tenor (12/24/36/48/60 bulan) beserta nominal per bulan
-- **Persyaratan Administrasi:** Daftar dokumen yang diperlukan per paket
-- **Cetak PDF:** Klik "Cetak PDF" untuk cetak daftar tipe rumah
+**Fitur:** CRUD kartu, harga & DP (auto-hitung nominal dari persentase), paket cicilan dinamis (tambah/hapus tenor 12-60 bln), persyaratan administrasi, cetak PDF.
 
 ---
 
 ### 15. Serah Terima / BAST (`serah_terima.php`)
-Mencatat berita acara serah terima unit ke konsumen.
+Mencatat berita acara serah terima unit.
 
-**Fitur utama:**
-- **Tambah/Edit/Hapus:** CRUD lengkap
-- **Tautan Transaksi:** Pilih konsumen + blok dari data transaksi yang sudah ACC
-- **Masa Garansi:** Tracking masa retensi/garansi unit
-- **Status Garansi:** Masa Garansi / Selesai Garansi / Ada Komplain
-- **Cetak BAST:** Klik ikon printer untuk cetak BAST PDF
+**Fitur:** CRUD, tautan transaksi (pilih konsumen+blok dari ACC), masa garansi tracking, status garansi, cetak BAST PDF.
 
 ---
 
-### 16. Pengaturan Sistem (`pengaturan.php`)
-Konfigurasi umum sistem (5 tab):
+### 16. Pembatalan Unit (`pembatalan_unit.php`) — **DIPERBARUI**
+Mengelola pembatalan unit konsumen.
+
+**Fitur Baru:**
+- Field tambahan: **Booking Fee**, **Rekening** (bank, nomor, an, cabang), **Status Pembatalan** (Draft/Disetujui)
+- **Modal Edit per Baris:** Klik pensil → modal edit field pembatalan
+- **Autofill dari Transaksi:** JS otofill konsumen, blok, cluster, tipe, harga, booking fee
+- **Cetak Surat PDF:** `cetak_pembatalan.php` — format PDF-compliant A4 (margin 25/25/25/30mm), kop logo, ttd rata kanan flush, terbilang Indonesia, teks "(no_blok)"
+
+---
+
+### 17. Laporan Pembangunan (`laporan_pembangunan.php`) — **DIPERBARUI**
+**Filter Nama Dropdown Checkbox:** Custom dropdown (`#btnFilterNama`, `#namaFilterMenu`), badge counter, daftar nama dari `data-name` baris tampil, gabung filter blok/status/cluster/nama.
+
+---
+
+### 18. Pengaturan Sistem (`pengaturan.php`)
+Konfigurasi umum (5 tab):
 
 | Tab | Fungsi |
 |-----|--------|
-| **Profil Developer** | Nama perusahaan, pimpinan, telepon, email, rekening, alamat (untuk kop surat/BAST) |
-| **Manajemen User** | Tambah/edit/hapus akun pengguna, tetapkan role & status |
+| **Profil Developer** | Nama perusahaan, pimpinan, telepon, email, rekening, alamat (kop surat/BAST) |
+| **Manajemen User** | Tambah/edit/hapus akun, tetapkan role & status |
 | **Master Data** | Kelola daftar bank & daftar dokumen KPR master |
 | **Penomoran & Keuangan** | Format template nomor kwitansi, BAST, transaksi |
-| **Backup & Restore** | Download backup database (.sql) / Upload restore dari file .sql |
+| **Backup & Restore** | Download backup database (.sql) / Upload restore dari .sql |
 
 **Role Pengguna:**
 | Role | Akses |
@@ -237,23 +236,52 @@ Konfigurasi umum sistem (5 tab):
 
 ---
 
+## CLUSTER & DATA UPDATE TERBARU
+
+### Split Cluster SHANKARA RESIDENCE 3 (Dalam Kaum)
+| ID | Cluster | Unit | Blok |
+|----|---------|------|------|
+| 3 | SHANKARA RESIDENCE 3 TAHAP 1 | 17 | A-01 .. A-17 |
+| 7 | SHANKARA RESIDENCE 3 TAHAP 2 | 8 | B-01 .. B-08 |
+| **Total** | | **25** | |
+
+### Split Cluster KARTIASA
+| ID | Cluster | Unit | Blok |
+|----|---------|------|------|
+| 1 | SHANKARA RESIDENCE TAHAP 1 | 95 | A-01 .. A-17, dst |
+| 6 | SHANKARA RESIDENCE TAHAP 2 | 37 | B≥30, K, L, M |
+
+### Pembersihan Data Duplikat
+- **RULY APRI:** Hapus id 85 (sisa id 4 A-01 PROSES, id 109 A-02 ACC-AKAD + KW/014)
+- **FIDIN FATONI:** Hapus id 151 (sisa id 138 K-01 PROSES + KW/021 DP 29jt)
+
+---
+
+## TEMA & UI GLOBAL
+
+- **Modal Biru Global:** Semua modal header biru `#1e3a8a`, judul putih, close putih (via override `app.css:275-299`)
+- **Bootstrap Success → Biru:** `.btn-success`, `.bg-success`, `.badge-success`, `.text-success` di-override ke `--primary-blue` (`app.css:226-249`)
+- **CSS Specificity:** `.modal .modal-header` (0,2,0) mengalahkan utility Bootstrap (0,1,0)
+- **PWA Ready:** `manifest.json`, `sw.js`, `idle.js`, `pwa_head.php`
+
+---
+
 ## PENGGUNAAN HARI-HARI
 
 ### Workflow Harian Marketing:
-1. Login → **Dashboard** untuk cek overview
-2. **Data Konsumen** → tambah data konsumen baru
-3. **Transaksi** → input transaksi booking
-4. **Pembayaran** → catat pembayaran Booking Fee/DP → cetak kwitansi
+1. Login → **Dashboard** overview
+2. **Data Konsumen** → tambah konsumen baru
+3. **Transaksi** → input booking
+4. **Pembayaran** → catat Booking Fee/DP → cetak kwitansi
 5. **BI Checking** → input hasil pengecekan kredit
 
 ### Workflow Harian Admin Pemberkasan:
 1. Login → cek **Deadline Pemberkasan** di Dashboard
-2. **Pemberkasan KPR** → update checklist dokumen per konsumen
+2. **Pemberkasan KPR** → update checklist dokumen
 3. Update status bank (Wawancara → OTS → ACC/Ditolak)
 
 ### Workflow Harian Lapangan:
-1. Login → **Pembangunan** → update progress fisik unit
-2. Bisa update satuan atau massal
+1. Login → **Pembangunan** → update progress fisik (satuan/massal)
 
 ### Workflow Harian Keuangan:
 1. Login → **Keuangan** → input pemasukan/pengeluaran
@@ -261,7 +289,7 @@ Konfigurasi umum sistem (5 tab):
 3. **Laporan** → cetak laporan bulanan
 
 ### Backup Rutin:
-1. **Pengaturan** → tab Backup & Restore → klik "Download Backup"
+1. **Pengaturan** → tab Backup & Restore → "Download Backup"
 2. Simpan file `.sql` secara berkala
 
 ---
@@ -269,8 +297,35 @@ Konfigurasi umum sistem (5 tab):
 ## TIPS PENTING
 
 - **Session timeout 10 menit** — simpan pekerjaan sebelum timeout
-- **1 device per akun** — login di device lain akan logout device sebelumnya
-- **Auto-refresh 30 detik** — halaman otomatis refresh setiap 30 detik (skip jika modal/form aktif)
-- **WhatsApp integrasi** — klik nomor WA di mana saja untuk langsung chat konsumen
-- **Filter chip** — di halaman Pemberkasan, filter cluster/bank muncul sebagai chip yang bisa dihapus satu per satu
-- **Export PDF** — tersedia di Pemberkasan, Keuangan, Pembangunan, Laporan, Kwitansi, BAST, dan Tipe Rumah
+- **1 device per akun** — login device lain = logout device sebelumnya
+- **Auto-refresh 30 detik** — halaman refresh otomatis (skip jika modal/form aktif)
+- **WhatsApp integrasi** — klik nomor WA di mana saja untuk chat langsung
+- **Filter chip** — di Pemberkasan, filter cluster/bank sebagai chip hapus per item
+- **Export PDF** — tersedia di Pemberkasan, Keuangan, Pembangunan, Laporan, Kwitansi, BAST, Tipe Rumah, **Pembatalan**
+- **API Access** — gunakan endpoint `/api/` untuk integrasi eksternal (session cookie PHPSESSID)
+
+---
+
+## DEPLOYMENT & MAINTENANCE
+
+### Git
+```bash
+cd C:\xampp\htdocs\shandev
+git add .
+git commit -m "Pesan commit"
+git push origin main
+```
+
+### Database
+- DB: `db_perumahan` (MariaDB)
+- Koneksi: `includes/koneksi.php`
+- Backup: `pengaturan.php` → tab Backup & Restore
+
+### Logs
+- `logs/php_errors.log` — PHP errors
+- `logs/funnel_log.txt` — Funnel activity
+- `log_aktivitas.php` — Audit trail user actions
+
+---
+
+*Terakhir diperbarui: 22 September 2026*
