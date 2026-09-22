@@ -92,7 +92,7 @@ class KonsumenController extends BaseController {
             FROM data_transaksi t
             JOIN data_rumah r ON r.id_rumah = t.id_rumah
             JOIN data_cluster c ON c.id_cluster = r.id_cluster
-            JOIN data_tipe_rumah t2 ON t2.id_tipe = r.id_tipe
+            JOIN data_tipe_rumah t2 ON t2.tipe_rumah = r.tipe_rumah
             WHERE t.id_konsumen = ?
             ORDER BY t.tgl_booking DESC
         ");

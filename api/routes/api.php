@@ -84,6 +84,43 @@ $routes['GET']['/pemberkasan/{id:\d+}'] = ['PemberkasanController', 'show'];
 $routes['PUT']['/pemberkasan/{id:\d+}'] = ['PemberkasanController', 'update'];
 $routes['PUT']['/pemberkasan/{id:\d+}/berkas'] = ['PemberkasanController', 'updateBerkas'];
 
+// Prospek
+$routes['GET']['/prospek'] = ['ProspekController', 'index'];
+$routes['GET']['/prospek/stats'] = ['ProspekController', 'stats'];
+$routes['GET']['/prospek/{id:\d+}'] = ['ProspekController', 'show'];
+$routes['POST']['/prospek'] = ['ProspekController', 'store'];
+$routes['PUT']['/prospek/{id:\d+}'] = ['ProspekController', 'update'];
+$routes['DELETE']['/prospek/{id:\d+}'] = ['ProspekController', 'destroy'];
+$routes['POST']['/prospek/{id:\d+}/deal'] = ['ProspekController', 'deal'];
+
+// BI Checking
+$routes['GET']['/bi-checking'] = ['BiCheckingController', 'index'];
+$routes['GET']['/bi-checking/options'] = ['BiCheckingController', 'options'];
+$routes['GET']['/bi-checking/stats'] = ['BiCheckingController', 'stats'];
+$routes['GET']['/bi-checking/{id:\d+}'] = ['BiCheckingController', 'show'];
+$routes['POST']['/bi-checking'] = ['BiCheckingController', 'store'];
+$routes['PUT']['/bi-checking/{id:\d+}'] = ['BiCheckingController', 'update'];
+$routes['DELETE']['/bi-checking/{id:\d+}'] = ['BiCheckingController', 'destroy'];
+
+// Pembangunan (Progres)
+$routes['GET']['/pembangunan'] = ['PembangunanController', 'index'];
+$routes['GET']['/pembangunan/stats'] = ['PembangunanController', 'stats'];
+$routes['GET']['/pembangunan/units'] = ['PembangunanController', 'units'];
+$routes['GET']['/pembangunan/{id:\d+}'] = ['PembangunanController', 'show'];
+$routes['POST']['/pembangunan'] = ['PembangunanController', 'store'];
+$routes['PUT']['/pembangunan/{id:\d+}'] = ['PembangunanController', 'update'];
+$routes['DELETE']['/pembangunan/{id:\d+}'] = ['PembangunanController', 'destroy'];
+
+// Pengaturan (Akun & Sistem)
+$routes['GET']['/pengaturan'] = ['PengaturanController', 'getSettings'];
+$routes['PUT']['/pengaturan'] = ['PengaturanController', 'updateSettings'];
+$routes['GET']['/pengaturan/users'] = ['PengaturanController', 'indexUsers'];
+$routes['GET']['/pengaturan/users/roles'] = ['PengaturanController', 'roleOptions'];
+$routes['GET']['/pengaturan/users/{id:\d+}'] = ['PengaturanController', 'showUser'];
+$routes['POST']['/pengaturan/users'] = ['PengaturanController', 'storeUser'];
+$routes['PUT']['/pengaturan/users/{id:\d+}'] = ['PengaturanController', 'updateUser'];
+$routes['DELETE']['/pengaturan/users/{id:\d+}'] = ['PengaturanController', 'destroyUser'];
+
 // Laporan / Dashboard
 $routes['GET']['/laporan/dashboard'] = ['LaporanController', 'dashboard'];
 $routes['GET']['/laporan/penjualan'] = ['LaporanController', 'penjualan'];

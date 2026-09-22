@@ -96,9 +96,9 @@ class ClusterController extends BaseController {
             SELECT
                 c.id_cluster, c.cluster_name,
                 COUNT(r.id_rumah) as total_rumah,
-                SUM(CASE WHEN r.status_rumah = 'tersedia' THEN 1 ELSE 0 END) as tersedia,
-                SUM(CASE WHEN r.status_rumah = 'booking' THEN 1 ELSE 0 END) as booking,
-                SUM(CASE WHEN r.status_rumah = 'terjual' THEN 1 ELSE 0 END) as terjual
+                SUM(CASE WHEN r.status_unit = 'tersedia' THEN 1 ELSE 0 END) as tersedia,
+                SUM(CASE WHEN r.status_unit = 'booking' THEN 1 ELSE 0 END) as booking,
+                SUM(CASE WHEN r.status_unit = 'terjual' THEN 1 ELSE 0 END) as terjual
             FROM data_cluster c
             LEFT JOIN data_rumah r ON r.id_cluster = c.id_cluster
             GROUP BY c.id_cluster

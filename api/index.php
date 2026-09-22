@@ -20,6 +20,10 @@ require_once __DIR__ . '/controllers/TransaksiController.php';
 require_once __DIR__ . '/controllers/PembayaranController.php';
 require_once __DIR__ . '/controllers/PembatalanController.php';
 require_once __DIR__ . '/controllers/PemberkasanController.php';
+require_once __DIR__ . '/controllers/ProspekController.php';
+require_once __DIR__ . '/controllers/BiCheckingController.php';
+require_once __DIR__ . '/controllers/PembangunanController.php';
+require_once __DIR__ . '/controllers/PengaturanController.php';
 require_once __DIR__ . '/controllers/LaporanController.php';
 
 $routes = require_once __DIR__ . '/routes/api.php';
