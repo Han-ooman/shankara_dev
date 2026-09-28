@@ -8,6 +8,8 @@ if (!isset($_SESSION['status_login']) || $_SESSION['status_login'] !== true) {
 }
 include "includes/cek_sesi.php";
 include "includes/koneksi.php";
+require_once __DIR__ . '/includes/role_access.php';
+role_guard();
 
 // Proteksi CSRF global untuk semua aksi POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrf_verify()) {
