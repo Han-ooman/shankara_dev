@@ -37,6 +37,7 @@ if (!function_exists('role_peta_halaman')) {
             'karyawan.php'           => ['Super Admin'],
             'gaji.php'               => ['Super Admin', 'Kasir Keuangan'],
             'pengaturan.php'         => ['Super Admin'],
+            'pengingat.php'          => ['Super Admin', 'Admin Pemberkasan', 'Kasir Keuangan'],
             'log_aktivitas.php'      => ['Super Admin'],
         ];
     }

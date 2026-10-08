@@ -24,6 +24,10 @@ shandev/
 ├── index.php, login.php, *.php          # 27 halaman utama
 ├── .htaccess, manifest.json, pwa_head.php, sidebar.php
 ├── PANDUAN.md                           # File ini
+├── pengingat.php                        # Pengingat & Notifikasi Push
+├── push_api.php                         # Endpoint Web Push (subscribe/test)
+├── sw.js                                # Service Worker (push + cache)
+├── cli_push_gen.php                     # Generate kunci VAPID (CLI only)
 ├── api/                                 # REST API (endpoint /api/)
 │   ├── index.php                        # Router
 │   ├── controllers/ (11)                # Auth, Cluster, TipeRumah, Rumah, Konsumen,
@@ -40,7 +44,7 @@ shandev/
 │   ├── cetak_pemberkasan.php, cetak_slip_gaji.php, cetak_tipe_rumah.php
 ├── assets/                              # Static assets
 │   ├── css/app.css, style.css
-│   ├── js/app.js, idle.js, sw.js
+│   ├── js/app.js, idle.js, push_client.js
 │   └── images/favicon/
 ├── data/                                # CSV import/export (di-ignore git)
 ├── format_bast/                         # Template PDF & logo kop
@@ -164,10 +168,15 @@ Buku besar pemasukan & pengeluaran.
 
 ---
 
-### 11. Pembayaran & Kwitansi (`pembayaran.php`)
-Mencatat penerimaan pembayaran konsumen.
+### 11. Pembayaran & Kwitansi (`pembayaran.php`) — **DIPERBARUI**
+Mencatat pembayaran konsumen (pemasukan) & pengeluaran perusahaan (kwitansi di luar unit).
 
-**Fitur:** Tambah pembayaran (pilih transaksi, jenis, nominal, metode, no kwitansi), hapus (auto-hapus keuangan terkait), auto-sync ke Keuangan, cetak kwitansi PDF.
+**Fitur:**
+- **Kwitansi Pemasukan (Konsumen → PT):** Pilih transaksi, jenis (Booking Fee/DP/Cicilan/Pelunasan), nominal, metode, no kwitansi → auto-sync ke Keuangan, cetak kwitansi PDF. Tanda tangan penerima: `( Hanapi, S.Tr.Kom )` / "Penerima / Administrator".
+- **Kwitansi Multi-Blok:** Satu kwitansi dapat memuat 2+ unit untuk 1 konsumen (checkbox + kotak cari "Cari blok / nama konsumen..." + informasi "N blok terpilih"). Daftar blok tampil sebagai badge di tabel riwayat ("Riwayat Kwitansi") dan dicetak lengkap di kwitansi (mis. `NO. BLOK A-07, A-08, A-09`, "pembelian 3 unit rumah"). Validasi otomatis: minimal 1 blok dipilih & seluruh blok harus atas konsumen yang sama.
+- **Kwitansi Pengeluaran (PT → Konsumen):** Pilih **"Di Luar Unit (Pengeluaran)"** → input **Jenis** (Refund/Komisi/Bantuan/Koreksi/Lainnya) dan **Nama Penerima** → otomatis dicatat di Keuangan sebagai **Pengeluaran** dengan deskripsi `Refund - <penerima> (<keterangan>)`. Cetak: judul "KWITANSI Pengeluaran", "Telah dibayarkan kepada...", "Untuk Pengeluaran...", tanda tangan `( Nama Penerima )`.
+- **Tabel Riwayat:** Kolom **Arus** (badge hijau *Pemasukan* / merah *Pengeluaran*) & kolom **Penerima / Konsumen**.
+- Hapus pembayaran → auto-hapus keuangan terkait.
 
 ---
 
@@ -236,6 +245,18 @@ Konfigurasi umum (5 tab):
 
 ---
 
+### 19. Status KPR (`status_kpr.php`)
+Memantau & menyaring status KPR seluruh transaksi.
+
+**Filter — satu form (pilih semua → klik "Terapkan Filter"):**
+- **Pencarian:** kata kunci konsumen / blok / cluster (Enter atau tombol Terapkan)
+- **Status:** BPHTB/Tapera/Trilogi/Sikumbang Belum, Cluster, Status konsumen, Skema bayar
+- **Tahap KPR per modul:** BPHTB, Tapera, Trilogi, SIKUMB (Belum/Sudah)
+- **Rentang tanggal akad:** dari – sampai
+- **Badge Aktif:** filter yang dipilih tampil sebagai badge (hapus satu per satu / "Bersihkan Semua"), tombol **Reset**, penghitung jumlah baris hasil. Setelah edit status massal/tunggal, filter aktif tetap tersimpan.
+
+---
+
 ## CLUSTER & DATA UPDATE TERBARU
 
 ### Split Cluster SHANKARA RESIDENCE 3 (Dalam Kaum)
@@ -254,6 +275,54 @@ Konfigurasi umum (5 tab):
 ### Pembersihan Data Duplikat
 - **RULY APRI:** Hapus id 85 (sisa id 4 A-01 PROSES, id 109 A-02 ACC-AKAD + KW/014)
 - **FIDIN FATONI:** Hapus id 151 (sisa id 138 K-01 PROSES + KW/021 DP 29jt)
+
+### Unit SHANKARA MIDTOWN RESIDENCE (id 4)
+| Blok | Jumlah | Keterangan |
+|------|--------|------------|
+| A-01 .. A-24 | 24 | TERSEDIA, tipe/SHM/luas kosong, harga 0 |
+| A-25 | 1 | TERBOOKING (tipe 36, 182jt) |
+| A-26 | 1 | TERSEDIA, kosong |
+| **Total** | | **26 unit (A-01 .. A-26)** |
+
+### Tipe Rumah Baru
+- **35 (Komersil)** (id 12): harga **Rp 184.000.000**, DP **Rp 2.000.000** (1,09%), plafon kredit Rp 182.000.000. Skema angsuran bertahap:
+  - **Tenor 120 bln:** Thn 1 → 1.908.229 | 2-3 → 2.072.810 | 4 → 2.280.707 | 5-10 → 2.407.189
+  - **Tenor 180 bln:** Thn 1 → 1.415.654 | 2-3 → 1.598.890 | 4-10 → 1.859.692 | 11-15 → 1.903.156
+
+---
+
+## NOTIFIKASI PUSH & PENGINGAT
+
+### Halaman Pengingat (`pengingat.php`)
+Menu **"Pengingat & Notifikasi"** (grup Pengaturan) menampilkan item yang perlu follow-up:
+- **Deadline Pemberkasan** (berkas belum lengkap)
+- **Wawancara Bank**
+- **Akad KPR** (konsumen PROSES, belum ACC)
+- **Follow-up Prospek** (status belum Deal/Tidak Lanjut)
+
+Item tampil mulai **H-7** hingga **telat**, diurutkan dari yang paling mendesak. Setiap baris punya tombol **WA** yang membuka WhatsApp dengan pesan template otomatis (nama, unit, cluster, tanggal, sisa hari).
+
+**Filter:** jenis pengingat + status (semua / telat / hari ini / H-1-3 / H-4-7).
+
+### Template WhatsApp
+Template pesan disimpan di `pengaturan_sistem` (kunci `pengingat_tpl_deadline`, `pengingat_tpl_wawancara`, `pengingat_tpl_akad`, `pengingat_tpl_followup`). Placeholder: `{nama}`, `{unit}`, `{cluster}`, `{tanggal}`, `{sisa}`, `{bank}`.
+Ubah lewat SQL atau `pengaturan.php`.
+
+### Web Push Notifications (PWA)
+- **Syarat browser:** Chrome/Edge/Firefox (desktop+Android). Di **localhost** langsung bisa; di **Tailscale/public** butuh **HTTPS** agar Notification API jalan.
+- **Aktifkan Notifikasi:** Klik tombol hijau "Aktifkan Notifikasi" di halaman Pengingat → izinkan permintaan browser → browser mendaftarkan subscription ke `push_subscriptions`.
+- **Kirim Uji Push:** Tombol "Kirim Uji Push" mengirim notifikasi tes ke semua perangkat yang terdaftar untuk akun Anda.
+- **Sumber server:** VAPID JWT (ES256, RFC 8292) + enkripsi payload (RFC 8291/8188, aes128gcm).
+- **Kunci VAPID:** dibuat otomatis via `cli_push_gen.php` (dijalankan sekali lewat CLI, tersimpan di `pengaturan_sistem`). JANGAN generate di web runtime karena butuh `OPENSSL_CONF` di environment.
+
+### Upload/Regenerasi Kunci (setelah pindah server)
+```powershell
+$env:OPENSSL_CONF = "C:\xampp\php\extras\ssl\openssl.cnf"
+cd C:\xampp\htdocs\shandev
+C:\xampp\php\php.exe cli_push_gen.php
+Remove-Item Env:\OPENSSL_CONF
+```
+Kunci baru = semua subscription perangkat lama harus diaktifkan ulang.
 
 ---
 
@@ -328,4 +397,4 @@ git push origin main
 
 ---
 
-*Terakhir diperbarui: 22 September 2026*
+*Terakhir diperbarui: 8 Oktober 2026*
