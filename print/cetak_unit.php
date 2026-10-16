@@ -45,6 +45,12 @@ if ($result && mysqli_num_rows($result) > 0) {
         $data[] = $row;
     }
 }
+
+$cluster_label = '';
+if ($filter_cluster !== '') {
+    $cnameRow = mysqli_query($koneksi, "SELECT cluster_name FROM data_cluster WHERE id_cluster = '$filter_cluster' LIMIT 1");
+    $cluster_label = ($cnameRow && $cr = mysqli_fetch_assoc($cnameRow)) ? $cr['cluster_name'] : $filter_cluster;
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -54,149 +60,218 @@ if ($result && mysqli_num_rows($result) > 0) {
     <style>
         @page {
             size: A4 landscape;
-            margin: 10mm 8mm;
+            margin: 10mm 10mm;
         }
+
         * { box-sizing: border-box; }
+
         body {
-            font-family: Arial, Helvetica, sans-serif;
-            color: #111827;
-            font-size: 9pt;
-            line-height: 1.45;
-            background: #fff;
+            font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
+            background-color: #f4f7f5;
+            padding: 10px 0;
+            margin: 0;
+            color: #111;
         }
-        .header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 2px solid #1e3a8a;
-            padding-bottom: 6px;
-            margin-bottom: 10px;
-        }
-        .logo-wrap {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .logo {
-            width: 28px;
-            height: 28px;
-            object-fit: contain;
-        }
-        .brand {
-            font-weight: 800;
-            font-size: 12pt;
-            color: #1e3a8a;
-            letter-spacing: 0.2px;
-            text-transform: uppercase;
-        }
-        .title {
-            font-weight: 700;
-            font-size: 11pt;
+
+        .no-print-btn {
             text-align: center;
-            flex: 1;
+            margin-bottom: 15px;
         }
-        .meta {
-            text-align: right;
-            font-size: 8pt;
-            color: #4b5563;
+
+        .btn-print {
+            background-color: #1e3a8a;
+            color: #fff;
+            border: none;
+            padding: 10px 24px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
         }
-        table {
+        .btn-back {
+            background-color: #64748b;
+            color: #fff;
+            border: none;
+            padding: 10px 24px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-left: 8px;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .sheet {
+            background: #fff;
+            border: 2px solid #1e3a8a;
+            border-radius: 12px;
+            padding: 22px 26px;
+            margin: 0 auto 18px;
+            max-width: 277mm;
+            page-break-after: always;
+        }
+        .sheet:last-child {
+            page-break-after: auto;
+        }
+
+        .sheet-title {
+            text-align: center;
+            font-size: 17px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            color: #1e3a8a;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+            border-bottom: 3px double #1e3a8a;
+            padding-bottom: 8px;
+        }
+
+        .info-table {
             width: 100%;
             border-collapse: collapse;
+            margin-bottom: 14px;
+            font-size: 12.5px;
         }
-        th, td {
-            border: 1px solid #d1d5db;
-            padding: 4px 6px;
-            vertical-align: top;
+        .info-table th, .info-table td {
+            border: 1.5px solid #1e3a8a;
+            padding: 7px 10px;
+            text-align: left;
         }
-        thead th {
-            background: #f1f5f9;
+        .info-table th {
+            background: #eff6ff;
+            color: #1e3a8a;
             font-weight: 700;
-            font-size: 8pt;
-            text-transform: uppercase;
-            letter-spacing: 0.2px;
+            width: 30%;
         }
-        tbody tr:nth-child(even) {
-            background: #f9fafb;
+        .info-table td { font-weight: 600; }
+
+        .ang-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
         }
-        .text-center { text-align: center; }
-        .text-right { text-align: right; }
-        .fw-bold { font-weight: 700; }
-        .badge {
-            display: inline-block;
-            padding: 1px 6px;
-            border-radius: 4px;
-            font-size: 8pt;
-            border: 1px solid #000;
-            background: #fff;
+        .ang-table th, .ang-table td {
+            border: 1px solid #1e3a8a;
+            padding: 6px 8px;
+            text-align: center;
         }
-        .filter-info {
-            margin-bottom: 8px;
-            font-size: 8pt;
-            color: #4b5563;
+        .ang-table th {
+            background: #eff6ff;
+            color: #1e3a8a;
+            font-weight: 700;
+        }
+        .ang-table td { font-weight: 600; }
+        .ang-table .text-left { text-align: left; }
+        .ang-table .text-right { text-align: right; }
+
+        .catatan {
+            margin-top: 10px;
+            font-size: 11.5px;
+            color: #333;
+            background: #f6f8f7;
+            border-left: 4px solid #b45309;
+            padding: 8px 12px;
+            border-radius: 0 6px 6px 0;
+        }
+
+        @media print {
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            html, body {
+                background-color: #fff;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .sheet {
+                box-shadow: none;
+                border: 2px solid #1e3a8a;
+                margin: 0 !important;
+            }
+            .no-print-btn { display: none; }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="logo-wrap">
-            <img src="../assets/images/favicon/favicon.png" alt="Logo" class="logo">
-            <div class="brand">Shankara Dev</div>
-        </div>
-        <div class="title">DATA UNIT RUMAH</div>
-        <div class="meta">
-            Dicetak: <?= date('d/m/Y H:i:s') ?> WIB
-        </div>
-    </div>
 
-    <?php if ($filter_keyword !== '' || $filter_cluster !== '' || $filter_status !== '' || $filter_tipe !== ''): ?>
-    <div class="filter-info">
-        Filter aktif:
-        <?php if ($filter_keyword !== ''): ?>Keyword: "<strong><?= htmlspecialchars($filter_keyword) ?></strong>"; <?php endif; ?>
-        <?php if ($filter_cluster !== ''): 
-            $cnameRow = mysqli_query($koneksi, "SELECT cluster_name FROM data_cluster WHERE id_cluster = '$filter_cluster' LIMIT 1");
-            $cname = ($cnameRow && $cr = mysqli_fetch_assoc($cnameRow)) ? $cr['cluster_name'] : $filter_cluster;
-            ?>Cluster: <strong><?= htmlspecialchars($cname) ?></strong>; <?php endif; ?>
-        <?php if ($filter_status !== ''): ?>Status: <strong><?= htmlspecialchars(strtoupper($filter_status)) ?></strong>; <?php endif; ?>
-        <?php if ($filter_tipe !== ''): ?>Tipe: <strong><?= htmlspecialchars($filter_tipe) ?></strong><?php endif; ?>
-    </div>
+<div class="no-print-btn">
+    <button onclick="window.print()" class="btn-print">🖨 Cetak / Simpan PDF</button>
+    <a href="unit.php" class="btn-back">← Kembali</a>
+</div>
+
+<div class="sheet">
+    <div class="sheet-title">Data Unit Rumah</div>
+
+    <?php if ($filter_keyword !== '' || $cluster_label !== '' || $filter_status !== '' || $filter_tipe !== ''): ?>
+    <table class="info-table">
+        <tr>
+            <th>Filter Aktif</th>
+            <td>
+                <?php
+                $parts = [];
+                if ($filter_keyword !== '') $parts[] = 'Keyword: "' . htmlspecialchars($filter_keyword) . '"';
+                if ($cluster_label !== '') $parts[] = 'Cluster: ' . htmlspecialchars($cluster_label);
+                if ($filter_status !== '') $parts[] = 'Status: ' . htmlspecialchars(strtoupper($filter_status));
+                if ($filter_tipe !== '') $parts[] = 'Tipe: ' . htmlspecialchars($filter_tipe);
+                echo implode(' &nbsp;|&nbsp; ', $parts);
+                ?>
+            </td>
+        </tr>
+        <tr>
+            <th>Total Data</th>
+            <td><?= count($data) ?> unit</td>
+        </tr>
+    </table>
+    <?php else: ?>
+    <table class="info-table">
+        <tr>
+            <th>Total Data</th>
+            <td><?= count($data) ?> unit (semua data)</td>
+        </tr>
+    </table>
     <?php endif; ?>
 
-    <table>
+    <table class="ang-table">
         <thead>
             <tr>
                 <th>Cluster</th>
-                <th class="text-center">No. Blok</th>
-                <th class="text-center">Tipe</th>
+                <th>No. Blok</th>
+                <th>Tipe</th>
                 <th>No. SHM</th>
-                <th class="text-center">Luas Tanah (m²)</th>
-                <th class="text-center">Luas Bangunan (m²)</th>
-                <th class="text-right">Harga Jual</th>
-                <th class="text-center">Status Unit</th>
-                <th class="text-center">ID</th>
+                <th>L. Tanah (m²)</th>
+                <th>L. Bangunan (m²)</th>
+                <th>Harga Jual</th>
+                <th>Status</th>
             </tr>
         </thead>
         <tbody>
             <?php if (count($data) === 0): ?>
             <tr>
-                <td colspan="9" class="text-center">Tidak ada data unit dengan filter yang dipilih.</td>
+                <td colspan="8">Tidak ada data unit dengan filter yang dipilih.</td>
             </tr>
             <?php else: foreach ($data as $row): 
                 $status = strtoupper(trim($row['status_unit'] ?? 'TERSEDIA'));
             ?>
             <tr>
-                <td><?= htmlspecialchars($row['cluster_name'] ?? '-') ?></td>
-                <td class="text-center fw-bold"><?= htmlspecialchars($row['no_blok']) ?></td>
-                <td class="text-center"><?= htmlspecialchars($row['tipe_rumah']) ?></td>
-                <td><?= htmlspecialchars($row['no_shm'] ?? '-') ?></td>
-                <td class="text-center"><?= htmlspecialchars($row['luas_tanah'] ?? '-') ?></td>
-                <td class="text-center"><?= htmlspecialchars($row['luas_bangunan'] ?? '-') ?></td>
-                <td class="text-right fw-bold"><?= rupiah($row['harga_jual'] ?? 0) ?></td>
-                <td class="text-center"><span class="badge"><?= htmlspecialchars($status) ?></span></td>
-                <td class="text-center"><?= (int)$row['id_rumah'] ?></td>
+                <td class="text-left"><?= htmlspecialchars($row['cluster_name'] ?? '-') ?></td>
+                <td><?= htmlspecialchars($row['no_blok']) ?></td>
+                <td><?= htmlspecialchars($row['tipe_rumah']) ?></td>
+                <td class="text-left"><?= htmlspecialchars($row['no_shm'] ?? '-') ?></td>
+                <td><?= htmlspecialchars($row['luas_tanah'] ?? '-') ?></td>
+                <td><?= htmlspecialchars($row['luas_bangunan'] ?? '-') ?></td>
+                <td class="text-right"><?= rupiah($row['harga_jual'] ?? 0) ?></td>
+                <td><?= htmlspecialchars($status) ?></td>
             </tr>
             <?php endforeach; endif; ?>
         </tbody>
     </table>
+
+    <div class="catatan"><strong>Dicetak :</strong> <?= date('d/m/Y H:i:s') ?> WIB &nbsp;&nbsp;|&nbsp;&nbsp; Dicetak oleh: <?= htmlspecialchars($_SESSION['username'] ?? '-') ?></div>
+</div>
+
+<script>
+    window.onload = function() {
+        window.print();
+    };
+</script>
 </body>
 </html>
