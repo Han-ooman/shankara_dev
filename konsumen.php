@@ -1,6 +1,7 @@
 <?php
 include "includes/koneksi.php";
 require_once __DIR__ . '/includes/helper_log.php';
+require_once __DIR__ . '/includes/konsumen_filter.php';
 
 session_start();
 // Jika belum login atau status login tidak valid, lempar paksa kembali ke halaman login
@@ -77,9 +78,20 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
 }
 
 // LOGIKA PENANGKAPAN FILTER KONSUMEN
-$filter_keyword   = isset($_GET['keyword']) ? mysqli_real_escape_string($koneksi, $_GET['keyword']) : '';
-$filter_pekerjaan = isset($_GET['pekerjaan']) ? mysqli_real_escape_string($koneksi, $_GET['pekerjaan']) : '';
-$filter_wa        = isset($_GET['wa']) ? mysqli_real_escape_string($koneksi, $_GET['wa']) : '';
+$filters = konsumen_get_filters();
+$filter_keyword   = $filters['keyword'];
+$filter_pekerjaan = $filters['pekerjaan'];
+$filter_wa        = $filters['wa'];
+$filter_ktp       = $filters['ktp'];
+$filter_bi        = $filters['bi'];
+$filter_transaksi = $filters['transaksi'];
+$filter_sort      = $filters['sort'];
+$ada_filter       = konsumen_filter_active($filters);
+$daftar_pekerjaan = konsumen_daftar_pekerjaan($koneksi);
+
+// Ambil data konsumen sesuai filter (logic terpusat di includes/konsumen_filter.php)
+$konsumen_rows = konsumen_list($koneksi, $filters);
+$jumlah_hasil  = count($konsumen_rows);
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -133,46 +145,90 @@ $filter_wa        = isset($_GET['wa']) ? mysqli_real_escape_string($koneksi, $_G
         <!-- BAR FILTER MULTI-KRITERIA KONSUMEN -->
         <div class="card border-0 shadow-sm rounded-4 mb-4" style="background-color: #ffffff;">
             <div class="card-body p-3">
-                <form method="GET" action="konsumen.php" class="row g-3 align-items-center">
-                    
-                    <!-- 1. Input Cari Kata Kunci (Update dengan gaya Rounded Pill) -->
-                    <div class="col-lg-4 col-md-12">
+                <form method="GET" action="konsumen.php" class="row g-3 align-items-center" id="formFilterKonsumen">
+
+                    <!-- 1. Input Cari Kata Kunci -->
+                    <div class="col-12 col-lg-4 col-md-12">
                         <div class="position-relative">
                             <i class="bi bi-search search-input-icon"></i>
-                            <input type="text" name="keyword" class="form-control rounded-pill search-input-pill" 
-                                   placeholder="Cari ID, Nama, Pekerjaan, No WA..." value="<?= htmlspecialchars($filter_keyword) ?>">
+                            <input type="text" name="keyword" class="form-control rounded-pill search-input-pill"
+                                   placeholder="Cari ID, Nama, Pekerjaan, No WA, KTP, Alamat..." value="<?= htmlspecialchars($filter_keyword) ?>">
                         </div>
                     </div>
 
                     <!-- 2. Filter Pekerjaan -->
-                    <div class="col-lg-3 col-md-4">
+                    <div class="col-6 col-lg-3 col-md-6">
                         <select name="pekerjaan" class="form-select rounded-pill bg-light border-0 px-3 py-2">
                             <option value="">-- Semua Pekerjaan --</option>
-                            <?php
-                            $q_pekerjaan = mysqli_query($koneksi, "SELECT DISTINCT pekerjaan FROM data_konsumen WHERE pekerjaan IS NOT NULL AND pekerjaan != '' ORDER BY pekerjaan ASC");
-                            while ($pk = mysqli_fetch_assoc($q_pekerjaan)) {
-                                $selected = ($filter_pekerjaan == $pk['pekerjaan']) ? 'selected' : '';
-                                echo "<option value='".htmlspecialchars($pk['pekerjaan'])."' $selected>".htmlspecialchars($pk['pekerjaan'])."</option>";
-                            }
-                            ?>
+                            <?php foreach ($daftar_pekerjaan as $pk): ?>
+                                <option value="<?= htmlspecialchars($pk) ?>" <?= ($filter_pekerjaan == $pk) ? 'selected' : '' ?>><?= htmlspecialchars($pk) ?></option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
 
-                    <!-- 3. Filter WhatsApp / Telepon -->
-                    <div class="col-lg-3 col-md-4">
+                    <!-- 3. Filter Status BI Checking -->
+                    <div class="col-6 col-lg-2 col-md-6">
+                        <select name="bi" class="form-select rounded-pill bg-light border-0 px-3 py-2">
+                            <option value="">-- Semua BI --</option>
+                            <option value="lulus" <?= ($filter_bi == 'lulus') ? 'selected' : '' ?>>BI Lulus</option>
+                            <option value="dalam_proses" <?= ($filter_bi == 'dalam_proses') ? 'selected' : '' ?>>BI Dalam Proses</option>
+                            <option value="dipertimbangkan" <?= ($filter_bi == 'dipertimbangkan') ? 'selected' : '' ?>>BI Dipertimbangkan</option>
+                            <option value="tidak_lulus" <?= ($filter_bi == 'tidak_lulus') ? 'selected' : '' ?>>BI Tidak Lulus</option>
+                            <option value="belum" <?= ($filter_bi == 'belum') ? 'selected' : '' ?>>Belum Dicek</option>
+                        </select>
+                    </div>
+
+                    <!-- 4. Filter Status Transaksi -->
+                    <div class="col-6 col-lg-3 col-md-6">
+                        <select name="transaksi" class="form-select rounded-pill bg-light border-0 px-3 py-2">
+                            <option value="">-- Semua Status Transaksi --</option>
+                            <option value="belum" <?= ($filter_transaksi == 'belum') ? 'selected' : '' ?>>Belum Ada Transaksi</option>
+                            <option value="proses" <?= ($filter_transaksi == 'proses') ? 'selected' : '' ?>>Proses</option>
+                            <option value="acc" <?= ($filter_transaksi == 'acc') ? 'selected' : '' ?>>ACC - Akad</option>
+                            <option value="batal" <?= ($filter_transaksi == 'batal') ? 'selected' : '' ?>>Batal</option>
+                        </select>
+                    </div>
+
+                    <!-- 5. Filter Status WhatsApp -->
+                    <div class="col-6 col-lg-2 col-md-4">
                         <select name="wa" class="form-select rounded-pill bg-light border-0 px-3 py-2">
-                            <option value="">-- Semua Status Kontak --</option>
-                            <option value="ada" <?= ($filter_wa == 'ada') ? 'selected' : '' ?>>Memiliki No. WhatsApp</option>
-                            <option value="tidak" <?= ($filter_wa == 'tidak') ? 'selected' : '' ?>>Tidak Ada No. WhatsApp</option>
+                            <option value="">-- Semua Kontak --</option>
+                            <option value="ada" <?= ($filter_wa == 'ada') ? 'selected' : '' ?>>Ada WhatsApp</option>
+                            <option value="tidak" <?= ($filter_wa == 'tidak') ? 'selected' : '' ?>>Tidak Ada WhatsApp</option>
                         </select>
                     </div>
 
-                    <!-- 4. Tombol Filter & Reset -->
-                    <div class="col-lg-2 col-md-4 d-flex gap-2">
-                        <button type="submit" class="btn text-white w-100 rounded-pill" style="background-color: var(--primary-blue); padding: 8px;">
+                    <!-- 6. Filter Status KTP -->
+                    <div class="col-6 col-lg-2 col-md-4">
+                        <select name="ktp" class="form-select rounded-pill bg-light border-0 px-3 py-2">
+                            <option value="">-- Semua KTP --</option>
+                            <option value="ada" <?= ($filter_ktp == 'ada') ? 'selected' : '' ?>>Ada No. KTP</option>
+                            <option value="tidak" <?= ($filter_ktp == 'tidak') ? 'selected' : '' ?>>Tidak Ada No. KTP</option>
+                        </select>
+                    </div>
+
+                    <!-- 7. Urutkan -->
+                    <div class="col-6 col-lg-3 col-md-4">
+                        <select name="sort" class="form-select rounded-pill bg-light border-0 px-3 py-2">
+                            <option value="" <?= ($filter_sort == '') ? 'selected' : '' ?>>Urut: Nama (A-Z)</option>
+                            <option value="nama_desc" <?= ($filter_sort == 'nama_desc') ? 'selected' : '' ?>>Urut: Nama (Z-A)</option>
+                            <option value="id_desc" <?= ($filter_sort == 'id_desc') ? 'selected' : '' ?>>Urut: Terbaru</option>
+                            <option value="id_asc" <?= ($filter_sort == 'id_asc') ? 'selected' : '' ?>>Urut: Terlama</option>
+                        </select>
+                    </div>
+
+                    <!-- 8. Tombol Filter, Export & Reset -->
+                    <div class="col-12 col-lg-5 col-md-12 d-flex gap-2 flex-wrap">
+                        <button type="submit" class="btn text-white rounded-pill flex-grow-1" style="background-color: var(--primary-blue); padding: 8px;">
                             <i class="bi bi-funnel-fill me-1"></i> Filter
                         </button>
-                        <?php if (!empty($filter_keyword) || !empty($filter_pekerjaan) || !empty($filter_wa)): ?>
+                        <button type="button" class="btn btn-outline-danger rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;" id="btnExportPdfKonsumen" title="Export PDF">
+                            <i class="bi bi-file-earmark-pdf"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-success rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;" id="btnExportExcelKonsumen" title="Export Excel">
+                            <i class="bi bi-file-earmark-excel"></i>
+                        </button>
+                        <?php if ($ada_filter): ?>
                             <a href="konsumen.php" class="btn btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;" title="Reset Filter">
                                 <i class="bi bi-arrow-counterclockwise"></i>
                             </a>
@@ -185,6 +241,21 @@ $filter_wa        = isset($_GET['wa']) ? mysqli_real_escape_string($koneksi, $_G
 
         <!-- TABEL FULL WIDTH -->
         <div class="content-card">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <span class="text-muted small fw-semibold">
+                    Menampilkan <strong id="jumlahHasil"><?= $jumlah_hasil ?></strong> konsumen
+                    <?php if ($ada_filter): ?>
+                        dari filter aktif
+                    <?php else: ?>
+                        (semua data)
+                    <?php endif; ?>
+                </span>
+                <?php if ($ada_filter): ?>
+                    <span class="text-muted small">
+                        <?= implode(' &nbsp;|&nbsp; ', array_map('htmlspecialchars', konsumen_filter_labels($filters))) ?>
+                    </span>
+                <?php endif; ?>
+            </div>
             <form id="formMassal" action="konsumen.php" method="POST">
                 <?= csrf_field() ?>
                 <div class="table-responsive">
@@ -194,47 +265,22 @@ $filter_wa        = isset($_GET['wa']) ? mysqli_real_escape_string($koneksi, $_G
                                 <th width="40" class="text-center">
                                     <input type="checkbox" id="selectAll" class="form-check-input" onclick="toggleSelectAll(this)">
                                 </th>
-                                <th style="width: 150px;">ID Konsumen</th>
+                                <th style="width: 130px;">ID Konsumen</th>
                                 <th>Nama Lengkap</th>
                                 <th>Pekerjaan</th>
                                 <th>Alamat KTP</th>
+                                <th>No. KTP</th>
                                 <th>No. WhatsApp / HP</th>
                                 <th>BI Checking</th>
+                                <th>Status Transaksi</th>
                                 <th class="text-center" style="width: 100px;">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php
-                            // QUERY DENGAN FILTER DINAMIS
-                            $query = "SELECT k.*, 
-                                      (SELECT b.hasil_bi FROM data_bi_checking b WHERE b.id_konsumen = k.id_konsumen ORDER BY b.tgl_cek DESC, b.id_bi_checking DESC LIMIT 1) AS bi_status,
-                                      (SELECT b.tgl_cek FROM data_bi_checking b WHERE b.id_konsumen = k.id_konsumen ORDER BY b.tgl_cek DESC, b.id_bi_checking DESC LIMIT 1) AS bi_tgl
-                                      FROM data_konsumen k WHERE 1=1";
-
-                            if (!empty($filter_keyword)) {
-                                $query .= " AND (id_konsumen LIKE '%$filter_keyword%' 
-                                           OR name_lengkap LIKE '%$filter_keyword%' 
-                                           OR pekerjaan LIKE '%$filter_keyword%' 
-                                           OR no_whatsapp LIKE '%$filter_keyword%'
-                                           OR alamat_ktp LIKE '%$filter_keyword%')";
-                            }
-
-                            if (!empty($filter_pekerjaan)) {
-                                $query .= " AND pekerjaan = '$filter_pekerjaan'";
-                            }
-
-                            if ($filter_wa === 'ada') {
-                                $query .= " AND no_whatsapp IS NOT NULL AND no_whatsapp != '' AND no_whatsapp != '-'";
-                            } elseif ($filter_wa === 'tidak') {
-                                $query .= " AND (no_whatsapp IS NULL OR no_whatsapp = '' OR no_whatsapp = '-')";
-                            }
-
-                            $query .= " ORDER BY name_lengkap ASC";
-                            $q_konsumen = mysqli_query($koneksi, $query);
-
                             $modalEditHTML = '';
-                            if ($q_konsumen && mysqli_num_rows($q_konsumen) > 0) {
-                                while ($k = mysqli_fetch_assoc($q_konsumen)) {
+                            if ($jumlah_hasil > 0) {
+                                foreach ($konsumen_rows as $k) {
                             ?>
                             <tr>
                                 <td class="text-center">
@@ -244,6 +290,7 @@ $filter_wa        = isset($_GET['wa']) ? mysqli_real_escape_string($koneksi, $_G
                                 <td class="fw-bold text-dark"><?= htmlspecialchars($k['name_lengkap']) ?></td>
                                 <td><span class="text-uppercase small fw-semibold text-muted"><?= htmlspecialchars($k['pekerjaan']) ?></span></td>
                                 <td><span class="small text-dark"><?= $k['alamat_ktp'] ? htmlspecialchars($k['alamat_ktp']) : '<span class="text-muted">-</span>' ?></span></td>
+                                <td><span class="small text-dark"><?= !empty($k['no_ktp']) && $k['no_ktp'] != '-' ? htmlspecialchars($k['no_ktp']) : '<span class="text-muted">-</span>' ?></span></td>
                                 <td>
                                     <?php if (!empty($k['no_whatsapp']) && $k['no_whatsapp'] != '-'): ?>
                                         <a href="https://wa.me/<?= preg_replace('/[^0-9]/', '', $k['no_whatsapp']) ?>" target="_blank" class="text-decoration-none text-success fw-medium">
@@ -269,6 +316,10 @@ $filter_wa        = isset($_GET['wa']) ? mysqli_real_escape_string($koneksi, $_G
                                     <a href="bi_checking.php?konsumen=<?= $k['id_konsumen'] ?>" class="small text-success text-decoration-none fw-medium d-inline-block mt-1">
                                         <i class="bi bi-clipboard-plus me-1"></i>Cek BI
                                     </a>
+                                </td>
+                                <td>
+                                    <?php $tx = konsumen_status_badge_data($k['status_transaksi'] ?? null); ?>
+                                    <span class="badge <?= $tx['bg'] ?> px-2 py-1"><i class="bi <?= $tx['ikon'] ?> me-1"></i><?= htmlspecialchars($tx['label']) ?></span>
                                 </td>
                                 <td class="text-center">
                                     <div class="d-flex justify-content-center align-items-center gap-1">
@@ -335,7 +386,7 @@ $filter_wa        = isset($_GET['wa']) ? mysqli_real_escape_string($koneksi, $_G
                             <?php 
                                 }
                             } else {
-                                echo "<tr><td colspan='8' class='text-center text-muted py-4'>Tidak ada data konsumen yang sesuai dengan kriteria filter.</td></tr>";
+                                echo "<tr><td colspan='10' class='text-center text-muted py-4'>Tidak ada data konsumen yang sesuai dengan kriteria filter.</td></tr>";
                             }
                             ?>
                         </tbody>
@@ -470,6 +521,29 @@ document.addEventListener('DOMContentLoaded', function () {
 
             document.getElementById('infoNamaKonsumenHapus').innerText = 'Nama: ' + nama + ' (#KNS-' + id + ')';
             document.getElementById('btnConfirmDeleteKonsumen').href = 'konsumen.php?action=hapus&id=' + id + '&token=' + encodeURIComponent(document.getElementById('csrf_global').value);
+        });
+    }
+
+    // Export PDF & Excel membawa filter aktif
+    const formFilter = document.getElementById('formFilterKonsumen');
+    function qsFilterAktif() {
+        if (!formFilter) return '';
+        const params = new URLSearchParams(new FormData(formFilter));
+        // buang field kosong
+        [...params.keys()].forEach(k => { if (params.get(k) === '') params.delete(k); });
+        const s = params.toString();
+        return s ? ('?' + s) : '';
+    }
+    const btnPdf = document.getElementById('btnExportPdfKonsumen');
+    if (btnPdf) {
+        btnPdf.addEventListener('click', function () {
+            window.open('print/cetak_konsumen.php' + qsFilterAktif(), '_blank');
+        });
+    }
+    const btnExcel = document.getElementById('btnExportExcelKonsumen');
+    if (btnExcel) {
+        btnExcel.addEventListener('click', function () {
+            window.open('print/export_konsumen.php' + qsFilterAktif(), '_blank');
         });
     }
 });
