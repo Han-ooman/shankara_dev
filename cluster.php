@@ -193,7 +193,7 @@ if (!empty($selected_cluster_id)) {
                         </select>
                     </form>
                 </div>
-                <div class="col-md-7 d-flex justify-content-end gap-3 mt-3 mt-md-0">
+                <div class="col-md-7 d-flex flex-wrap justify-content-center justify-content-md-end gap-3 mt-3 mt-md-0">
                     <div class="text-center px-3 border-end">
                         <span class="d-block text-muted small fw-semibold">Total Unit</span>
                         <span class="fs-4 fw-bold text-dark"><?= $stat_total ?></span>
@@ -226,7 +226,7 @@ if (!empty($selected_cluster_id)) {
             </div>
             
             <!-- KETERANGAN WARNA STATUS -->
-            <div class="d-flex gap-3 mb-4 p-2 bg-light rounded-3 small">
+            <div class="d-flex flex-wrap gap-3 mb-4 p-2 bg-light rounded-3 small">
                 <span class="d-flex align-items-center gap-1"><span class="badge bg-success rounded-circle p-1"> </span> TERSEDIA</span>
                 <span class="d-flex align-items-center gap-1"><span class="badge bg-warning rounded-circle p-1"> </span> TERBOOKING</span>
                 <span class="d-flex align-items-center gap-1"><span class="badge bg-danger rounded-circle p-1"> </span> TERJUAL</span>

@@ -1,5 +1,5 @@
 /* =============================================
-   SHANKARA DEV â€” SHARED DESIGN SYSTEM
+   SHANKARA DEV — SHARED DESIGN SYSTEM
    ============================================= */
 
 /* --- CSS Variables --- */
@@ -403,6 +403,18 @@ body {
 ::selection {
     background: rgba(37, 99, 235,0.15);
     color: var(--primary-blue);
+}
+
+/* --- Mobile Responsive --- */
+.min-width-0 { min-width: 0; }
+
+@media (max-width: 575.98px) {
+    .stat-card { padding: 14px; }
+    .stat-card .stat-value { font-size: 1.05rem; }
+    .stat-card .stat-icon { width: 40px; height: 40px; font-size: 1.05rem; }
+    .stat-card .d-flex > div { min-width: 0; }
+    .stat-card .stat-value,
+    .stat-card .stat-label { overflow-wrap: anywhere; }
 }
 
 /* --- Print Utilities --- */
