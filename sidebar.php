@@ -64,6 +64,11 @@ role_guard();
             <i class="bi bi-journal-text"></i> Laporan Harian
         </a>
         <?php endif; ?>
+        <?php if (role_menu_izin($__role, 'laporan_mingguan.php')): ?>
+        <a href="laporan_mingguan.php" class="nav-link-custom <?= $currentPage === 'laporan_mingguan.php' || $currentPage === 'cetak_laporan_mingguan.php' ? 'active' : '' ?>">
+            <i class="bi bi-calendar-week"></i> Laporan Mingguan
+        </a>
+        <?php endif; ?>
 
         <!-- KELOMPOK 2: PEMBERKASAN & LAPANGAN -->
         <?php if (role_menu_izin($__role, 'pemberkasan.php') || role_menu_izin($__role, 'status_kpr.php') || role_menu_izin($__role, 'pembangunan.php') || role_menu_izin($__role, 'laporan_pembangunan.php') || role_menu_izin($__role, 'serah_terima.php')): ?>

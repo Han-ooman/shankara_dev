@@ -24,6 +24,7 @@ if (!function_exists('role_peta_halaman')) {
             'rencana_akad.php'       => ['Super Admin', 'Admin Pemberkasan', 'Kasir Keuangan'],
             'bi_checking.php'        => ['Super Admin', 'Admin Pemberkasan', 'Kasir Keuangan'],
             'laporan_harian.php'     => ['Super Admin', 'Admin Pemberkasan'],
+            'laporan_mingguan.php'   => ['Super Admin', 'Kasir Keuangan', 'Admin Pemberkasan'],
             'pemberkasan.php'        => ['Super Admin', 'Admin Pemberkasan'],
             'status_kpr.php'         => ['Super Admin', 'Admin Pemberkasan'],
             'pembangunan.php'        => ['Super Admin', 'Pengawas Lapangan'],

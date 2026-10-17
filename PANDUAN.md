@@ -34,14 +34,16 @@ shandev/
 │   │                                     # Transaksi, Pembayaran, Pembatalan, Pemberkasan, Laporan
 │   ├── helpers/ (5)                     # Database, Response, Auth, Request, Log
 │   └── routes/api.php                   # Definisi route
-├── includes/ (9)                        # Shared PHP
+├── includes/ (10)                       # Shared PHP
 │   ├── koneksi.php, cek_sesi.php, security.php
 │   ├── berkas_helper.php, helper_log.php, page_loader.php
 │   ├── proses_transaksi.php, toggle_maintenance.php, auto_update_laporan.php
-├── print/ (8)                           # Cetak PDF
+│   ├── laporan_mingguan_data.php        # Perhitungan laporan mingguan (dipakai layar + PDF)
+├── print/ (10)                          # Cetak PDF
 │   ├── cetak_bast.php, cetak_keuangan.php, cetak_kwitansi.php
 │   ├── cetak_laporan_harian.php, cetak_pembatalan.php
 │   ├── cetak_pemberkasan.php, cetak_slip_gaji.php, cetak_tipe_rumah.php
+│   ├── cetak_unit.php, cetak_laporan_mingguan.php
 ├── assets/                              # Static assets
 │   ├── css/app.css, style.css
 │   ├── js/app.js, idle.js, push_client.js
@@ -184,6 +186,24 @@ Mencatat pembayaran konsumen (pemasukan) & pengeluaran perusahaan (kwitansi di l
 Dashboard laporan penjualan & performa.
 
 **Fitur:** 3 chart (batang jualan per cluster, donut status unit, donut skema bayar), tabel rekap per-cluster, export PDF (html2canvas+jsPDF / browser print).
+
+---
+
+### 12b. Laporan Mingguan (`laporan_mingguan.php`) ✨ **BARU**
+Ringkasan kinerja per minggu (Senin–Minggu) dalam satu halaman ringkas.
+
+**Fitur:**
+- Pemilih minggu (`<input type="week">`) + navigasi minggu sebelumnya/berikutnya + tombol "Minggu Ini".
+- KPI: Unit Booking, Akad (terpisah), Kas Masuk, Pengeluaran (+ saldo kas), Prospek Baru, Follow-up, Berkas/BI Checking, Kegiatan Selesai.
+- Ringkasan naratif otomatis + daftar highlight (cluster terbaik, kas terbesar, sumber prospek, kategori kegiatan terbanyak, jumlah item telat).
+- Rekap per cluster (booking / akad / kas masuk).
+- Ringkasan Kegiatan Harian (total, selesai, berlangsung, terhambat, belum) + per kategori.
+- Sumber prospek (distribusi).
+- Pengingat & Tunggakan (deadline berkas, wawancara, akad, follow-up) dengan status telat/H-x.
+- Export PDF → `print/cetak_laporan_mingguan.php` (gaya sama dengan halaman cetak lain, auto-print).
+
+**Sumber data:** `data_transaksi` (tgl_booking, tanggal_akad), `data_pembayaran` (tgl_bayar), `data_keuangan` (tanggal, jenis), `data_prospek` (created_at, tanggal_followup), `data_bi_checking` (tgl_cek), `data_laporan_harian` (tanggal), `view_database_utama`.
+**Logic terpusat** di `includes/laporan_mingguan_data.php` (`lm_hitung()`) agar angka di layar & PDF selalu identik.
 
 ---
 
