@@ -56,8 +56,13 @@ if (isset($_POST['login'])) {
                     // Batas perangkat login: default 1 device, admin (id 1) & Trainee (id 5) boleh 2
                     $limit_device = in_array(intval($user['id']), [1, 5], true) ? 2 : 1;
 
+                    // IP klien utk penanda device (Vercel melewatkan IP asli di X-Forwarded-For)
+                    $ip_client = trim(explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'] ?? ($_SERVER['REMOTE_ADDR'] ?? ''))[0]);
+
                     // Bersihkan sesi yang sudah basi (terakhir aktif lebih dari 30 menit lalu)
                     sdb_query($koneksi, "DELETE FROM user_sesi WHERE user_id = " . intval($user['id']) . " AND last_active < (NOW() - INTERVAL 30 MINUTE)");
+                    // Buang row tidak sah (session_id kosong — tak mungkin dicocokkan cek_sesi)
+                    sdb_query($koneksi, "DELETE FROM user_sesi WHERE user_id = " . intval($user['id']) . " AND (session_id IS NULL OR session_id = '')");
 
                     // Hitung jumlah sesi aktif untuk akun ini
                     $count_result = sdb_query($koneksi, "SELECT COUNT(*) AS jml FROM user_sesi WHERE user_id = " . intval($user['id']));
@@ -84,10 +89,18 @@ if (isset($_POST['login'])) {
                         // Reset counter gagal setelah login sukses
                         reset_login_fails($lock_key);
 
-                        // Simpan sesi aktif di tabel user_sesi
-                        $session_id_baru = session_id();
-                        $stmt_sesi = $koneksi->prepare("INSERT INTO user_sesi (user_id, session_id, login_at, last_active) VALUES (?, ?, NOW(), NOW())");
-                        $stmt_sesi->bind_param("is", $user['id'], $session_id_baru);
+                        // Runtime Vercel dapat mengeksekusi 1 request 2x → hapus jejak login
+                        // kembar milik device/IP yang sama supaya kuota tidak terisi palsu
+                        $sid_baru = session_id();
+                        $ip_safe  = sdb_real_escape_string($koneksi, $ip_client);
+                        sdb_query($koneksi, "DELETE FROM user_sesi WHERE user_id = " . intval($user['id'])
+                            . " AND session_id <> '" . sdb_real_escape_string($koneksi, $sid_baru) . "'"
+                            . " AND ip_address = '" . $ip_safe . "'"
+                            . " AND last_active > (NOW() - INTERVAL 2 MINUTE)");
+
+                        // Simpan sesi aktif di tabel user_sesi (dengan IP device)
+                        $stmt_sesi = $koneksi->prepare("INSERT INTO user_sesi (user_id, session_id, login_at, last_active, ip_address) VALUES (?, ?, NOW(), NOW(), ?)");
+                        $stmt_sesi->bind_param("iss", $user['id'], $sid_baru, $ip_client);
                         $stmt_sesi->execute();
                         $stmt_sesi->close();
 
