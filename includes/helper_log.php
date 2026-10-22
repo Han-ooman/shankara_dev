@@ -14,7 +14,9 @@ function log_aktivitas($koneksi, $aksi, $modul, $deskripsi, $detail = null, $use
     $detail_e  = ($detail !== null && $detail !== '')
         ? "'" . sdb_real_escape_string($koneksi, is_string($detail) ? mb_substr($detail, 0, 65535) : json_encode($detail, JSON_UNESCAPED_UNICODE)) . "'"
         : 'NULL';
-    $ip        = sdb_real_escape_string($koneksi, isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '');
+    // Di Vercel REMOTE_ADDR = 127.0.0.1 (runtime internal), IP asli ada di X-Forwarded-For
+    $__ip = trim(explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'] ?? ($_SERVER['REMOTE_ADDR'] ?? ''))[0]);
+    $ip        = sdb_real_escape_string($koneksi, $__ip !== '' ? $__ip : (isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : ''));
     $ua        = sdb_real_escape_string($koneksi, isset($_SERVER['HTTP_USER_AGENT']) ? mb_substr($_SERVER['HTTP_USER_AGENT'], 0, 255) : '');
 
     sdb_query($koneksi, "INSERT INTO log_aktivitas (user_id, aksi, modul, deskripsi, detail, ip_address, user_agent, created_at)
