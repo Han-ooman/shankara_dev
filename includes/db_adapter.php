@@ -10,11 +10,18 @@ define('DB_ADAPTER_VERSION', '1.0-supabase');
 
 if (!defined('MYSQLI_ASSOC')) { define('MYSQLI_ASSOC', 1); define('MYSQLI_NUM', 2); define('MYSQLI_BOTH', 3); }
 
-// Kredensial Supabase dibaca dari config/local.php (tidak ikut di-commit).
+// Kredensial Supabase, urutan prioritas:
+// 1. config/local.php (lokal, di-gitignore)
+// 2. Environment variables: SUPABASE_DSN, SUPABASE_USER, SUPABASE_PASSWORD (dipakai di Vercel)
 // Contoh tersedia di config/local.example.php.
 $__local_config = dirname(__DIR__) . '/config/local.php';
 if (!defined('SUPABASE_DSN') && is_file($__local_config)) {
     require_once $__local_config;
+}
+if (!defined('SUPABASE_DSN') && getenv('SUPABASE_DSN')) {
+    define('SUPABASE_DSN', getenv('SUPABASE_DSN'));
+    define('SUPABASE_USER', getenv('SUPABASE_USER'));
+    define('SUPABASE_PASSWORD', getenv('SUPABASE_PASSWORD'));
 }
 if (!defined('SUPABASE_DSN') || !defined('SUPABASE_USER') || !defined('SUPABASE_PASSWORD')) {
     throw new RuntimeException('Kredensial database belum diatur. Salin config/local.example.php menjadi config/local.php lalu isi kredensialnya.');
