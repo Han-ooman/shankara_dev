@@ -445,12 +445,22 @@ class sdb {
     public $server_info    = 'PostgreSQL 17 (Supabase)';
     public $client_version = 180002;
     public $info           = '';
-    private ?PDO $pdo      = null;
     private bool $inTx     = false;
 
     public function __construct($host = null, $user = null, $pass = null, $db = null,
                                 $port = null, $socket = null) {
-        // Semua parameter lama MySQL diabaikan; koneksi tetap ke Supabase
+        // Semua parameter lama MySQL diabaikan; koneksi tetap ke Supabase.
+        // Koneksi dibuat LAZY pada query/prepare pertama (menghemat ±1,3s
+        // pada halaman yang tidak menyentuh DB, mis. GET login.php di Vercel).
+        $this->ensurePDO();
+    }
+
+    private ?PDO $pdo = null;
+    private bool $pdoTried = false;
+
+    private function ensurePDO(): ?PDO {
+        if ($this->pdoTried) return $this->pdo;
+        $this->pdoTried = true;
         try {
             $this->pdo = new PDO(SUPABASE_DSN, SUPABASE_USER, SUPABASE_PASSWORD, [
                 PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
@@ -467,9 +477,10 @@ class sdb {
             $this->errno         = 2002;
             error_log('db_adapter: koneksi Supabase gagal: ' . $e->getMessage());
         }
+        return $this->pdo;
     }
 
-    public function getPDO(): ?PDO { return $this->pdo; }
+    public function getPDO(): ?PDO { return $this->ensurePDO(); }
     public function inTransaction(): bool { return $this->inTx; }
 
     private function markError(Throwable $e): void {
@@ -479,13 +490,14 @@ class sdb {
     }
 
     public function query($sql, $resultmode = 0) {
-        if ($this->pdo === null) return false;
+        $pdo = $this->ensurePDO();
+        if ($pdo === null) return false;
         $raw = (string)$sql;
         try {
-            $t = dbx_translate($raw, $this->pdo);
+            $t = dbx_translate($raw, $pdo);
             $isSelect = preg_match('/^(SELECT|WITH|SHOW)\b/im', $t) || preg_match('/\bRETURNING\b/i', $t);
             if ($isSelect) {
-                $stmt = $this->pdo->prepare($t);
+                $stmt = $pdo->prepare($t);
                 // '?'-placeholder tak boleh tanpa bind; MySQL $koneksi->query sangat jarang pakai ?
                 if (preg_match_all('/\?/', $t) > 0) {
                     $this->error = 'Placeholder ? pada ->query() atau ->prepare() tidak didukung tanpa bind param.';
@@ -495,10 +507,10 @@ class sdb {
                 return new sdb_result($stmt);
             }
             // UPDATE / INSERT / DELETE / DDL
-            $st = $this->pdo->exec($t);
+            $st = $pdo->exec($t);
             $this->affected_rows = $st;
             if (preg_match('/^\s*INSERT\b/i', $t)) {
-                try { $this->insert_id = (int)$this->pdo->query('SELECT lastval()')->fetchColumn(); }
+                try { $this->insert_id = (int)$pdo->query('SELECT lastval()')->fetchColumn(); }
                 catch (Throwable $e) { /* INSERT tanpa sequence: dia biarkan */ }
             }
             return true;
@@ -509,9 +521,10 @@ class sdb {
     }
 
     public function prepare($sql) {
-        if ($this->pdo === null) return false;
+        $pdo = $this->ensurePDO();
+        if ($pdo === null) return false;
         try {
-            $t = dbx_translate((string)$sql, $this->pdo);
+            $t = dbx_translate((string)$sql, $pdo);
             return new sdb_stmt($this, $t);
         } catch (Throwable $e) {
             $this->markError($e);
@@ -532,19 +545,20 @@ class sdb {
     public function character_set_name() { return 'utf8mb4'; }
 
     public function begin_transaction($flags = 0, $name = null) {
-        if ($this->pdo === null) return false;
+        $pdo = $this->ensurePDO();
+        if ($pdo === null) return false;
         if ($this->inTx) return true;
-        try { $this->pdo->beginTransaction(); $this->inTx = true; return true; }
+        try { $pdo->beginTransaction(); $this->inTx = true; return true; }
         catch (Throwable $e) { $this->markError($e); return false; }
     }
     public function commit($flags = 0, $name = null) {
         if (!$this->inTx) return true;
-        try { $this->pdo->commit(); $this->inTx = false; return true; }
+        try { $this->ensurePDO()?->commit(); $this->inTx = false; return true; }
         catch (Throwable $e) { $this->markError($e); return false; }
     }
     public function rollback($flags = 0, $name = null) {
         if (!$this->inTx) return true;
-        try { $this->pdo->rollBack(); $this->inTx = false; return true; }
+        try { $this->ensurePDO()?->rollBack(); $this->inTx = false; return true; }
         catch (Throwable $e) { $this->markError($e); return false; }
     }
     public function autocommit($mode) {
@@ -556,10 +570,10 @@ class sdb {
     public function next_result() { return false; }
     public function more_results() { return false; }
     public function select_db($db) { return strtolower($db) === 'postgres'; }
-    public function ping() { return $this->pdo !== null; }
+    public function ping() { if (!$this->pdoTried) $this->ensurePDO(); return $this->pdo !== null; }
     public function ssl_set() { return true; }
     public function stmt_init() { return new sdb_stmt($this, ''); }
-    public function close() { $this->pdo = null; return true; }
+    public function close() { $this->pdo = null; $this->pdoTried = true; return true; }
     public function __destruct() { $this->pdo = null; }
 }
 
