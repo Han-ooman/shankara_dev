@@ -62,7 +62,7 @@ $bank_rek    = trim($data['rekening_bank'] ?? '');
 $no_rek      = trim($data['rekening_no'] ?? '');
 $no_blok     = trim($data['no_blok'] ?? '');
 $tgl = !empty($data['tgl_surat']) && $data['tgl_surat'] !== '0000-00-00'
-    ? strftime('%d %B %Y', strtotime($data['tgl_surat']))
+    ? date('d F Y', strtotime($data['tgl_surat']))
     : '................';
 ?>
 <!DOCTYPE html>
@@ -113,7 +113,7 @@ $tgl = !empty($data['tgl_surat']) && $data['tgl_surat'] !== '0000-00-00'
         <!-- KOP SURAT -->
         <div class="kop">
             <div class="kop-inner">
-                <img src="format_bast/logo/logo_kop.png" alt="Logo Shankara" class="kop-logo">
+                <img src="../format_bast/logo/logo_kop.png" alt="Logo Shankara" class="kop-logo">
                 <div>
                     <div class="kop-nama">PT. GOLDEN SHANKARA INDONESIA</div>
                     <div class="kop-alamat">Alamat : Jalan Lintas Kalimantan Poros Utara Kartiasa No. 86, Sambas &ndash; Kalimantan Barat</div>

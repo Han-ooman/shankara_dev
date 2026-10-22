@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrf_verify()) {
     die("Token keamanan tidak valid. Muat ulang halaman lalu coba lagi.");
 }
 
-// AUTO-UPDATE: Belum Dikerjakan Ã¢â€ â€™ Sedang Berlangsung saat jam_mulai tiba
+// AUTO-UPDATE: Belum Dikerjakan → Sedang Berlangsung saat jam_mulai tiba
 $now_h = date('H:i:s');
 $today = date('Y-m-d');
 $koneksi->query("UPDATE data_laporan_harian SET status='Sedang Berlangsung', updated_at=NOW()
@@ -22,7 +22,7 @@ $koneksi->query("UPDATE data_laporan_harian SET status='Sedang Berlangsung', upd
     AND (jam_selesai IS NULL OR jam_selesai > '$now_h')
     AND status='Belum Dikerjakan'");
 
-// AUTO-UPDATE: Sedang Berlangsung / Belum Ã¢â€ â€™ Selesai saat jam_selesai tiba
+// AUTO-UPDATE: Sedang Berlangsung / Belum → Selesai saat jam_selesai tiba
 $koneksi->query("UPDATE data_laporan_harian SET status='Selesai', updated_at=NOW()
     WHERE tanggal='$today' AND jam_selesai IS NOT NULL AND jam_selesai <= '$now_h'
     AND status IN ('Sedang Berlangsung','Belum Dikerjakan')");

@@ -71,3 +71,7 @@ funnel_log.txt
 !api/controllers/.gitkeep
 !api/helpers/.gitkeep
 !api/routes/.gitkeep
+# Data operasional lokal (jangan di-commit)
+/data/
+/data_konsumen_clean.csv
+/data_transaksi_clean.csv

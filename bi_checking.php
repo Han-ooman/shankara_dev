@@ -84,7 +84,7 @@ $filter_marketing = isset($_GET['marketing']) ? intval($_GET['marketing']) : 0;
 $preselect_konsumen = isset($_GET['konsumen']) ? intval($_GET['konsumen']) : 0;
 
 // ==========================================
-// STATISTIK (1 query Ð²Ð¼ÐµÑÑ‚Ð¾ 4)
+// STATISTIK (1 query untuk 4 data)
 // ==========================================
 $stat = ['total'=>0, 'lulus'=>0, 'proses'=>0, 'tidak'=>0];
 $q_stat = mysqli_query($koneksi, "SELECT 

@@ -1,5 +1,6 @@
 ﻿<?php
 include "includes/koneksi.php";
+include "includes/cluster_hold.php";
 
 session_start();
 // Jika belum login atau status login tidak valid, lempar paksa kembali ke halaman login
@@ -59,6 +60,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['simpan_transaksi']) 
     $skema_bayar     = mysqli_real_escape_string($koneksi, $_POST['skema_bayar']);
     $skema_akad      = mysqli_real_escape_string($koneksi, $_POST['skema_akad'] ?? '');
     $status_konsumen = mysqli_real_escape_string($koneksi, $_POST['status_konsumen']);
+
+    // Blokir booking / transaksi baru bila cluster sedang di HOLD
+    cluster_hold_cek_rumah($koneksi, $id_rumah, 'transaksi.php');
     
     $tgl_akad_input  = $_POST['tanggal_akad'] ?? $_POST['tgl_akad'] ?? '';
     $tgl_akad_val    = !empty($tgl_akad_input) ? "'".mysqli_real_escape_string($koneksi, $tgl_akad_input)."'" : "NULL";
@@ -97,6 +101,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_transaksi'])) {
     $tgl_akad_input  = $_POST['tanggal_akad'] ?? $_POST['tgl_akad'] ?? '';
     $tgl_akad_val    = !empty($tgl_akad_input) ? "'".mysqli_real_escape_string($koneksi, $tgl_akad_input)."'" : "NULL";
     $skema_akad_sql  = !empty($skema_akad) ? "'$skema_akad'" : "NULL";
+
+    // Blokir pindah ke unit dari cluster yang di HOLD
+    cluster_hold_cek_rumah($koneksi, $id_rumah_baru, 'transaksi.php');
 
     // Step A: Dapatkan id_rumah lama dari transaksi ini
     $get_rumah = mysqli_query($koneksi, "SELECT id_rumah FROM data_transaksi WHERE id_transaksi = $id_transaksi");
@@ -487,7 +494,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_transaksi'])) {
                             <select name="id_rumah" id="select_rumah" class="form-select border-0 shadow-sm" style="border-radius: 8px;" required onchange="cekStatusUnit(this)">
                                 <option value="" data-status="" data-pemesan="">-- Pilih Unit Rumah --</option>
                                 <?php
-                                $query_rumah = "SELECT r.*, c.cluster_name, k.name_lengkap AS pemesan 
+                                $query_rumah = "SELECT r.*, c.cluster_name, c.cluster_status, k.name_lengkap AS pemesan 
                                                 FROM data_rumah r 
                                                 JOIN data_cluster c ON r.id_cluster = c.id_cluster 
                                                 LEFT JOIN data_transaksi t ON r.id_rumah = t.id_rumah AND t.status_konsumen IN ('PROSES', 'ACC - AKAD')
@@ -498,8 +505,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_transaksi'])) {
                                 while ($r = mysqli_fetch_assoc($rumah)) {
                                     $status = strtolower($r['status_unit']);
                                     $pemesan = !empty($r['pemesan']) ? $r['pemesan'] : 'Konsumen Lain';
-                                    echo "<option value='".$r['id_rumah']."' data-status='".$status."' data-pemesan='".$pemesan."'>";
-                                    echo $r['cluster_name']." - Blok ".$r['no_blok']." (Tipe ".$r['tipe_rumah'].") - Status: ".strtoupper($r['status_unit']);
+                                    $isHold = cluster_is_hold($r['cluster_status'] ?? '');
+                                    $labelHold = $isHold ? ' - [HOLD]' : '';
+                                    echo "<option value='".$r['id_rumah']."' data-status='".$status."' data-pemesan='".htmlspecialchars($pemesan, ENT_QUOTES)."' data-hold='".($isHold ? '1' : '0')."' data-cluster='".htmlspecialchars($r['cluster_name'], ENT_QUOTES)."'>";
+                                    echo $r['cluster_name']." - Blok ".$r['no_blok']." (Tipe ".$r['tipe_rumah'].") - Status: ".strtoupper($r['status_unit']).$labelHold;
                                     echo "</option>";
                                 }
                                 ?>
@@ -566,14 +575,21 @@ function cekStatusUnit(selectElement) {
     const selectedOption = selectElement.options[selectElement.selectedIndex];
     const status = selectedOption.getAttribute('data-status');
     const pemesan = selectedOption.getAttribute('data-pemesan');
-    
+    const isHold = selectedOption.getAttribute('data-hold') === '1';
+    const clusterName = selectedOption.getAttribute('data-cluster') || '';
+
     const alertBox = document.getElementById('statusAlert');
     const alertIcon = document.getElementById('alertIcon');
     const alertMessage = document.getElementById('alertMessage');
-    
+
     alertBox.className = 'alert border-0 mt-2 shadow-sm';
-    
-    if (status === 'terbooking') {
+
+    if (isHold) {
+        alertBox.classList.add('alert-danger', 'text-danger');
+        alertBox.style.backgroundColor = '#f8d7da';
+        alertIcon.className = 'bi bi-ban text-danger me-2';
+        alertMessage.innerHTML = '<strong>Cluster Dihold:</strong> Unit ini berada di Cluster <strong>' + clusterName + '</strong> yang sedang di <span class="badge bg-danger">HOLD</span> oleh sistem. Booking & pembayaran tidak dapat dilakukan.';
+    } else if (status === 'terbooking') {
         alertBox.classList.add('alert-warning', 'text-dark');
         alertBox.style.backgroundColor = '#fff3cd';
         alertIcon.className = 'bi bi-exclamation-triangle-fill text-warning me-2';
@@ -698,6 +714,7 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<?php include "includes/modal_hold.php"; ?>
     <script src="assets/js/idle.js"></script>
     <script src="assets/js/app.js"></script>
 </body>

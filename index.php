@@ -1,6 +1,7 @@
 ﻿<?php
 include 'includes/koneksi.php';
 include 'includes/berkas_helper.php';
+include 'includes/cluster_hold.php';
 
 session_start();
 // Jika belum login atau status login tidak valid, lempar paksa kembali ke halaman login
@@ -571,8 +572,8 @@ $lh_count = count($lh_rows);
                                 <select name="id_rumah" id="select_rumah" class="form-select border-0 shadow-sm" style="border-radius: 8px;" required onchange="cekStatusUnit(this)">
                                     <option value="" data-status="" data-pemesan="">-- Pilih Unit Rumah --</option>
                                     <?php
-                                    // Query mengambil data rumah + pemesan (jika terbooking/terjual)
-                                    $query_rumah = "SELECT r.*, c.cluster_name, k.name_lengkap AS pemesan 
+                                    // Query mengambil data rumah + pemesan (jika terbooked/terjual)
+                                    $query_rumah = "SELECT r.*, c.cluster_name, c.cluster_status, k.name_lengkap AS pemesan 
                                                     FROM data_rumah r 
                                                     LEFT JOIN data_cluster c ON r.id_cluster = c.id_cluster 
                                                     LEFT JOIN data_transaksi t ON r.id_rumah = t.id_rumah AND t.status_konsumen IN ('PROSES', 'ACC - AKAD')
@@ -584,8 +585,10 @@ $lh_count = count($lh_rows);
                                         $status = strtolower($r['status_unit']);
                                         $pemesan = !empty($r['pemesan']) ? $r['pemesan'] : 'Konsumen Lain';
                                         $cluster = !empty($r['cluster_name']) ? $r['cluster_name'] : 'Shankara Residence';
-                                        echo "<option value='".$r['id_rumah']."' data-status='".$status."' data-pemesan='".htmlspecialchars($pemesan)."'>";
-                                        echo $cluster." - Blok ".htmlspecialchars($r['no_blok'])." (Tipe ".htmlspecialchars($r['tipe_rumah']).") - Status: ".strtoupper($r['status_unit']);
+                                        $isHold = cluster_is_hold($r['cluster_status'] ?? '');
+                                        $labelHold = $isHold ? ' - [HOLD]' : '';
+                                        echo "<option value='".$r['id_rumah']."' data-status='".$status."' data-pemesan='".htmlspecialchars($pemesan, ENT_QUOTES)."' data-hold='".($isHold ? '1' : '0')."' data-cluster='".htmlspecialchars($cluster, ENT_QUOTES)."'>";
+                                        echo $cluster." - Blok ".htmlspecialchars($r['no_blok'])." (Tipe ".htmlspecialchars($r['tipe_rumah']).") - Status: ".strtoupper($r['status_unit']).$labelHold;
                                         echo "</option>";
                                     }
                                     ?>
@@ -642,37 +645,41 @@ $lh_count = count($lh_rows);
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<?php include "includes/modal_hold.php"; ?>
     <script>
         function cekStatusUnit(selectElement) {
             const selectedOption = selectElement.options[selectElement.selectedIndex];
             const status = selectedOption.getAttribute('data-status');
             const pemesan = selectedOption.getAttribute('data-pemesan');
-            
+            const isHold = selectedOption.getAttribute('data-hold') === '1';
+            const clusterName = selectedOption.getAttribute('data-cluster') || '';
+
             const alertBox = document.getElementById('statusAlert');
             const alertIcon = document.getElementById('alertIcon');
             const alertMessage = document.getElementById('alertMessage');
-            
-            // Reset kelas alert
+
             alertBox.className = 'alert border-0 mt-2 shadow-sm';
-            
-            if (status === 'terbooking') {
+
+            if (isHold) {
+                alertBox.classList.add('alert-danger', 'text-danger');
+                alertBox.style.backgroundColor = '#f8d7da';
+                alertIcon.className = 'bi bi-ban text-danger me-2';
+                alertMessage.innerHTML = '<strong>Cluster Dihold:</strong> Unit ini berada di Cluster <strong>' + clusterName + '</strong> yang sedang di <span class="badge bg-danger">HOLD</span> oleh sistem. Booking & pembayaran tidak dapat dilakukan.';
+            } else if (status === 'terbooking') {
                 alertBox.classList.add('alert-warning', 'text-dark');
                 alertBox.style.backgroundColor = '#fff3cd';
                 alertIcon.className = 'bi bi-exclamation-triangle-fill text-warning me-2';
                 alertMessage.innerHTML = '<strong>Peringatan:</strong> Unit ini sudah <span class="badge bg-warning text-dark">TERBOOKING</span> oleh <strong>' + pemesan + '</strong>.';
-            
             } else if (status === 'tersedia') {
                 alertBox.classList.add('alert-success', 'text-success-emphasis');
                 alertBox.style.backgroundColor = '#d1e7dd';
                 alertIcon.className = 'bi bi-check-circle-fill text-success me-2';
                 alertMessage.innerHTML = '<strong>Informasi:</strong> Unit ini <span class="badge bg-success">TERSEDIA</span> dan siap untuk dibooking!';
-            
             } else if (status === 'terjual') {
                 alertBox.classList.add('alert-danger', 'text-danger');
                 alertBox.style.backgroundColor = '#f8d7da';
                 alertIcon.className = 'bi bi-x-circle-fill text-danger me-2';
                 alertMessage.innerHTML = '<strong>Peringatan Khusus:</strong> Unit ini sudah <span class="badge bg-danger">TERJUAL</span> (Akad) atas nama <strong>' + pemesan + '</strong>.';
-            
             } else {
                 alertBox.classList.add('d-none');
             }

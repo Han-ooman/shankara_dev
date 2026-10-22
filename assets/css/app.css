@@ -2,7 +2,7 @@
 .app-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(30, 58, 138, 0.45);
+    background: rgba(15, 23, 42, 0.4);
     z-index: 1040;
     opacity: 0;
     visibility: hidden;
@@ -102,7 +102,7 @@ body.sidebar-open .app-overlay {
         transform: none;
     }
     .nav-link-custom.active::before {
-        left: -5px;
+        display: none;
     }
     .sidebar-footer {
         display: none;

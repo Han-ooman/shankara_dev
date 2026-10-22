@@ -12,16 +12,16 @@ include "../includes/koneksi.php";
 
 $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
-// Query detail pembayaran disinkronkan dengan struktur kolom tabel cluster.php (cluster_name & lokasi)
+// Query detail pembayaran. LEFT JOIN agar kwitansi di luar unit rumah (tanpa transaksi) tetap bisa dicetak.
 $query = mysqli_query($koneksi, "SELECT p.*, 
-                                       COALESCE(k.name_lengkap, 'Konsumen') AS name_lengkap,
+                                       COALESCE(k.name_lengkap, p.nama_pembayar, 'Pembayar') AS name_lengkap,
                                        r.no_blok, r.tipe_rumah,
                                        c.cluster_name,
                                        c.lokasi AS alamat_cluster
                                 FROM data_pembayaran p
-                                INNER JOIN data_transaksi t ON p.id_transaksi = t.id_transaksi
-                                INNER JOIN data_rumah r ON t.id_rumah = r.id_rumah
-                                INNER JOIN data_cluster c ON r.id_cluster = c.id_cluster
+                                LEFT JOIN data_transaksi t ON p.id_transaksi = t.id_transaksi
+                                LEFT JOIN data_rumah r ON t.id_rumah = r.id_rumah
+                                LEFT JOIN data_cluster c ON r.id_cluster = c.id_cluster
                                 LEFT JOIN data_konsumen k ON t.id_konsumen = k.id_konsumen
                                 WHERE p.id_pembayaran = '$id'");
 
@@ -31,12 +31,50 @@ if (!$data) {
     die("Data kwitansi tidak ditemukan.");
 }
 
-// Menentukan Nama Cluster dan Alamat Sesuai Data Cluster
-$nama_cluster   = !empty($data['cluster_name']) ? strtoupper($data['cluster_name']) : 'SHANKARA RESIDENCE';
-$alamat_lokasi  = !empty($data['alamat_cluster']) ? $data['alamat_cluster'] : 'Jln. Sukaramai, Dalam Kaum';
+// Query semua blok milik kwitansi ini (kwitansi bisa memuat 2+ blok dari 1 orang)
+$blok_list = [];
+$q_blok = mysqli_query($koneksi, "SELECT r.no_blok, r.tipe_rumah, c.cluster_name, c.lokasi, k.name_lengkap
+                                  FROM data_pembayaran_detail pd
+                                  JOIN data_transaksi t ON pd.id_transaksi = t.id_transaksi
+                                  LEFT JOIN data_rumah r ON t.id_rumah = r.id_rumah
+                                  LEFT JOIN data_cluster c ON r.id_cluster = c.id_cluster
+                                  LEFT JOIN data_konsumen k ON t.id_konsumen = k.id_konsumen
+                                  WHERE pd.id_pembayaran = '$id'
+                                  ORDER BY c.cluster_name, r.no_blok");
+if ($q_blok) {
+    while ($b = mysqli_fetch_assoc($q_blok)) {
+        $blok_list[] = $b;
+    }
+}
 
-// Satuan properti menyesuaikan jenis cluster (kavling vs unit rumah)
-$satuan_properti = (stripos($nama_cluster, 'KAVLING') !== false) ? '1 kavling' : '1 unit rumah';
+// Kwitansi di luar unit rumah: tanpa blok / cluster, arah uang PT -> Konsumen
+$is_non_unit = empty($data['id_transaksi']);
+$jenis_arah  = $is_non_unit ? 'Pengeluaran' : 'Pembayaran';
+
+// Blok ditampilkan dari detail; fallback ke transaksi utama bila detail kosong
+$jumlah_blok = count($blok_list);
+if ($jumlah_blok === 0 && !$is_non_unit && !empty($data['no_blok'])) {
+    $blok_list[] = [
+        'no_blok'       => $data['no_blok'],
+        'tipe_rumah'    => $data['tipe_rumah'] ?? '',
+        'cluster_name'  => $data['cluster_name'] ?? '',
+        'lokasi'        => $data['alamat_cluster'] ?? '',
+        'name_lengkap'  => $data['name_lengkap'] ?? '',
+    ];
+    $jumlah_blok = 1;
+}
+$daftar_blok_txt = implode(', ', array_column($blok_list, 'no_blok'));
+
+// Menentukan Nama Cluster dan Alamat Sesuai Data Cluster
+$cluster_blok = $blok_list[0]['cluster_name'] ?? $data['cluster_name'] ?? '';
+$nama_cluster   = !empty($cluster_blok) ? strtoupper($cluster_blok) : 'SHANKARA RESIDENCE';
+$alamat_lokasi  = !empty($blok_list[0]['lokasi']) ? $blok_list[0]['lokasi'] : (!empty($data['alamat_cluster']) ? $data['alamat_cluster'] : 'Jln. Sukaramai, Dalam Kaum');
+
+// Satuan properti menyesuaikan jenis cluster (kavling vs unit rumah) dan jumlah blok
+$satuan_properti = $is_non_unit ? '' : ((stripos($nama_cluster, 'KAVLING') !== false) ? ($jumlah_blok . ' kavling') : ($jumlah_blok . ' unit rumah'));
+
+// Catatan / keterangan pembayaran, ditampilkan setelah kalimat "Untuk Pembayaran"
+$catatan = trim(preg_replace('/\s+/', ' ', (string)($data['keterangan'] ?? '')));
 
 // Fungsi Terbilang Indonesia
 function terbilang($angka) {
@@ -80,7 +118,7 @@ $tgl_pembayaran = tgl_indo($data['tgl_bayar']);
 <head>
     <meta charset="UTF-8">
 
-    <link rel="icon" type="image/png" href="../assets/images/favicon/favicon.png">    <title>Kwitansi_Blok_<?= htmlspecialchars($data['no_blok']) ?></title>
+    <link rel="icon" type="image/png" href="../assets/images/favicon/favicon.png">    <title>Kwitansi<?= $is_non_unit ? '_NonUnit' : '_Blok_' . htmlspecialchars($data['no_blok'] ?? '-') ?></title>
     <style>
     /* PENGATURAN KERTAS PORTRAIT FULL PAGE */
     @page {
@@ -315,7 +353,7 @@ $tgl_pembayaran = tgl_indo($data['tgl_bayar']);
         cursor: pointer;
     }
 
-    /* ATURAN SAAT DICETAK */
+    /* ATURAN SAAT DICETAK / EXPORT PDF */
     @media print {
         * {
             -webkit-print-color-adjust: exact !important;
@@ -333,6 +371,8 @@ $tgl_pembayaran = tgl_indo($data['tgl_bayar']);
             max-width: 100% !important;
             margin: 0 !important;
             border: 2px solid #1e3a8a;
+            /* Scale 72% hanya saat cetak / export PDF, desain di layar tetap asli */
+            zoom: 0.72;
         }
         .no-print-btn {
             display: none;
@@ -343,7 +383,7 @@ $tgl_pembayaran = tgl_indo($data['tgl_bayar']);
 <body>
 
 <div class="no-print-btn">
-    <button onclick="window.print()" class="btn-print">Ã°Å¸â€“Â¨Ã¯Â¸Â Cetak / Simpan PDF</button>
+        <button onclick="window.print()" class="btn-print">🖨 Cetak / Simpan PDF</button>
 </div>
 
 <div class="kwitansi-card">
@@ -360,17 +400,21 @@ $tgl_pembayaran = tgl_indo($data['tgl_bayar']);
         <!-- BARIS NO BLOK & KWITANSI -->
         <div class="row-top">
             <div class="no-blok-box">
-                NO. BLOK <span class="no-blok-val"><?= htmlspecialchars($data['no_blok'] ?? '-') ?></span>
+                <?php if ($is_non_unit): ?>
+                    BUKAN UNIT RUMAH <span class="no-blok-val">-</span>
+                <?php else: ?>
+                    NO. BLOK <span class="no-blok-val"><?= htmlspecialchars($daftar_blok_txt ?: '-') ?></span>
+                <?php endif; ?>
             </div>
             <div class="kwitansi-title">
-                <u>KWITANSI PEMBAYARAN</u>
+                <u>KWITANSI <?= $jenis_arah ?></u>
             </div>
         </div>
 
         <!-- TABEL ISIAN -->
         <table class="kwitansi-table">
             <tr>
-                <td class="label-col">Telah terima dari</td>
+                <td class="label-col"><?= $is_non_unit ? 'Telah dibayarkan kepada' : 'Telah terima dari' ?></td>
                 <td class="colon-col">:</td>
                 <td>
                     <div class="value-box">
@@ -388,11 +432,18 @@ $tgl_pembayaran = tgl_indo($data['tgl_bayar']);
                 </td>
             </tr>
             <tr>
-                <td class="label-col" style="padding-top: 12px;">Untuk Pembayaran</td>
+                <td class="label-col" style="padding-top: 12px;">Untuk <?= $jenis_arah ?></td>
                 <td class="colon-col" style="padding-top: 12px;">:</td>
                 <td style="padding-top: 12px;">
                     <div class="underline-text">
-                        Pembayaran <?= htmlspecialchars($data['jenis_pembayaran']) ?> pembelian <?= $satuan_properti ?> di <?= htmlspecialchars($nama_cluster) ?> Blok <?= htmlspecialchars($data['no_blok']) ?> pada tanggal <?= $tgl_pembayaran ?>
+                        <?php if ($is_non_unit): ?>
+                            Pengeluaran <?= htmlspecialchars($data['jenis_pembayaran']) ?> (di luar transaksi unit rumah) kepada <?= htmlspecialchars($data['name_lengkap']) ?> pada tanggal <?= $tgl_pembayaran ?>
+                        <?php else: ?>
+                            Pembayaran <?= htmlspecialchars($data['jenis_pembayaran']) ?> pembelian <?= $satuan_properti ?> di <?= htmlspecialchars($nama_cluster) ?> Blok <?= htmlspecialchars($daftar_blok_txt ?: '-') ?> pada tanggal <?= $tgl_pembayaran ?>
+                        <?php endif; ?>
+                        <?php if ($catatan !== ''): ?>
+                            <br>- (<?= htmlspecialchars($catatan) ?>)
+                        <?php endif; ?>
                     </div>
                     <div class="blank-line"></div>
                 </td>
@@ -414,10 +465,14 @@ $tgl_pembayaran = tgl_indo($data['tgl_bayar']);
                 </div>
                 <br>
                 <div class="ttd-nama">
-                    ( Hanapi, S.Tr.Kom )
+                    <?php if ($is_non_unit): ?>
+                        ( <?= htmlspecialchars($data['name_lengkap']) ?> )
+                    <?php else: ?>
+                        ( Hanapi, S.Tr.Kom )
+                    <?php endif; ?>
                 </div>
                 <div class="ttd-jabatan">
-                    Penerima / Administrator
+                    <?= $is_non_unit ? 'Penerima' : 'Penerima / Administrator' ?>
                 </div>
             </div>
         </div>

@@ -275,7 +275,7 @@ if ($potongan > 0)       $baris[] = ['label' => 'Potongan' . (!empty($data['kete
     <div class="header">
         <div class="company-info">
             <div class="logo-section">
-                <img src="format_bast/logo/logo_kop.png" alt="Logo Shankara" class="logo-icon">
+                <img src="../format_bast/logo/logo_kop.png" alt="Logo Shankara" class="logo-icon">
                 <div>
                     <div class="company-name-title">SHANKARA RESIDENCE</div>
                     <div class="company-subtitle">REAL ESTATE</div>

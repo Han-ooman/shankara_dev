@@ -66,7 +66,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
     exit();
 }
 
-// TANDAI DEAL â†’ pindah ke data_konsumen
+// TANDAI DEAL → pindah ke data_konsumen
 if (isset($_POST['deal_prospek'])) {
     $id = intval($_POST['id_prospek']);
     $q = mysqli_query($koneksi, "SELECT * FROM data_prospek WHERE id_prospek = $id");

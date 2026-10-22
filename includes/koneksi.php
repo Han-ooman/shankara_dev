@@ -24,16 +24,14 @@ if ($_self !== 'maintenance.php' && $_self !== 'toggle_maintenance.php') {
     }
 }
 
-$host = "localhost";
-$user = "root";
-$pass = "";
-$db   = "db_perumahan";
+// Koneksi via adapter mysqli-compat -> Supabase PostgreSQL (PDO pgsql)
+require_once __DIR__ . '/db_adapter.php';
 
-$koneksi = mysqli_connect($host, $user, $pass, $db);
+$koneksi = mysqli_connect(SUPABASE_DSN, SUPABASE_USER, SUPABASE_PASSWORD, 'postgres');
 
-if (!$koneksi) {
+if (!($koneksi instanceof mysqli) || $koneksi->connect_errno) {
     // Jangan bocorkan detail koneksi ke pengguna; catat ke log server.
-    error_log("Koneksi DB gagal: " . mysqli_connect_error());
+    error_log("Koneksi DB gagal: " . $koneksi->connect_error);
     http_response_code(500);
     die("Terjadi kesalahan internal. Silakan hubungi administrator.");
 }

@@ -65,12 +65,14 @@ if (!function_exists('konsumen_status_sql')) {
 
         if ($f['keyword'] !== '') {
             $kw = $esc($f['keyword']);
-            $q .= " AND (k.id_konsumen LIKE '%$kw%'"
-                . " OR k.name_lengkap LIKE '%$kw%'"
-                . " OR k.pekerjaan LIKE '%$kw%'"
-                . " OR k.no_whatsapp LIKE '%$kw%'"
-                . " OR k.no_ktp LIKE '%$kw%'"
-                . " OR k.alamat_ktp LIKE '%$kw%')";
+            // id_konsumen bertipe integer; CONCAT('', ...) membuatnya teks di MySQL maupun PostgreSQL.
+            // LOWER() di kedua sisi agar pencarian tidak peka huruf besar/kecil (perilaku MySQL).
+            $q .= " AND (LOWER(CONCAT('', k.id_konsumen)) LIKE LOWER('%$kw%')"
+                . " OR LOWER(k.name_lengkap) LIKE LOWER('%$kw%')"
+                . " OR LOWER(k.pekerjaan) LIKE LOWER('%$kw%')"
+                . " OR LOWER(k.no_whatsapp) LIKE LOWER('%$kw%')"
+                . " OR LOWER(k.no_ktp) LIKE LOWER('%$kw%')"
+                . " OR LOWER(k.alamat_ktp) LIKE LOWER('%$kw%'))";
         }
 
         if ($f['pekerjaan'] !== '') {

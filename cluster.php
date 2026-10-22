@@ -287,11 +287,13 @@ if (!empty($selected_cluster_id)) {
                         while ($row_c = mysqli_fetch_assoc($q_table_cluster)) {
                             // Formatting status badge
                             $st_lower = strtolower(trim($row_c['cluster_status']));
-                            if ($st_lower === 'done') {
-                                $badge_status = '<span class="badge bg-success-subtle text-success border border-success px-3 py-1 rounded-pill"><i class="bi bi-check-all me-1"></i>Done</span>';
-                            } elseif ($st_lower === 'on going') {
-                                $badge_status = '<span class="badge bg-primary-subtle text-primary border border-primary px-3 py-1 rounded-pill"><i class="bi bi-arrow-repeat me-1"></i>On Going</span>';
-                            } else {
+if ($st_lower === 'done') {
+                                 $badge_status = '<span class="badge bg-success-subtle text-success border border-success px-3 py-1 rounded-pill"><i class="bi bi-check-all me-1"></i>Done</span>';
+                             } elseif ($st_lower === 'on going') {
+                                 $badge_status = '<span class="badge bg-primary-subtle text-primary border border-primary px-3 py-1 rounded-pill"><i class="bi bi-arrow-repeat me-1"></i>On Going</span>';
+                             } elseif (in_array($st_lower, ['hold', 'di hold'], true)) {
+                                 $badge_status = '<span class="badge bg-danger-subtle text-danger border border-danger px-3 py-1 rounded-pill"><i class="bi bi-pause-circle me-1"></i>Hold</span>';
+                             } else {
                                 $badge_status = '<span class="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-1 rounded-pill"><i class="bi bi-hourglass me-1"></i>Not Started</span>';
                             }
                         ?>
@@ -339,6 +341,7 @@ if (!empty($selected_cluster_id)) {
                                                             <option value="on going" <?= ($row_c['cluster_status'] == 'on going') ? 'selected' : '' ?>>on going</option>
                                                             <option value="done" <?= ($row_c['cluster_status'] == 'done') ? 'selected' : '' ?>>done</option>
                                                             <option value="not started" <?= ($row_c['cluster_status'] == 'not started') ? 'selected' : '' ?>>not started</option>
+                                                            <option value="hold" <?= ($row_c['cluster_status'] == 'hold') ? 'selected' : '' ?>>hold</option>
                                                         </select>
                                                     </div>
                                                 </div>
@@ -389,6 +392,7 @@ if (!empty($selected_cluster_id)) {
                             <option value="on going">on going</option>
                             <option value="done">done</option>
                             <option value="not started">not started</option>
+                            <option value="hold">hold</option>
                         </select>
                     </div>
                 </div>

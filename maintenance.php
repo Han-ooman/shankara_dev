@@ -165,7 +165,7 @@
     <div class="brand-name">Shankara Dev</div>
 
     <div class="card">
-        <span class="icon-wrench">ðŸ› </span>
+        <span class="icon-wrench">🔧</span>
         <h2>Website Sedang Dalam Perbaikan</h2>
         <p>Sistem sedang dalam proses pembaruan atau pemeliharaan. Silakan coba kembali beberapa saat lagi.</p>
 

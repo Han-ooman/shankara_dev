@@ -30,9 +30,9 @@ class AuthController extends BaseController {
         $limit_device = in_array((int)$user['id'], [1, 5], true) ? 2 : 1;
         Database::execute(
             "DELETE FROM user_sesi
-             WHERE user_id = ? AND id NOT IN (
-                 SELECT id FROM (
-                     SELECT id FROM user_sesi WHERE user_id = ? ORDER BY last_active DESC LIMIT ?
+             WHERE user_id = ? AND id_sesi NOT IN (
+                 SELECT id_sesi FROM (
+                     SELECT id_sesi FROM user_sesi WHERE user_id = ? ORDER BY last_active DESC LIMIT ?
                  ) AS t
              )",
             [$user['id'], $user['id'], $limit_device - 1]

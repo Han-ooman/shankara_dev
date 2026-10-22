@@ -1,5 +1,6 @@
 <?php
 include __DIR__ . "/koneksi.php";
+include __DIR__ . "/cluster_hold.php";
 
 session_start();
 
@@ -15,6 +16,9 @@ if (isset($_POST['simpan'])) {
     $id_rumah       = $_POST['id_rumah'];
     $skema_bayar    = $_POST['skema_bayar'];
     $status_konsumen = $_POST['status_konsumen'];
+
+    // Blokir booking baru bila cluster sedang di HOLD
+    cluster_hold_cek_rumah($koneksi, (int)$id_rumah, '../index.php');
     
     // Penanganan Tanggal Akad (Jika kosong diisi NULL)
     $tanggal_akad   = !empty($_POST['tanggal_akad']) ? "'".$_POST['tanggal_akad']."'" : "NULL";

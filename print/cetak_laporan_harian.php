@@ -137,7 +137,7 @@ foreach ($rows as $r) {
     <?php else: ?>
         <?php foreach ($grouped as $tgl => $items): ?>
             <div class="date-group">
-                <div class="date-label">ðŸ“… <?= date('l, d F Y', strtotime($tgl)) ?></div>
+            <div class="date-label">📅 <?= date('l, d F Y', strtotime($tgl)) ?></div>
                 <table>
                     <thead>
                         <tr>

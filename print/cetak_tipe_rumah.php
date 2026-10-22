@@ -7,7 +7,7 @@ if (!isset($_SESSION['status_login']) || $_SESSION['status_login'] !== true) {
 include "../includes/cek_sesi.php";
 include "../includes/koneksi.php";
 
-$q_tipe = mysqli_query($koneksi, "SELECT * FROM data_tipe_rumah ORDER BY CAST(tipe_rumah AS UNSIGNED) ASC, id_tipe ASC");
+$q_tipe = mysqli_query($koneksi, "SELECT * FROM data_tipe_rumah ORDER BY CAST(LEFT(tipe_rumah, 3) AS UNSIGNED) ASC, id_tipe ASC");
 $data_tipe = [];
 if ($q_tipe) { while ($r = mysqli_fetch_assoc($q_tipe)) { $data_tipe[] = $r; } }
 
@@ -188,8 +188,8 @@ function ambil_plafon($keterangan) {
 <body>
 
 <div class="no-print-btn">
-    <button onclick="window.print()" class="btn-print">ðŸ–¨ï¸ Cetak / Simpan PDF</button>
-    <a href="tipe_rumah.php" class="btn-back">â† Kembali</a>
+        <button onclick="window.print()" class="btn-print">🖨 Cetak / Simpan PDF</button>
+        <a href="tipe_rumah.php" class="btn-back">← Kembali</a>
 </div>
 
 <?php if (empty($data_tipe)): ?>

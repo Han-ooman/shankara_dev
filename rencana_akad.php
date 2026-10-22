@@ -6,6 +6,7 @@ if (!isset($_SESSION['status_login']) || $_SESSION['status_login'] !== true) {
 }
 include "includes/cek_sesi.php";
 include "includes/koneksi.php";
+include "includes/cluster_hold.php";
 require_once __DIR__ . '/includes/helper_log.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrf_verify()) {
@@ -39,12 +40,16 @@ $bulanPrev = date('Y-m', strtotime($bulan . '-01 -1 month'));
 $bulanNext = date('Y-m', strtotime($bulan . '-01 +1 month'));
 $blnPertama = $bulan . '-01';
 $blnTerakhir = date('Y-m-t', strtotime($blnPertama));
-$labelBulan = strftime('%B %Y', strtotime($blnPertama));
+$labelBulan = date('F Y', strtotime($blnPertama));
 
 if (isset($_POST['simpan_rencana'])) {
     $tgl_booking     = date('Y-m-d');
     $id_konsumen     = intval($_POST['id_konsumen']);
     $id_rumah        = intval($_POST['id_rumah']);
+
+    // Blokir rencana akad baru bila cluster sedang di HOLD
+    cluster_hold_cek_rumah($koneksi, $id_rumah, "rencana_akad.php?bulan=$bulan");
+
     $skema_bayar     = mysqli_real_escape_string($koneksi, $_POST['skema_bayar']);
     $skema_akad      = mysqli_real_escape_string($koneksi, $_POST['skema_akad']);
     $bank_tujuan    = mysqli_real_escape_string($koneksi, $_POST['bank_tujuan'] ?? '');
@@ -520,6 +525,7 @@ if ($ada) {
 <?php }} ?>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<?php include "includes/modal_hold.php"; ?>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const searchInput = document.getElementById('searchInput');

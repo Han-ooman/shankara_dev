@@ -106,7 +106,7 @@ if (isset($_GET['hapus'])) {
     exit();
 }
 
-$q_tipe = mysqli_query($koneksi, "SELECT * FROM data_tipe_rumah ORDER BY CAST(tipe_rumah AS UNSIGNED) ASC, id_tipe ASC");
+$q_tipe = mysqli_query($koneksi, "SELECT * FROM data_tipe_rumah ORDER BY CAST(LEFT(tipe_rumah, 3) AS UNSIGNED) ASC, id_tipe ASC");
 $data_tipe = [];
 if ($q_tipe) { while ($r = mysqli_fetch_assoc($q_tipe)) { $data_tipe[] = $r; } }
 

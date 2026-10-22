@@ -26,7 +26,7 @@ function xls_cell($v)
     return htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
 }
 ?>
-<html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
 <head>
     <meta charset="UTF-8">
     <style>
@@ -35,6 +35,8 @@ function xls_cell($v)
         .judul { font-size: 15px; font-weight: bold; color: #1e3a8a; }
         .subjudul { font-size: 11px; color: #444444; }
         .tengah { text-align: center; }
+        /* Paksa sel jadi format teks agar angka panjang (No. KTP/WA) tidak jadi notasi ilmiah */
+        .teks { mso-number-format: '\@'; }
     </style>
 </head>
 <body>
@@ -72,10 +74,10 @@ function xls_cell($v)
             <td><?= xls_cell($row['name_lengkap']) ?></td>
             <td><?= xls_cell($row['pekerjaan'] ?: '-') ?></td>
             <td><?= xls_cell($row['alamat_ktp'] ?: '-') ?></td>
-            <td><?= xls_cell(!empty($row['no_ktp']) && $row['no_ktp'] != '-' ? $row['no_ktp'] : '-') ?></td>
-            <td><?= xls_cell(!empty($row['no_whatsapp']) && $row['no_whatsapp'] != '-' ? $row['no_whatsapp'] : '-') ?></td>
+            <td class="teks"><?= xls_cell(!empty($row['no_ktp']) && $row['no_ktp'] != '-' ? $row['no_ktp'] : '-') ?></td>
+            <td class="teks"><?= xls_cell(!empty($row['no_whatsapp']) && $row['no_whatsapp'] != '-' ? $row['no_whatsapp'] : '-') ?></td>
             <td><?= xls_cell(!empty($row['bi_status']) ? $row['bi_status'] : 'Belum Dicek') ?></td>
-            <td class="tengah"><?= xls_cell($tgl_bi) ?></td>
+            <td class="tengah teks"><?= xls_cell($tgl_bi) ?></td>
             <td><?= xls_cell($tx['label']) ?></td>
         </tr>
         <?php endforeach; endif; ?>

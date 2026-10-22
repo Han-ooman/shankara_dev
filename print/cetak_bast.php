@@ -52,8 +52,8 @@ $nama_konsumen = !empty($data['name_lengkap']) ? $data['name_lengkap'] : '______
 $no_ktp = !empty($data['no_ktp']) ? $data['no_ktp'] : '_____________________';
 $alamat_ktp = !empty($data['alamat_ktp']) ? $data['alamat_ktp'] : '________________________________________';
 $tipe_rumah = !empty($data['tipe_rumah']) ? strtoupper($data['tipe_rumah']) : '______';
-$luas_bangunan = !empty($data['luas_bangunan']) ? $data['luas_bangunan'] . ' mÂ²' : '______ mÂ²';
-$luas_tanah = !empty($data['luas_tanah']) ? $data['luas_tanah'] . ' mÂ²' : '______ mÂ²';
+$luas_bangunan = !empty($data['luas_bangunan']) ? $data['luas_bangunan'] . ' m²' : '______ m²';
+$luas_tanah = !empty($data['luas_tanah']) ? $data['luas_tanah'] . ' m²' : '______ m²';
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -278,7 +278,7 @@ $luas_tanah = !empty($data['luas_tanah']) ? $data['luas_tanah'] . ' mÂ²' : '__
 <div class="bast-card">
     <!-- HEADER PERUSAHAAN -->
     <div class="header-company">
-        <img src="format_bast/logo/logo_kop.png" alt="Logo Shankara Group" class="kop-logo">
+        <img src="../format_bast/logo/logo_kop.png" alt="Logo Shankara Group" class="kop-logo">
         <div class="kop-text">
             <h1>PT. GOLDEN SHANKARA INDONESIA</h1>
             <p>Alamat: Jalan Lintas Kalimantan Poros Utara Kartiasa No. 86, Sambas-Kalimantan Barat</p>

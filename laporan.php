@@ -45,7 +45,7 @@ if ($q_skema) {
 }
 
 // 4. DATA UNTUK CHART PENJUALAN PER CLUSTER (BAR CHART) & TABEL REKAP
-// Single grouped query instead of 5 queries Ã— N clusters
+// Single grouped query instead of 5 queries × N clusters
 $stats_per_cluster = [];
 $q_cstats = mysqli_query($koneksi, "SELECT 
     r.id_cluster,

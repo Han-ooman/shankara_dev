@@ -48,31 +48,77 @@ if (isset($_POST['update_status_kpr'])) {
         log_aktivitas($koneksi, 'UBAH', 'Status KPR', 'Update status KPR ' . count($ids) . ' transaksi (#' . implode(',', $ids) . ')', $val);
     }
 
-    $f = in_array($_POST['f'] ?? '', ['bphtb', 'tapera', 'trilogi', 'sikumbang']) ? $_POST['f'] : '';
-    header("Location: status_kpr.php" . ($f ? "?f=$f" : ''));
+    $allowedParams = ['k', 'f', 'f_cluster', 'f_status', 'f_skema', 'f_akad_dari', 'f_akad_sampai', 'f_bphtb', 'f_tapera', 'f_trilogi', 'f_sikumb'];
+    parse_str((string)($_POST['redirect'] ?? ''), $q);
+    $keep = [];
+    foreach ($allowedParams as $key) {
+        if (isset($q[$key]) && $q[$key] !== '') { $keep[$key] = $q[$key]; }
+    }
+    $qs = http_build_query($keep);
+    header("Location: status_kpr.php" . ($qs !== '' ? '?' . $qs : ''));
     exit();
 }
 
 // ==========================================
-// FILTER
+// FILTER LENGKAP & PINTAR
 // ==========================================
 $keyword = isset($_GET['k']) ? mysqli_real_escape_string($koneksi, $_GET['k']) : '';
 $filterF = isset($_GET['f']) ? $_GET['f'] : '';
 $filterF = in_array($filterF, ['bphtb', 'tapera', 'trilogi', 'sikumbang']) ? $filterF : '';
 
+// Filter tahap KPR per modul
+$filterBphtb   = in_array($_GET['f_bphtb']   ?? '', ['belum', 'sudah']) ? $_GET['f_bphtb']   : '';
+$filterTapera  = in_array($_GET['f_tapera']  ?? '', ['belum', 'sudah']) ? $_GET['f_tapera']  : '';
+$filterTrilogi = in_array($_GET['f_trilogi'] ?? '', ['belum', 'sudah']) ? $_GET['f_trilogi'] : '';
+$filterSikumb  = in_array($_GET['f_sikumb']  ?? '', ['belum', 'sudah']) ? $_GET['f_sikumb']  : '';
+
+// Filter tambahan
+$filterCluster   = isset($_GET['f_cluster'])   ? mysqli_real_escape_string($koneksi, $_GET['f_cluster'])   : '';
+$filterStatusK   = isset($_GET['f_status'])    ? mysqli_real_escape_string($koneksi, $_GET['f_status'])    : '';
+$filterSkema     = isset($_GET['f_skema'])     ? mysqli_real_escape_string($koneksi, $_GET['f_skema'])     : '';
+$filterAkadDari  = isset($_GET['f_akad_dari']) ? mysqli_real_escape_string($koneksi, $_GET['f_akad_dari']) : '';
+$filterAkadSampai= isset($_GET['f_akad_sampai']) ? mysqli_real_escape_string($koneksi, $_GET['f_akad_sampai']) : '';
+
 $whereBase = "t.status_konsumen != 'BATAL' AND (t.skema_bayar = 'KPR Subsidi' OR r.tipe_rumah = '36') AND t.skema_bayar NOT IN ('Cash Tempo', 'Cash Keras')";
+
 if ($keyword !== '') {
     $whereBase .= " AND (k.name_lengkap LIKE '%$keyword%' OR r.no_blok LIKE '%$keyword%' OR c.cluster_name LIKE '%$keyword%')";
 }
+if ($filterCluster) {
+    $whereBase .= " AND c.cluster_name = '$filterCluster'";
+}
+if ($filterStatusK) {
+    $whereBase .= " AND t.status_konsumen = '$filterStatusK'";
+}
+if ($filterSkema) {
+    $whereBase .= " AND t.skema_bayar = '$filterSkema'";
+}
+if ($filterAkadDari) {
+    $whereBase .= " AND t.tanggal_akad >= '$filterAkadDari'";
+}
+if ($filterAkadSampai) {
+    $whereBase .= " AND t.tanggal_akad <= '$filterAkadSampai'";
+}
 
-// Dedup: 1 transaksi terbaru per (konsumen + unit), utamakan yang sudah punya tanggal akad
-$durPart = "ROW_NUMBER() OVER (PARTITION BY t.id_konsumen, t.id_rumah ORDER BY (t.tanggal_akad IS NULL) ASC, t.id_transaksi DESC) AS rn";
+// Filter tahap KPR (sudah/belum) - ditambahkan ke whereBase
+if ($filterBphtb === 'belum')   { $whereBase .= " AND (t.status_bphtb = 'Belum Dikerjakan' OR t.status_bphtb IS NULL OR t.status_bphtb = '')"; }
+elseif ($filterBphtb === 'sudah') { $whereBase .= " AND NOT (t.status_bphtb = 'Belum Dikerjakan' OR t.status_bphtb IS NULL OR t.status_bphtb = '')"; }
+if ($filterTapera === 'belum')  { $whereBase .= " AND (t.status_tapera = 'Belum Daftar' OR t.status_tapera IS NULL OR t.status_tapera = '')"; }
+elseif ($filterTapera === 'sudah'){ $whereBase .= " AND NOT (t.status_tapera = 'Belum Daftar' OR t.status_tapera IS NULL OR t.status_tapera = '')"; }
+if ($filterTrilogi === 'belum') { $whereBase .= " AND (t.status_trilogi = 'Belum Diaplikasi' OR t.status_trilogi IS NULL OR t.status_trilogi = '')"; }
+elseif ($filterTrilogi === 'sudah'){ $whereBase .= " AND NOT (t.status_trilogi = 'Belum Diaplikasi' OR t.status_trilogi IS NULL OR t.status_trilogi = '')"; }
+if ($filterSikumb === 'belum')  { $whereBase .= " AND (t.status_sikumbang = 'Belum' OR t.status_sikumbang IS NULL OR t.status_sikumbang = '')"; }
+elseif ($filterSikumb === 'sudah'){ $whereBase .= " AND NOT (t.status_sikumbang = 'Belum' OR t.status_sikumbang IS NULL OR t.status_sikumbang = '')"; }
 
+// Legacy filter f (BPHTB/Tapera/Trilogi/Sikumbang Belum) - backward compat
 $whereFilt = '';
 if ($filterF === 'bphtb')      { $whereFilt = " AND (status_bphtb = 'Belum Dikerjakan' OR status_bphtb IS NULL OR status_bphtb = '')"; }
 elseif ($filterF === 'tapera') { $whereFilt = " AND (status_tapera = 'Belum Daftar' OR status_tapera IS NULL OR status_tapera = '')"; }
 elseif ($filterF === 'trilogi'){ $whereFilt = " AND (status_trilogi = 'Belum Diaplikasi' OR status_trilogi IS NULL OR status_trilogi = '')"; }
 elseif ($filterF === 'sikumbang'){ $whereFilt = " AND (status_sikumbang = 'Belum' OR status_sikumbang IS NULL OR status_sikumbang = '')"; }
+
+// Dedup: 1 transaksi terbaru per (konsumen + unit), utamakan yang sudah punya tanggal akad
+$durPart = "ROW_NUMBER() OVER (PARTITION BY t.id_konsumen, t.id_rumah ORDER BY (t.tanggal_akad IS NULL) ASC, t.id_transaksi DESC) AS rn";
 
 // ==========================================
 // STATISTIK (dedup tanpa filter status, sesuai makna kartu "Belum")
@@ -85,13 +131,15 @@ $q_stat = mysqli_query($koneksi, "SELECT
     SUM(trilogi0) AS trilogi,
     SUM(sikumbang0) AS sikumbang
 FROM (
-    SELECT (t.status_bphtb = 'Belum Dikerjakan' OR t.status_bphtb IS NULL OR t.status_bphtb = '') AS bphtb0,
-           (t.status_tapera = 'Belum Daftar' OR t.status_tapera IS NULL OR t.status_tapera = '') AS tapera0,
-           (t.status_trilogi = 'Belum Diaplikasi' OR t.status_trilogi IS NULL OR t.status_trilogi = '') AS trilogi0,
-           (t.status_sikumbang = 'Belum' OR t.status_sikumbang IS NULL OR t.status_sikumbang = '') AS sikumbang0,
+    SELECT (t.status_bphtb = 'Belum Dikerjakan' OR t.status_bphtb IS NULL OR t.status_bphtb = '')::int AS bphtb0,
+           (t.status_tapera = 'Belum Daftar' OR t.status_tapera IS NULL OR t.status_tapera = '')::int AS tapera0,
+           (t.status_trilogi = 'Belum Diaplikasi' OR t.status_trilogi IS NULL OR t.status_trilogi = '')::int AS trilogi0,
+           (t.status_sikumbang = 'Belum' OR t.status_sikumbang IS NULL OR t.status_sikumbang = '')::int AS sikumbang0,
            $durPart
     FROM data_transaksi t
+    JOIN data_konsumen k ON t.id_konsumen = k.id_konsumen
     JOIN data_rumah r ON t.id_rumah = r.id_rumah
+    JOIN data_cluster c ON r.id_cluster = c.id_cluster
     WHERE $whereBase
 ) sub
 WHERE sub.rn = 1");
@@ -102,6 +150,19 @@ if ($s = mysqli_fetch_assoc($q_stat)) {
     $stat['trilogi']   = intval($s['trilogi']);
     $stat['sikumbang'] = intval($s['sikumbang']);
 }
+
+// Ambil daftar untuk dropdown filter
+$clusters = [];
+$q_cl = mysqli_query($koneksi, "SELECT DISTINCT cluster_name FROM data_cluster ORDER BY cluster_name");
+while ($r = mysqli_fetch_assoc($q_cl)) $clusters[] = $r['cluster_name'];
+
+$skemas = [];
+$q_sk = mysqli_query($koneksi, "SELECT DISTINCT skema_bayar FROM data_transaksi WHERE skema_bayar IS NOT NULL AND skema_bayar != '' ORDER BY skema_bayar");
+while ($r = mysqli_fetch_assoc($q_sk)) $skemas[] = $r['skema_bayar'];
+
+$statuses = [];
+$q_st = mysqli_query($koneksi, "SELECT DISTINCT status_konsumen FROM data_transaksi WHERE status_konsumen IS NOT NULL AND status_konsumen != '' ORDER BY status_konsumen");
+while ($r = mysqli_fetch_assoc($q_st)) $statuses[] = $r['status_konsumen'];
 
 function status_nilai_html($v) {
     if ($v === null || $v === '' || strpos($v, 'Belum') === 0) {
@@ -228,31 +289,145 @@ function status_nilai_html($v) {
             </div>
 
             <div class="content-card">
-                <div class="row g-2 mb-4 align-items-center filter-section">
-                    <div class="col-md-4">
+                <form method="GET" action="status_kpr.php" id="filterForm">
+                <div class="row g-2 mb-3 align-items-center filter-section">
+                    <div class="col-md-3">
                         <div class="position-relative">
                             <i class="bi bi-search position-absolute text-muted" style="left: 16px; top: 50%; transform: translateY(-50%);"></i>
-                            <input type="text" id="searchInput" class="form-control filter-input ps-5 shadow-none" placeholder="Cari konsumen / unit rumah...">
+                            <input type="text" id="searchInput" name="k" class="form-control filter-input ps-5 shadow-none" placeholder="Cari konsumen / blok / cluster..." value="<?= htmlspecialchars($keyword) ?>">
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <form method="GET" action="status_kpr.php" class="d-flex align-items-center gap-2">
-                            <select name="f" class="form-select filter-input shadow-none" onchange="this.form.submit()">
-                                <option value="">Semua Status</option>
-                                <option value="bphtb" <?= $filterF === 'bphtb' ? 'selected' : '' ?>>BPHTB Belum Dikerjakan</option>
-                                <option value="tapera" <?= $filterF === 'tapera' ? 'selected' : '' ?>>Tapera Belum Daftar</option>
-                                <option value="trilogi" <?= $filterF === 'trilogi' ? 'selected' : '' ?>>Trilogi Belum Diaplikasi</option>
-                                <option value="sikumbang" <?= $filterF === 'sikumbang' ? 'selected' : '' ?>>Sikumbang Belum Hijau</option>
-                            </select>
-                        </form>
+                    <div class="col-md-2">
+                        <select name="f" class="form-select filter-input shadow-none">
+                            <option value="">Semua Status</option>
+                            <option value="bphtb" <?= $filterF === 'bphtb' ? 'selected' : '' ?>>BPHTB Belum</option>
+                            <option value="tapera" <?= $filterF === 'tapera' ? 'selected' : '' ?>>Tapera Belum</option>
+                            <option value="trilogi" <?= $filterF === 'trilogi' ? 'selected' : '' ?>>Trilogi Belum</option>
+                            <option value="sikumbang" <?= $filterF === 'sikumbang' ? 'selected' : '' ?>>Sikumbang Belum</option>
+                        </select>
                     </div>
-                    <div class="col-md-3 text-end ms-auto d-flex gap-2 align-items-center justify-content-end">
-                        <button id="btnMassal" type="button" class="btn btn-success rounded-pill btn-sm fw-medium d-none">
-                            <i class="bi bi-pencil-square me-1"></i> Ubah Massal (<span id="massalCount">0</span>)
-                        </button>
-                        <button id="btnReset" class="btn btn-outline-secondary rounded-pill btn-sm fw-medium">
-                            <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
-                        </button>
+                    <div class="col-md-2">
+                        <select name="f_cluster" class="form-select filter-input shadow-none">
+                            <option value="">Semua Cluster</option>
+                            <?php foreach ($clusters as $cl): ?>
+                            <option value="<?= htmlspecialchars($cl) ?>" <?= $filterCluster === $cl ? 'selected' : '' ?>><?= htmlspecialchars($cl) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select name="f_status" class="form-select filter-input shadow-none">
+                            <option value="">Status Konsumen</option>
+                            <?php foreach ($statuses as $st): ?>
+                            <option value="<?= htmlspecialchars($st) ?>" <?= $filterStatusK === $st ? 'selected' : '' ?>><?= htmlspecialchars($st) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select name="f_skema" class="form-select filter-input shadow-none">
+                            <option value="">Skema Bayar</option>
+                            <?php foreach ($skemas as $sk): ?>
+                            <option value="<?= htmlspecialchars($sk) ?>" <?= $filterSkema === $sk ? 'selected' : '' ?>><?= htmlspecialchars($sk) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Filter tahap KPR (Semua / Belum / Sudah) -->
+                <div class="row g-2 mb-3 align-items-center">
+                    <div class="col-12 col-md-3">
+                        <label class="form-label small fw-semibold mb-1">Filter Tahap KPR</label>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <select name="f_bphtb" class="form-select filter-input shadow-none">
+                            <option value="">BPHTB: Semua</option>
+                            <option value="belum" <?= $filterBphtb === 'belum' ? 'selected' : '' ?>>Belum</option>
+                            <option value="sudah" <?= $filterBphtb === 'sudah' ? 'selected' : '' ?>>Sudah</option>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <select name="f_tapera" class="form-select filter-input shadow-none">
+                            <option value="">Tapera: Semua</option>
+                            <option value="belum" <?= $filterTapera === 'belum' ? 'selected' : '' ?>>Belum</option>
+                            <option value="sudah" <?= $filterTapera === 'sudah' ? 'selected' : '' ?>>Sudah</option>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <select name="f_trilogi" class="form-select filter-input shadow-none">
+                            <option value="">Trilogi: Semua</option>
+                            <option value="belum" <?= $filterTrilogi === 'belum' ? 'selected' : '' ?>>Belum</option>
+                            <option value="sudah" <?= $filterTrilogi === 'sudah' ? 'selected' : '' ?>>Sudah</option>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <select name="f_sikumb" class="form-select filter-input shadow-none">
+                            <option value="">Sikumbang: Semua</option>
+                            <option value="belum" <?= $filterSikumb === 'belum' ? 'selected' : '' ?>>Belum</option>
+                            <option value="sudah" <?= $filterSikumb === 'sudah' ? 'selected' : '' ?>>Sudah</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row g-2 mb-3 align-items-center">
+                    <div class="col-md-4">
+                        <div class="input-group input-group-sm">
+                            <input type="date" name="f_akad_dari" class="form-control filter-input shadow-none" value="<?= htmlspecialchars($filterAkadDari) ?>" title="Akad dari">
+                            <span class="input-group-text bg-white border-end-0">s/d</span>
+                            <input type="date" name="f_akad_sampai" class="form-control filter-input shadow-none" value="<?= htmlspecialchars($filterAkadSampai) ?>" title="Akad sampai">
+                        </div>
+                    </div>
+                    <div class="col-md-8 d-flex justify-content-end gap-2">
+                        <button type="submit" class="btn btn-primary rounded-pill btn-sm px-4 fw-medium"><i class="bi bi-funnel me-1"></i>Terapkan Filter</button>
+                        <a href="status_kpr.php" class="btn btn-outline-secondary rounded-pill btn-sm px-4 fw-medium"><i class="bi bi-x-lg me-1"></i>Reset</a>
+                    </div>
+                </div>
+            </form>
+
+                <!-- Active Filter Badges -->
+                <div class="mb-3">
+                    <div class="d-flex flex-wrap gap-2" id="activeFilters">
+                        <?php
+                        $baseParams = $_GET;
+                        $activeFilters = [];
+                        if ($keyword) { $p = $baseParams; unset($p['k']); $activeFilters[] = ['label' => "Cari: $keyword", 'url' => 'status_kpr.php?' . http_build_query($p)]; }
+                        if ($filterF) { $labels = ['bphtb'=>'BPHTB Belum','tapera'=>'Tapera Belum','trilogi'=>'Trilogi Belum','sikumbang'=>'Sikumbang Belum']; $p = $baseParams; unset($p['f']); $activeFilters[] = ['label' => "Status: {$labels[$filterF]}", 'url' => 'status_kpr.php?' . http_build_query($p)]; }
+                        if ($filterCluster) { $p = $baseParams; unset($p['f_cluster']); $activeFilters[] = ['label' => "Cluster: $filterCluster", 'url' => 'status_kpr.php?' . http_build_query($p)]; }
+                        if ($filterStatusK) { $p = $baseParams; unset($p['f_status']); $activeFilters[] = ['label' => "Status: $filterStatusK", 'url' => 'status_kpr.php?' . http_build_query($p)]; }
+                        if ($filterSkema) { $p = $baseParams; unset($p['f_skema']); $activeFilters[] = ['label' => "Skema: $filterSkema", 'url' => 'status_kpr.php?' . http_build_query($p)]; }
+                        if ($filterAkadDari || $filterAkadSampai) { $p = $baseParams; unset($p['f_akad_dari'], $p['f_akad_sampai']); $activeFilters[] = ['label' => "Akad: " . ($filterAkadDari?:'-') . " s/d " . ($filterAkadSampai?:'-'), 'url' => 'status_kpr.php?' . http_build_query($p)]; }
+                        if ($filterBphtb) { $p = $baseParams; unset($p['f_bphtb']); $activeFilters[] = ['label' => "BPHTB: " . ($filterBphtb==='belum'?'Belum':'Sudah'), 'url' => 'status_kpr.php?' . http_build_query($p)]; }
+                        if ($filterTapera) { $p = $baseParams; unset($p['f_tapera']); $activeFilters[] = ['label' => "Tapera: " . ($filterTapera==='belum'?'Belum':'Sudah'), 'url' => 'status_kpr.php?' . http_build_query($p)]; }
+                        if ($filterTrilogi) { $p = $baseParams; unset($p['f_trilogi']); $activeFilters[] = ['label' => "Trilogi: " . ($filterTrilogi==='belum'?'Belum':'Sudah'), 'url' => 'status_kpr.php?' . http_build_query($p)]; }
+                        if ($filterSikumb) { $p = $baseParams; unset($p['f_sikumb']); $activeFilters[] = ['label' => "Sikumbang: " . ($filterSikumb==='belum'?'Belum':'Sudah'), 'url' => 'status_kpr.php?' . http_build_query($p)]; }
+                        foreach ($activeFilters as $af):
+                        ?>
+                        <a href="<?= htmlspecialchars($af['url']) ?>" class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle rounded-pill px-3 py-2 small d-inline-flex align-items-center gap-1 text-decoration-none" title="Hapus filter ini">
+                            <?= htmlspecialchars($af['label']) ?>
+                            <i class="bi bi-x-circle text-primary"></i>
+                        </a>
+                        <?php endforeach; ?>
+                        <?php if ($activeFilters): ?>
+                        <a href="status_kpr.php" class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary-subtle rounded-pill px-3 py-2 small d-inline-flex align-items-center gap-1 text-decoration-none" title="Bersihkan semua filter">
+                            <i class="bi bi-x-lg me-1"></i> Bersihkan Semua
+                        </a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <div class="row g-2 mb-3 align-items-center">
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center gap-2">
+                            <button id="btnMassal" type="button" class="btn btn-success rounded-pill btn-sm fw-medium d-none">
+                                <i class="bi bi-pencil-square me-1"></i> Ubah Massal (<span id="massalCount">0</span>)
+                            </button>
+                            <button id="btnReset" class="btn btn-outline-secondary rounded-pill btn-sm fw-medium">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Semua
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-8 text-end">
+                        <small class="text-muted">
+                            Menampilkan <strong id="rowCount">0</strong> data KPR
+                        </small>
                     </div>
                 </div>
 
@@ -354,7 +529,7 @@ function status_nilai_html($v) {
                 <?= csrf_field() ?>
                 <input type="hidden" name="update_status_kpr" value="1">
                 <input type="hidden" name="ids" id="modalIds" value="">
-                <input type="hidden" name="f" id="modalF" value="<?= htmlspecialchars($filterF) ?>">
+                <input type="hidden" name="redirect" value="<?= htmlspecialchars($_SERVER['QUERY_STRING'] ?? '') ?>">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title fw-bold" id="statusModalTitle">Ubah Status</h5>
@@ -394,7 +569,6 @@ function status_nilai_html($v) {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            const searchInput = document.getElementById('searchInput');
             const tableRows = document.querySelectorAll('#tableKpr tbody tr');
             const btnReset = document.getElementById('btnReset');
             const rowChecks = document.querySelectorAll('.row-check');
@@ -403,12 +577,18 @@ function status_nilai_html($v) {
             const massalCount = document.getElementById('massalCount');
             const statusModalEl = document.getElementById('statusModal');
             const modalIds = document.getElementById('modalIds');
-            const modalF = document.getElementById('modalF');
             const modalTitle = document.getElementById('statusModalTitle');
             const modChecks = document.querySelectorAll('.mod-check');
+            const rowCountEl = document.getElementById('rowCount');
 
             function visibleRows() {
-                return Array.from(tableRows);
+                return Array.from(tableRows).filter(tr => tr.style.display !== 'none');
+            }
+
+            function updateRowCount() {
+                if (rowCountEl) {
+                    rowCountEl.textContent = visibleRows().length;
+                }
             }
 
             function refreshMassal() {
@@ -437,7 +617,6 @@ function status_nilai_html($v) {
 
             function openModal(ids, prefill) {
                 modalIds.value = ids.join(',');
-                modalF.value = new URLSearchParams(location.search).get('f') || '';
                 modalTitle.textContent = ids.length > 1
                     ? ('Ubah Status Massal (' + ids.length + ' data)')
                     : 'Ubah Status';
@@ -464,31 +643,12 @@ function status_nilai_html($v) {
                 openModal(ids, {});
             });
 
-            if (sessionStorage.getItem('status_kpr_search')) {
-                searchInput.value = sessionStorage.getItem('status_kpr_search');
-            }
-
-            function filterTable() {
-                const query = searchInput.value.toLowerCase().trim();
-                sessionStorage.setItem('status_kpr_search', searchInput.value);
-                tableRows.forEach(row => {
-                    row.style.display = row.innerText.toLowerCase().includes(query) ? '' : 'none';
-                });
-            }
-
-            filterTable();
-            searchInput.addEventListener('input', function () {
-                filterTable();
-                const hasHidden = Array.from(tableRows).some(tr => tr.style.display === 'none');
-                if (hasHidden && selectAll.checked) selectAll.checked = false;
-            });
             btnReset.addEventListener('click', function () {
-                searchInput.value = '';
-                sessionStorage.removeItem('status_kpr_search');
-                filterTable();
                 window.location.href = 'status_kpr.php';
             });
 
+            // Update row count on load
+            updateRowCount();
             refreshMassal();
         });
     </script>
