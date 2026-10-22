@@ -24,12 +24,24 @@ if ($_self !== 'maintenance.php' && $_self !== 'toggle_maintenance.php') {
     }
 }
 
-// Koneksi via adapter mysqli-compat -> Supabase PostgreSQL (PDO pgsql)
+// Koneksi via adapter sdb -> mendukung 2 driver (Supabase/pgsql & MySQL lokal).
+// Aplikasi ini punya dua koneksi: online (Supabase) dan offline (MySQL lokal).
 require_once __DIR__ . '/db_adapter.php';
 
-$koneksi = sdb_connect(SUPABASE_DSN, SUPABASE_USER, SUPABASE_PASSWORD, 'postgres');
+// ===== DUA KONEKSI DATABASE =====
+// 1) ONLINE  : Supabase (PostgreSQL)  -> $koneksi_online
+// 2) OFFLINE : MySQL lokal (XAMPP)    -> $koneksi_offline
+// Koneksi aktif mengikuti konstanta DB_MODE ('offline' default / 'online').
+$koneksi_online  = sdb_connect_pgsql();   // Supabase  (online)
+$koneksi_offline = sdb_connect_mysql();   // MySQL lokal (offline)
 
-if (!($koneksi instanceof sdb) || $koneksi->connect_errno) {
+$koneksi = (DB_MODE === 'online') ? $koneksi_online : $koneksi_offline;
+
+// Alias yang lebih eksplisit (bisa dipakai halaman/future sync).
+$koneksi_lokal    = $koneksi_offline;
+$koneksi_supabase = $koneksi_online;
+
+if (!($koneksi instanceof sdb) || !$koneksi->ping() || $koneksi->connect_errno) {
     // Jangan bocorkan detail koneksi ke pengguna; catat ke log server.
     error_log("Koneksi DB gagal: " . $koneksi->connect_error);
     http_response_code(500);

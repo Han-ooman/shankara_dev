@@ -131,10 +131,10 @@ $q_stat = sdb_query($koneksi, "SELECT
     SUM(trilogi0) AS trilogi,
     SUM(sikumbang0) AS sikumbang
 FROM (
-    SELECT (t.status_bphtb = 'Belum Dikerjakan' OR t.status_bphtb IS NULL OR t.status_bphtb = '')::int AS bphtb0,
-           (t.status_tapera = 'Belum Daftar' OR t.status_tapera IS NULL OR t.status_tapera = '')::int AS tapera0,
-           (t.status_trilogi = 'Belum Diaplikasi' OR t.status_trilogi IS NULL OR t.status_trilogi = '')::int AS trilogi0,
-           (t.status_sikumbang = 'Belum' OR t.status_sikumbang IS NULL OR t.status_sikumbang = '')::int AS sikumbang0,
+    SELECT CASE WHEN (t.status_bphtb = 'Belum Dikerjakan' OR t.status_bphtb IS NULL OR t.status_bphtb = '') THEN 1 ELSE 0 END AS bphtb0,
+           CASE WHEN (t.status_tapera = 'Belum Daftar' OR t.status_tapera IS NULL OR t.status_tapera = '') THEN 1 ELSE 0 END AS tapera0,
+           CASE WHEN (t.status_trilogi = 'Belum Diaplikasi' OR t.status_trilogi IS NULL OR t.status_trilogi = '') THEN 1 ELSE 0 END AS trilogi0,
+           CASE WHEN (t.status_sikumbang = 'Belum' OR t.status_sikumbang IS NULL OR t.status_sikumbang = '') THEN 1 ELSE 0 END AS sikumbang0,
            $durPart
     FROM data_transaksi t
     JOIN data_konsumen k ON t.id_konsumen = k.id_konsumen

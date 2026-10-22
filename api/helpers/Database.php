@@ -1,15 +1,12 @@
 <?php
 // api/helpers/Database.php - Singleton database connection
+// Mengikuti mode aktif di config/local.php (atau env DB_MODE):
+//   'offline' -> MySQL lokal   |   'online' -> Supabase
+
+require_once dirname(__DIR__, 2) . '/includes/db_adapter.php';
 
 class Database {
     private static ?sdb $instance = null;
-    private static array $config = [
-        'host' => 'localhost',
-        'user' => 'root',
-        'pass' => '',
-        'db'   => 'db_perumahan',
-        'charset' => 'utf8mb4'
-    ];
 
     private function __construct() {}
     private function __clone() {}
@@ -17,18 +14,12 @@ class Database {
 
     public static function getInstance(): sdb {
         if (self::$instance === null) {
-            self::$instance = new sdb(
-                self::$config['host'],
-                self::$config['user'],
-                self::$config['pass'],
-                self::$config['db']
-            );
-            if (self::$instance->connect_error) {
+            self::$instance = sdb_connect_active();
+            if (!self::$instance->ping() || self::$instance->connect_errno) {
                 error_log("API DB Connect Error: " . self::$instance->connect_error);
                 throw new Exception("Database connection failed", 500);
             }
-            self::$instance->set_charset(self::$config['charset']);
-            self::$instance->query("SET time_zone = '+07:00'");
+            self::$instance->set_charset('utf8mb4');
         }
         return self::$instance;
     }

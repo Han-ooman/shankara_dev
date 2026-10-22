@@ -1,21 +1,31 @@
 <?php
-// includes/db_adapter.php — Adapter kompatibilitas sdb -> Supabase PostgreSQL (PDO pgsql)
+// includes/db_adapter.php — Adapter kompatibilitas sdb (API mysqli-ish)
+// Mendukung DUA driver dengan API yang sama:
+//   - 'pgsql' : Supabase (PostgreSQL)  -> koneksi ONLINE
+//   - 'mysql' : MySQL lokal (XAMPP)    -> koneksi OFFLINE
 // Menyediakan API mysqli-ish (sdb_connect, sdb_query, $koneksi->prepare, dll)
-// di atas Supabase agar 60+ file PHP aplikasi tidak perlu diubah besar-besaran.
-// Catatan penting: ekstensi sdb HARUS dinonaktifkan di php.ini agar definisi
+// agar 60+ file PHP aplikasi tidak perlu diubah besar-besaran.
+// Catatan penting: ekstensi mysqli HARUS dinonaktifkan di php.ini agar definisi
 // fungsi/class di sini tidak fatal error karena redeclare.
 
 if (defined('DB_ADAPTER_VERSION')) return;
-define('DB_ADAPTER_VERSION', '1.0-supabase');
+define('DB_ADAPTER_VERSION', '2.0-dual');
 
 if (!defined('MYSQLI_ASSOC')) { define('MYSQLI_ASSOC', 1); define('MYSQLI_NUM', 2); define('MYSQLI_BOTH', 3); }
 
-// Kredensial Supabase, urutan prioritas:
-// 1. config/local.php (lokal, di-gitignore)
-// 2. Environment variables: SUPABASE_DSN, SUPABASE_USER, SUPABASE_PASSWORD (dipakai di Vercel)
-// Contoh tersedia di config/local.example.php.
+/* =========================================================================
+ *  KONFIGURASI DUAL DATABASE
+ *  - ONLINE  : Supabase (PostgreSQL) -> SUPABASE_DSN / SUPABASE_USER / SUPABASE_PASSWORD
+ *  - OFFLINE : MySQL lokal (XAMPP)   -> MYSQL_HOST / MYSQL_PORT / MYSQL_DATABASE /
+ *                                          MYSQL_USER / MYSQL_PASSWORD
+ *  Sumber kredensial (urutan prioritas):
+ *  1. config/local.php (lokal, sudah di-gitignore)
+ *  2. Environment variables (dipakai di Vercel)
+ *  Contoh tersedia di config/local.example.php.
+ * ========================================================================= */
 $__local_config = dirname(__DIR__) . '/config/local.php';
-if (!defined('SUPABASE_DSN') && is_file($__local_config)) {
+$__has_local_config = is_file($__local_config);
+if ($__has_local_config) {
     require_once $__local_config;
 }
 if (!defined('SUPABASE_DSN') && getenv('SUPABASE_DSN')) {
@@ -24,9 +34,28 @@ if (!defined('SUPABASE_DSN') && getenv('SUPABASE_DSN')) {
     define('SUPABASE_PASSWORD', getenv('SUPABASE_PASSWORD'));
 }
 if (!defined('SUPABASE_DSN') || !defined('SUPABASE_USER') || !defined('SUPABASE_PASSWORD')) {
-    throw new RuntimeException('Kredensial database belum diatur. Salin config/local.example.php menjadi config/local.php lalu isi kredensialnya.');
+    throw new RuntimeException('Kredensial database online (Supabase) belum diatur. Salin config/local.example.php menjadi config/local.php lalu isi kredensialnya.');
 }
-unset($__local_config);
+
+// ---- Kredensial MySQL lokal (offline) ----
+if (!defined('MYSQL_HOST'))     define('MYSQL_HOST',      getenv('MYSQL_HOST') ?: '127.0.0.1');
+if (!defined('MYSQL_PORT'))     define('MYSQL_PORT',      (int)(getenv('MYSQL_PORT') ?: 3306));
+if (!defined('MYSQL_DATABASE')) define('MYSQL_DATABASE',  getenv('MYSQL_DATABASE') ?: 'db_perumahan');
+if (!defined('MYSQL_USER'))     define('MYSQL_USER',      getenv('MYSQL_USER') ?: 'root');
+if (!defined('MYSQL_PASSWORD')) define('MYSQL_PASSWORD',  (string)(getenv('MYSQL_PASSWORD') ?: ''));
+if (!defined('MYSQL_CHARSET'))  define('MYSQL_CHARSET',   getenv('MYSQL_CHARSET') ?: 'utf8mb4');
+
+// ---- Mode aktif: 'offline' (MySQL lokal, default) atau 'online' (Supabase) ----
+if (!defined('DB_MODE')) {
+    $__mode = strtolower(trim((string)(getenv('DB_MODE') ?: '')));
+    if ($__mode === '') {
+        // Tanpa config lokal (mis. deployment Vercel) & kredensial Supabase dari
+        // env -> pakai koneksi ONLINE. Selebihnya -> MySQL lokal (OFFLINE).
+        $__mode = (!$__has_local_config && getenv('SUPABASE_DSN')) ? 'online' : 'offline';
+    }
+    define('DB_MODE', in_array($__mode, ['online', 'offline'], true) ? $__mode : 'offline');
+}
+unset($__local_config, $__has_local_config, $__mode);
 
 /* =========================================================================
  *  UTILITAS PARSER
@@ -445,15 +474,72 @@ class sdb {
     public $server_info    = 'PostgreSQL 17 (Supabase)';
     public $client_version = 180002;
     public $info           = '';
+    /** @var string 'pgsql' (Supabase/online) atau 'mysql' (lokal/offline) */
+    public string $driver  = 'pgsql';
+    public string $dsn     = '';
+    public string $dbUser  = '';
+    public string $dbPass  = '';
+    public string $dbName  = '';
     private bool $inTx     = false;
 
     public function __construct($host = null, $user = null, $pass = null, $db = null,
-                                $port = null, $socket = null) {
-        // Semua parameter lama MySQL diabaikan; koneksi tetap ke Supabase.
-        // Koneksi dibuat LAZY pada query/prepare pertama (menghemat ±1,3s
-        // pada halaman yang tidak menyentuh DB, mis. GET login.php di Vercel).
-        $this->ensurePDO();
+                                $port = null, $socket = null, ?string $driver = null) {
+        // Driver bisa dideteksi otomatis:
+        //   - $host berisi DSN ('pgsql:...' / 'mysql:...') -> driver dari DSN
+        //   - $host berupa hostname             -> MySQL (gaya mysqli: host,user,pass,db)
+        //   - $host kosong                      -> default pgsql (Supabase)
+        // Koneksi tetap LAZY (dibuat saat query/prepare/ping pertama) supaya
+        // halaman yang tidak menyentuh DB tidak Connections ke server.
+        $this->setupDriver($host, $user, $pass, $db, $port, $driver);
     }
+
+    private function setupDriver($host, $user, $pass, $db, $port, ?string $driver): void {
+        $host = ($host === null) ? '' : (string)$host;
+        $user = ($user === null) ? '' : (string)$user;
+        $pass = ($pass === null) ? '' : (string)$pass;
+        $db   = ($db === null) ? '' : (string)$db;
+
+        if ($driver === null || $driver === '') {
+            if (stripos($host, 'pgsql:') === 0 || stripos($host, 'postgres') === 0) $driver = 'pgsql';
+            elseif (stripos($host, 'mysql:') === 0)                              $driver = 'mysql';
+            elseif ($host !== '')                                                $driver = 'mysql';
+            else                                                                $driver = 'pgsql';
+        }
+        $this->driver = (strtolower($driver) === 'mysql') ? 'mysql' : 'pgsql';
+
+        if ($this->driver === 'mysql') {
+            if (stripos($host, 'mysql:') === 0) {
+                $this->dsn = $host;
+            } else {
+                $h = ($host !== '' && $host !== 'localhost') ? $host : '127.0.0.1';
+                $this->dsn = 'mysql:host=' . $h . ';port=' . ($port ? (int)$port : MYSQL_PORT);
+                if ($db !== '') $this->dsn .= ';dbname=' . $db;
+                $this->dsn .= ';charset=' . (defined('MYSQL_CHARSET') ? MYSQL_CHARSET : 'utf8mb4');
+            }
+            $this->dbUser = ($user !== '') ? $user : MYSQL_USER;
+            $this->dbPass = $pass;
+            $this->dbName = ($db !== '') ? $db : MYSQL_DATABASE;
+            $this->server_info = 'MySQL (lokal/offline)';
+            return;
+        }
+
+        // --- pgsql / Supabase (online) ---
+        if (stripos($host, 'pgsql:') === 0 || stripos($host, 'postgres') === 0) {
+            $this->dsn = $host;
+        } else {
+            $h = ($host !== '') ? $host : 'localhost';
+            $this->dsn = 'pgsql:host=' . $h . ';port=' . ($port ? (int)$port : 5432);
+            if ($db !== '') $this->dsn .= ';dbname=' . $db;
+        }
+        $this->dbUser = ($user !== '') ? $user : SUPABASE_USER;
+        $this->dbPass = ($pass !== '') ? $pass : SUPABASE_PASSWORD;
+        $this->dbName = ($db !== '') ? $db : 'postgres';
+        $this->server_info = 'PostgreSQL 17 (Supabase/online)';
+    }
+
+    /** 'mysql' = lokal/offline, 'pgsql' = Supabase/online */
+    public function getDriver(): string { return $this->driver; }
+    public function isOnline(): bool  { return $this->driver === 'pgsql'; }
 
     private ?PDO $pdo = null;
     private bool $pdoTried = false;
@@ -462,20 +548,32 @@ class sdb {
         if ($this->pdoTried) return $this->pdo;
         $this->pdoTried = true;
         try {
-            $this->pdo = new PDO(SUPABASE_DSN, SUPABASE_USER, SUPABASE_PASSWORD, [
+            $opts = [
                 PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_TIMEOUT            => 20,
-            ]);
-            try { $this->pdo->exec("SET timezone = 'Asia/Jakarta'"); } catch (Throwable $e) {}
-            global $dbxLastPDO;
-            $dbxLastPDO = $this->pdo;
+            ];
+            if ($this->driver === 'mysql') {
+                $opts[PDO::ATTR_EMULATE_PREPARES] = true; // placeholder ?, LIMIT ? dst.
+                $opts[PDO::ATTR_TIMEOUT] = 10;
+            } else {
+                $opts[PDO::ATTR_TIMEOUT] = 20;
+            }
+            $this->pdo = new PDO($this->dsn, $this->dbUser, $this->dbPass, $opts);
+            if ($this->driver === 'mysql') {
+                try { $this->pdo->exec("SET time_zone = '+07:00'"); } catch (Throwable $e) {}
+                try { $this->server_info = 'MySQL ' . $this->pdo->getAttribute(PDO::ATTR_SERVER_VERSION) . ' (lokal/offline)'; }
+                catch (Throwable $e) {}
+            } else {
+                try { $this->pdo->exec("SET timezone = 'Asia/Jakarta'"); } catch (Throwable $e) {}
+                global $dbxLastPDO;
+                $dbxLastPDO = $this->pdo;
+            }
         } catch (Throwable $e) {
             $this->connect_error = $e->getMessage();
             $this->connect_errno = 2002;
             $this->error         = $e->getMessage();
             $this->errno         = 2002;
-            error_log('db_adapter: koneksi Supabase gagal: ' . $e->getMessage());
+            error_log('db_adapter: koneksi ' . $this->driver . ' gagal: ' . $e->getMessage());
         }
         return $this->pdo;
     }
@@ -486,7 +584,13 @@ class sdb {
     private function markError(Throwable $e): void {
         $this->error = $e->getMessage();
         $this->errno = 1000 + ((int)$e->getCode() & 0xFFFF);
-        error_log('db_adapter: ' . $e->getMessage());
+        error_log('db_adapter: ' . $this->getDriver() . ': ' . $e->getMessage());
+    }
+
+    /** Terjemahkan SQL MySQL -> PostgreSQL (hanya untuk driver pgsql). */
+    private function translate(string $sql, ?PDO $pdo = null): string {
+        if ($this->driver === 'mysql') return $sql; // MySQL berjalan dengan SQL aslinya
+        return dbx_translate($sql, $pdo);
     }
 
     public function query($sql, $resultmode = 0) {
@@ -494,11 +598,11 @@ class sdb {
         if ($pdo === null) return false;
         $raw = (string)$sql;
         try {
-            $t = dbx_translate($raw, $pdo);
+            $t = $this->translate($raw, $pdo);
             $isSelect = preg_match('/^(SELECT|WITH|SHOW)\b/im', $t) || preg_match('/\bRETURNING\b/i', $t);
             if ($isSelect) {
                 $stmt = $pdo->prepare($t);
-                // '?'-placeholder tak boleh tanpa bind; MySQL $koneksi->query sangat jarang pakai ?
+                // '?'-placeholder tak boleh tanpa bind; $koneksi->query sangat jarang pakai ?
                 if (preg_match_all('/\?/', $t) > 0) {
                     $this->error = 'Placeholder ? pada ->query() atau ->prepare() tidak didukung tanpa bind param.';
                     return false;
@@ -510,7 +614,11 @@ class sdb {
             $st = $pdo->exec($t);
             $this->affected_rows = $st;
             if (preg_match('/^\s*INSERT\b/i', $t)) {
-                try { $this->insert_id = (int)$pdo->query('SELECT lastval()')->fetchColumn(); }
+                try {
+                    $this->insert_id = ($this->driver === 'mysql')
+                        ? (int)$pdo->lastInsertId()
+                        : (int)$pdo->query('SELECT lastval()')->fetchColumn();
+                }
                 catch (Throwable $e) { /* INSERT tanpa sequence: dia biarkan */ }
             }
             return true;
@@ -524,7 +632,7 @@ class sdb {
         $pdo = $this->ensurePDO();
         if ($pdo === null) return false;
         try {
-            $t = dbx_translate((string)$sql, $pdo);
+            $t = $this->translate((string)$sql, $pdo);
             return new sdb_stmt($this, $t);
         } catch (Throwable $e) {
             $this->markError($e);
@@ -532,16 +640,36 @@ class sdb {
         }
     }
 
-    // Escape gaya PostgreSQL: string literal didirikan standar MySQL dgn ' -> ''.
-    // Backslash dan NUL dibersihkan dulu untuk aman (MySQL-escape tidak dipakai).
+    // Escape string sesuai driver:
+    // - mysql : backslash + quote (gaya mysqli_real_escape_string)
+    // - pgsql : ' -> '' (gaya PostgreSQL)
     public function real_escape_string($s) {
         $s = (string)$s;
+        if ($this->driver === 'mysql') {
+            $pdo = $this->ensurePDO();
+            if ($pdo !== null) {
+                try {
+                    $q = $pdo->quote($s);
+                    if (is_string($q) && strlen($q) >= 2) return substr($q, 1, -1);
+                } catch (Throwable $e) { /* fallback manual di bawah */ }
+            }
+            return str_replace(["\\", "'", "\0"], ["\\\\", "\\'", "\\0"], $s);
+        }
         $s = str_replace(["\\", "\0"], ["\\\\", '\0'], $s);
         return str_replace("'", "''", $s);
     }
     public function escape_string($s) { return $this->real_escape_string($s); }
 
-    public function set_charset($cs) { return true; }
+    public function set_charset($cs) {
+        if ($this->driver === 'mysql') {
+            $pdo = $this->ensurePDO();
+            if ($pdo === null) return false;
+            $cs = preg_replace('/[^a-z0-9_]/i', '', (string)$cs);
+            try { $pdo->exec("SET NAMES '{$cs}'"); return true; }
+            catch (Throwable $e) { $this->markError($e); return false; }
+        }
+        return true;
+    }
     public function character_set_name() { return 'utf8mb4'; }
 
     public function begin_transaction($flags = 0, $name = null) {
@@ -569,7 +697,16 @@ class sdb {
     public function store_result() { return true; }
     public function next_result() { return false; }
     public function more_results() { return false; }
-    public function select_db($db) { return strtolower($db) === 'postgres'; }
+    public function select_db($db) {
+        if ($this->driver === 'mysql') {
+            $pdo = $this->ensurePDO();
+            if ($pdo === null) return false;
+            $safe = str_replace('`', '``', (string)$db);
+            try { $pdo->exec("USE `{$safe}`"); return true; }
+            catch (Throwable $e) { $this->markError($e); return false; }
+        }
+        return strtolower((string)$db) === 'postgres';
+    }
     public function ping() { if (!$this->pdoTried) $this->ensurePDO(); return $this->pdo !== null; }
     public function ssl_set() { return true; }
     public function stmt_init() { return new sdb_stmt($this, ''); }
@@ -735,8 +872,11 @@ class sdb_stmt {
                 $this->affected_rows = $st->rowCount();
                 if (preg_match('/^\s*INSERT\b/i', $sql)) {
                     try {
-                        $v = $pdo->query('SELECT lastval()')->fetchColumn();
-                        $this->insert_id = (int)$v;
+                        if ($this->owner->getDriver() === 'mysql') {
+                            $this->insert_id = (int)$pdo->lastInsertId();
+                        } else {
+                            $this->insert_id = (int)$pdo->query('SELECT lastval()')->fetchColumn();
+                        }
                     } catch (Throwable $e) { /* INSERT tanpa nextval: lastval tak tersedia */ }
                 }
                 $this->owner->affected_rows = $this->affected_rows;
@@ -771,6 +911,30 @@ class sdb_stmt {
  * ========================================================================= */
 function sdb_connect($host = null, $user = null, $pass = null, $db = null, $port = null) {
     return new sdb($host, $user, $pass, $db, $port);
+}
+/** Koneksi ONLINE ke Supabase (PostgreSQL). */
+function sdb_connect_pgsql($dsn = null, $user = null, $pass = null, $db = 'postgres', $port = 5432) {
+    return new sdb(
+        ($dsn !== null && $dsn !== '') ? $dsn : SUPABASE_DSN,
+        ($user !== null && $user !== '') ? $user : SUPABASE_USER,
+        ($pass !== null) ? $pass : SUPABASE_PASSWORD,
+        ($db !== null && $db !== '') ? $db : 'postgres',
+        $port, null, 'pgsql'
+    );
+}
+/** Koneksi OFFLINE ke MySQL lokal (XAMPP). */
+function sdb_connect_mysql($host = null, $user = null, $pass = null, $db = null, $port = null) {
+    return new sdb(
+        ($host !== null && $host !== '') ? $host : MYSQL_HOST,
+        ($user !== null && $user !== '') ? $user : MYSQL_USER,
+        ($pass !== null) ? $pass : MYSQL_PASSWORD,
+        ($db !== null && $db !== '') ? $db : MYSQL_DATABASE,
+        ($port !== null && $port !== '') ? $port : MYSQL_PORT, null, 'mysql'
+    );
+}
+/** Koneksi sesuai mode aktif (DB_MODE): 'online' -> Supabase, 'offline' -> MySQL. */
+function sdb_connect_active() {
+    return (DB_MODE === 'online') ? sdb_connect_pgsql() : sdb_connect_mysql();
 }
 function sdb_connect_error() { return ''; }
 function sdb_select_db(sdb $c, string $db): bool { return $c->select_db($db); }
