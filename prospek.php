@@ -15,18 +15,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrf_verify()) {
 
 // Tambah prospek
 if (isset($_POST['tambah_prospek'])) {
-    $nama    = mysqli_real_escape_string($koneksi, $_POST['name_lengkap']);
-    $ktp     = mysqli_real_escape_string($koneksi, $_POST['no_ktp'] ?? '');
-    $kerja   = mysqli_real_escape_string($koneksi, $_POST['pekerjaan'] ?? '');
-    $wa      = mysqli_real_escape_string($koneksi, $_POST['no_whatsapp'] ?? '');
-    $sumber  = mysqli_real_escape_string($koneksi, $_POST['sumber']);
-    $cluster = mysqli_real_escape_string($koneksi, $_POST['cluster_minat'] ?? '');
-    $unit    = mysqli_real_escape_string($koneksi, $_POST['unit_minat'] ?? '');
-    $catatan = mysqli_real_escape_string($koneksi, $_POST['catatan'] ?? '');
-    $status  = mysqli_real_escape_string($koneksi, $_POST['status_followup']);
-    $tgl_fu  = !empty($_POST['tanggal_followup']) ? "'" . mysqli_real_escape_string($koneksi, $_POST['tanggal_followup']) . "'" : 'NULL';
+    $nama    = sdb_real_escape_string($koneksi, $_POST['name_lengkap']);
+    $ktp     = sdb_real_escape_string($koneksi, $_POST['no_ktp'] ?? '');
+    $kerja   = sdb_real_escape_string($koneksi, $_POST['pekerjaan'] ?? '');
+    $wa      = sdb_real_escape_string($koneksi, $_POST['no_whatsapp'] ?? '');
+    $sumber  = sdb_real_escape_string($koneksi, $_POST['sumber']);
+    $cluster = sdb_real_escape_string($koneksi, $_POST['cluster_minat'] ?? '');
+    $unit    = sdb_real_escape_string($koneksi, $_POST['unit_minat'] ?? '');
+    $catatan = sdb_real_escape_string($koneksi, $_POST['catatan'] ?? '');
+    $status  = sdb_real_escape_string($koneksi, $_POST['status_followup']);
+    $tgl_fu  = !empty($_POST['tanggal_followup']) ? "'" . sdb_real_escape_string($koneksi, $_POST['tanggal_followup']) . "'" : 'NULL';
 
-    mysqli_query($koneksi, "INSERT INTO data_prospek (name_lengkap, no_ktp, pekerjaan, no_whatsapp, sumber, cluster_minat, unit_minat, catatan, status_followup, tanggal_followup)
+    sdb_query($koneksi, "INSERT INTO data_prospek (name_lengkap, no_ktp, pekerjaan, no_whatsapp, sumber, cluster_minat, unit_minat, catatan, status_followup, tanggal_followup)
         VALUES ('$nama','$ktp','$kerja','$wa','$sumber','$cluster','$unit','$catatan','$status',$tgl_fu)");
     header("Location: prospek.php");
     exit();
@@ -35,18 +35,18 @@ if (isset($_POST['tambah_prospek'])) {
 // Edit prospek
 if (isset($_POST['edit_prospek'])) {
     $id = intval($_POST['id_prospek']);
-    $nama    = mysqli_real_escape_string($koneksi, $_POST['name_lengkap']);
-    $ktp     = mysqli_real_escape_string($koneksi, $_POST['no_ktp'] ?? '');
-    $kerja   = mysqli_real_escape_string($koneksi, $_POST['pekerjaan'] ?? '');
-    $wa      = mysqli_real_escape_string($koneksi, $_POST['no_whatsapp'] ?? '');
-    $sumber  = mysqli_real_escape_string($koneksi, $_POST['sumber']);
-    $cluster = mysqli_real_escape_string($koneksi, $_POST['cluster_minat'] ?? '');
-    $unit    = mysqli_real_escape_string($koneksi, $_POST['unit_minat'] ?? '');
-    $catatan = mysqli_real_escape_string($koneksi, $_POST['catatan'] ?? '');
-    $status  = mysqli_real_escape_string($koneksi, $_POST['status_followup']);
-    $tgl_fu  = !empty($_POST['tanggal_followup']) ? "'" . mysqli_real_escape_string($koneksi, $_POST['tanggal_followup']) . "'" : 'NULL';
+    $nama    = sdb_real_escape_string($koneksi, $_POST['name_lengkap']);
+    $ktp     = sdb_real_escape_string($koneksi, $_POST['no_ktp'] ?? '');
+    $kerja   = sdb_real_escape_string($koneksi, $_POST['pekerjaan'] ?? '');
+    $wa      = sdb_real_escape_string($koneksi, $_POST['no_whatsapp'] ?? '');
+    $sumber  = sdb_real_escape_string($koneksi, $_POST['sumber']);
+    $cluster = sdb_real_escape_string($koneksi, $_POST['cluster_minat'] ?? '');
+    $unit    = sdb_real_escape_string($koneksi, $_POST['unit_minat'] ?? '');
+    $catatan = sdb_real_escape_string($koneksi, $_POST['catatan'] ?? '');
+    $status  = sdb_real_escape_string($koneksi, $_POST['status_followup']);
+    $tgl_fu  = !empty($_POST['tanggal_followup']) ? "'" . sdb_real_escape_string($koneksi, $_POST['tanggal_followup']) . "'" : 'NULL';
 
-    mysqli_query($koneksi, "UPDATE data_prospek SET
+    sdb_query($koneksi, "UPDATE data_prospek SET
         name_lengkap='$nama', no_ktp='$ktp', pekerjaan='$kerja', no_whatsapp='$wa',
         sumber='$sumber', cluster_minat='$cluster', unit_minat='$unit', catatan='$catatan',
         status_followup='$status', tanggal_followup=$tgl_fu WHERE id_prospek=$id");
@@ -61,7 +61,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
         die("Token keamanan tidak valid.");
     }
     $id_hapus = intval($_GET['id']);
-    mysqli_query($koneksi, "DELETE FROM data_prospek WHERE id_prospek = $id_hapus");
+    sdb_query($koneksi, "DELETE FROM data_prospek WHERE id_prospek = $id_hapus");
     header("Location: prospek.php");
     exit();
 }
@@ -69,35 +69,35 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
 // TANDAI DEAL → pindah ke data_konsumen
 if (isset($_POST['deal_prospek'])) {
     $id = intval($_POST['id_prospek']);
-    $q = mysqli_query($koneksi, "SELECT * FROM data_prospek WHERE id_prospek = $id");
-    if ($p = mysqli_fetch_assoc($q)) {
-        $nama    = mysqli_real_escape_string($koneksi, $p['name_lengkap']);
-        $ktp     = mysqli_real_escape_string($koneksi, $p['no_ktp'] ?? '');
-        $kerja   = mysqli_real_escape_string($koneksi, $p['pekerjaan'] ?? '');
-        $wa      = mysqli_real_escape_string($koneksi, $p['no_whatsapp'] ?? '');
+    $q = sdb_query($koneksi, "SELECT * FROM data_prospek WHERE id_prospek = $id");
+    if ($p = sdb_fetch_assoc($q)) {
+        $nama    = sdb_real_escape_string($koneksi, $p['name_lengkap']);
+        $ktp     = sdb_real_escape_string($koneksi, $p['no_ktp'] ?? '');
+        $kerja   = sdb_real_escape_string($koneksi, $p['pekerjaan'] ?? '');
+        $wa      = sdb_real_escape_string($koneksi, $p['no_whatsapp'] ?? '');
 
         // Cegah duplikat berdasarkan no_ktp atau no_whatsapp
         $dup = false;
         if (!empty($ktp)) {
-            $cek = mysqli_query($koneksi, "SELECT id_konsumen FROM data_konsumen WHERE no_ktp = '$ktp'");
-            if ($cek && mysqli_num_rows($cek) > 0) $dup = true;
+            $cek = sdb_query($koneksi, "SELECT id_konsumen FROM data_konsumen WHERE no_ktp = '$ktp'");
+            if ($cek && sdb_num_rows($cek) > 0) $dup = true;
         }
         if (!$dup && !empty($wa)) {
-            $cek = mysqli_query($koneksi, "SELECT id_konsumen FROM data_konsumen WHERE no_whatsapp = '$wa'");
-            if ($cek && mysqli_num_rows($cek) > 0) $dup = true;
+            $cek = sdb_query($koneksi, "SELECT id_konsumen FROM data_konsumen WHERE no_whatsapp = '$wa'");
+            if ($cek && sdb_num_rows($cek) > 0) $dup = true;
         }
 
         if ($dup) {
             // Sudah jadi konsumen, cukup tandai sebagai Deal (tidak insert ganda)
-            mysqli_query($koneksi, "UPDATE data_prospek SET status_followup='Deal' WHERE id_prospek=$id");
+            sdb_query($koneksi, "UPDATE data_prospek SET status_followup='Deal' WHERE id_prospek=$id");
             header("Location: prospek.php?pesan=duplikat");
             exit();
         }
 
-        mysqli_query($koneksi, "INSERT INTO data_konsumen (name_lengkap, no_ktp, pekerjaan, no_whatsapp)
+        sdb_query($koneksi, "INSERT INTO data_konsumen (name_lengkap, no_ktp, pekerjaan, no_whatsapp)
             VALUES ('$nama', '$ktp', '$kerja', '$wa')");
-        $new_id = mysqli_insert_id($koneksi);
-        mysqli_query($koneksi, "UPDATE data_prospek SET status_followup='Deal' WHERE id_prospek=$id");
+        $new_id = sdb_insert_id($koneksi);
+        sdb_query($koneksi, "UPDATE data_prospek SET status_followup='Deal' WHERE id_prospek=$id");
         header("Location: prospek.php?pesan=deal&id=$new_id");
         exit();
     }
@@ -111,20 +111,20 @@ $filter_sumber  = $_GET['sumber']  ?? '';
 $filter_keyword = $_GET['keyword'] ?? '';
 
 $where = "1=1";
-if (!empty($filter_status))  $where .= " AND status_followup = '" . mysqli_real_escape_string($koneksi, $filter_status) . "'";
-if (!empty($filter_sumber))  $where .= " AND sumber = '" . mysqli_real_escape_string($koneksi, $filter_sumber) . "'";
+if (!empty($filter_status))  $where .= " AND status_followup = '" . sdb_real_escape_string($koneksi, $filter_status) . "'";
+if (!empty($filter_sumber))  $where .= " AND sumber = '" . sdb_real_escape_string($koneksi, $filter_sumber) . "'";
 if (!empty($filter_keyword)) {
-    $kw = mysqli_real_escape_string($koneksi, $filter_keyword);
+    $kw = sdb_real_escape_string($koneksi, $filter_keyword);
     $where .= " AND (name_lengkap LIKE '%$kw%' OR no_whatsapp LIKE '%$kw%' OR pekerjaan LIKE '%$kw%' OR cluster_minat LIKE '%$kw%')";
 }
 
-$q_prospek = mysqli_query($koneksi, "SELECT * FROM data_prospek WHERE $where ORDER BY
+$q_prospek = sdb_query($koneksi, "SELECT * FROM data_prospek WHERE $where ORDER BY
     FIELD(status_followup,'Baru','Sudah Dihubungi','Minat','Sudah Survey','Deal','Tidak Lanjut'), tanggal_followup ASC, id_prospek DESC");
-$jml_data = $q_prospek ? mysqli_num_rows($q_prospek) : 0;
+$jml_data = $q_prospek ? sdb_num_rows($q_prospek) : 0;
 
 // Statistik
 $stat = ['total'=>0,'baru'=>0,'dihubungi'=>0,'minat'=>0,'survey'=>0,'deal'=>0,'tidak'=>0];
-$q_stat = mysqli_query($koneksi, "SELECT
+$q_stat = sdb_query($koneksi, "SELECT
     COUNT(*) AS total,
     SUM(status_followup='Baru') AS baru,
     SUM(status_followup='Sudah Dihubungi') AS dihubungi,
@@ -133,14 +133,14 @@ $q_stat = mysqli_query($koneksi, "SELECT
     SUM(status_followup='Deal') AS deal,
     SUM(status_followup='Tidak Lanjut') AS tidak
 FROM data_prospek");
-if ($s = mysqli_fetch_assoc($q_stat)) {
+if ($s = sdb_fetch_assoc($q_stat)) {
     foreach ($stat as $k => $v) $stat[$k] = intval($s[$k] ?? 0);
 }
 
 // Daftar cluster untuk dropdown (dimuat sekali ke array agar tidak habis terpakai dalam loop)
 $klaster = [];
-$q_cluster = mysqli_query($koneksi, "SELECT cluster_name FROM data_cluster ORDER BY cluster_name");
-while ($_cl = mysqli_fetch_assoc($q_cluster)) $klaster[] = $_cl['cluster_name'];
+$q_cluster = sdb_query($koneksi, "SELECT cluster_name FROM data_cluster ORDER BY cluster_name");
+while ($_cl = sdb_fetch_assoc($q_cluster)) $klaster[] = $_cl['cluster_name'];
 
 // Kumpulan modal (edit / deal) yang dibuat per baris
 $modals = '';
@@ -281,7 +281,7 @@ if (isset($_GET['pesan']) && $_GET['pesan'] === 'deal') {
                         $no = 1;
                         $fuClasses = ['Baru'=>'badge-fu-baru','Sudah Dihubungi'=>'badge-fu-hubungi','Minat'=>'badge-fu-minat','Sudah Survey'=>'badge-fu-survey','Deal'=>'badge-fu-deal','Tidak Lanjut'=>'badge-fu-tidak'];
                         $sumberClasses = ['Pameran'=>'badge-sumber-pameran','Walk-in Kantor'=>'badge-sumber-walkin','Instagram'=>'badge-sumber-ig','Facebook'=>'badge-sumber-fb','WhatsApp'=>'badge-sumber-wa','Referensi'=>'badge-sumber-ref','Lainnya'=>'badge-sumber-lain'];
-                        while ($p = mysqli_fetch_assoc($q_prospek)):
+                        while ($p = sdb_fetch_assoc($q_prospek)):
                     ?>
                     <tr>
                         <td><?= $no++ ?></td>

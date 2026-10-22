@@ -27,19 +27,19 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
     $id_pembayaran = intval($_GET['id']);
 
     // Ambil no_kwitansi sebelum hapus
-    $q_kw = mysqli_query($koneksi, "SELECT no_kwitansi FROM data_pembayaran WHERE id_pembayaran = $id_pembayaran");
-    $no_kw = ($q_kw && mysqli_num_rows($q_kw) > 0) ? mysqli_fetch_assoc($q_kw)['no_kwitansi'] : '';
+    $q_kw = sdb_query($koneksi, "SELECT no_kwitansi FROM data_pembayaran WHERE id_pembayaran = $id_pembayaran");
+    $no_kw = ($q_kw && sdb_num_rows($q_kw) > 0) ? sdb_fetch_assoc($q_kw)['no_kwitansi'] : '';
 
     $query_hapus = "DELETE FROM data_pembayaran WHERE id_pembayaran = $id_pembayaran";
-    if (mysqli_query($koneksi, $query_hapus)) {
+    if (sdb_query($koneksi, $query_hapus)) {
         // AUTO-SYNC hapus dari data_keuangan
         if ($no_kw) {
-            mysqli_query($koneksi, "DELETE FROM data_keuangan WHERE no_ref = '" . mysqli_real_escape_string($koneksi, $no_kw) . "'");
+            sdb_query($koneksi, "DELETE FROM data_keuangan WHERE no_ref = '" . sdb_real_escape_string($koneksi, $no_kw) . "'");
         }
         header("Location: pembayaran.php?status=deleted");
         exit();
     } else {
-        echo "<script>alert('Gagal menghapus riwayat pembayaran: " . mysqli_error($koneksi) . "');</script>";
+        echo "<script>alert('Gagal menghapus riwayat pembayaran: " . sdb_error($koneksi) . "');</script>";
     }
 }
 
@@ -47,12 +47,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
 if (isset($_POST['simpan_pembayaran'])) {
     $sumber      = ($_POST['sumber_pembayaran'] ?? 'Unit Rumah') === 'Lainnya' ? 'Lainnya' : 'Unit Rumah';
     $nama_pembayar = trim($_POST['nama_pembayar'] ?? '');
-    $no_kwitansi  = mysqli_real_escape_string($koneksi, $_POST['no_kwitansi']);
-    $jenis        = mysqli_real_escape_string($koneksi, $_POST['jenis_pembayaran']);
-    $jumlah       = mysqli_real_escape_string($koneksi, $_POST['jumlah_bayar']);
-    $tgl_bayar    = mysqli_real_escape_string($koneksi, $_POST['tgl_bayar']);
-    $metode       = mysqli_real_escape_string($koneksi, $_POST['metode_pembayaran']);
-    $keterangan   = mysqli_real_escape_string($koneksi, $_POST['keterangan']);
+    $no_kwitansi  = sdb_real_escape_string($koneksi, $_POST['no_kwitansi']);
+    $jenis        = sdb_real_escape_string($koneksi, $_POST['jenis_pembayaran']);
+    $jumlah       = sdb_real_escape_string($koneksi, $_POST['jumlah_bayar']);
+    $tgl_bayar    = sdb_real_escape_string($koneksi, $_POST['tgl_bayar']);
+    $metode       = sdb_real_escape_string($koneksi, $_POST['metode_pembayaran']);
+    $keterangan   = sdb_real_escape_string($koneksi, $_POST['keterangan']);
 
     // Kumpulkan semua transaksi terpilih (kwitansi multi-blok)
     $trx_ids = [];
@@ -79,8 +79,8 @@ if (isset($_POST['simpan_pembayaran'])) {
     // Validasi: semua transaksi dalam 1 kwitansi harus milik konsumen yang sama
     if ($sumber === 'Unit Rumah') {
         $in_trx = implode(',', array_map('intval', $trx_ids));
-        $q_kons = mysqli_query($koneksi, "SELECT DISTINCT id_konsumen FROM data_transaksi WHERE id_transaksi IN ($in_trx)");
-        $jml_konsumen = $q_kons ? mysqli_num_rows($q_kons) : 0;
+        $q_kons = sdb_query($koneksi, "SELECT DISTINCT id_konsumen FROM data_transaksi WHERE id_transaksi IN ($in_trx)");
+        $jml_konsumen = $q_kons ? sdb_num_rows($q_kons) : 0;
         if ($jml_konsumen > 1) {
             header("Location: pembayaran.php?status=err_konsumen");
             exit();
@@ -90,25 +90,25 @@ if (isset($_POST['simpan_pembayaran'])) {
     // Blokir pembayaran bila ada blok yang berada di cluster di HOLD
     if ($sumber === 'Unit Rumah') {
         foreach ($trx_ids as $tid) {
-            $q_rumah_trx = mysqli_query($koneksi, "SELECT id_rumah FROM data_transaksi WHERE id_transaksi = $tid LIMIT 1");
-            $id_rumah_trx = ($q_rumah_trx && mysqli_num_rows($q_rumah_trx) > 0) ? (int)(mysqli_fetch_assoc($q_rumah_trx)['id_rumah'] ?? 0) : 0;
+            $q_rumah_trx = sdb_query($koneksi, "SELECT id_rumah FROM data_transaksi WHERE id_transaksi = $tid LIMIT 1");
+            $id_rumah_trx = ($q_rumah_trx && sdb_num_rows($q_rumah_trx) > 0) ? (int)(sdb_fetch_assoc($q_rumah_trx)['id_rumah'] ?? 0) : 0;
             cluster_hold_cek_rumah($koneksi, $id_rumah_trx, 'pembayaran.php');
         }
     }
 
-    $nama_pembayar_sql = $nama_pembayar !== '' ? "'" . mysqli_real_escape_string($koneksi, $nama_pembayar) . "'" : 'NULL';
+    $nama_pembayar_sql = $nama_pembayar !== '' ? "'" . sdb_real_escape_string($koneksi, $nama_pembayar) . "'" : 'NULL';
     $id_trx_sql        = $id_transaksi > 0 ? "'$id_transaksi'" : 'NULL';
 
     // Simpan header kwitansi (id_transaksi = transaksi pertama sebagai referensi utama)
     $query = "INSERT INTO data_pembayaran (id_transaksi, nama_pembayar, sumber_pembayaran, no_kwitansi, jenis_pembayaran, jumlah_bayar, tgl_bayar, metode_pembayaran, keterangan)
               VALUES ($id_trx_sql, $nama_pembayar_sql, '$sumber', '$no_kwitansi', '$jenis', '$jumlah', '$tgl_bayar', '$metode', '$keterangan')";
-    mysqli_query($koneksi, $query);
-    $id_pembayaran_baru = mysqli_insert_id($koneksi);
+    sdb_query($koneksi, $query);
+    $id_pembayaran_baru = sdb_insert_id($koneksi);
 
     // Simpan detail blok (kwitansi multi-blok)
     if ($sumber === 'Unit Rumah' && $id_pembayaran_baru > 0) {
         foreach ($trx_ids as $tid) {
-            mysqli_query($koneksi, "INSERT INTO data_pembayaran_detail (id_pembayaran, id_transaksi) VALUES ($id_pembayaran_baru, $tid)");
+            sdb_query($koneksi, "INSERT INTO data_pembayaran_detail (id_pembayaran, id_transaksi) VALUES ($id_pembayaran_baru, $tid)");
         }
     }
 
@@ -128,9 +128,9 @@ if (isset($_POST['simpan_pembayaran'])) {
     // Cluster hanya berlaku untuk kwitansi berbasis unit rumah
     $cluster_id = 'NULL';
     if ($id_transaksi > 0) {
-        $q_cluster = mysqli_query($koneksi, "SELECT r.id_cluster FROM data_transaksi t LEFT JOIN data_rumah r ON t.id_rumah = r.id_rumah WHERE t.id_transaksi = '$id_transaksi'");
-        if ($q_cluster && mysqli_num_rows($q_cluster) > 0) {
-            $cid = mysqli_fetch_assoc($q_cluster)['id_cluster'];
+        $q_cluster = sdb_query($koneksi, "SELECT r.id_cluster FROM data_transaksi t LEFT JOIN data_rumah r ON t.id_rumah = r.id_rumah WHERE t.id_transaksi = '$id_transaksi'");
+        if ($q_cluster && sdb_num_rows($q_cluster) > 0) {
+            $cid = sdb_fetch_assoc($q_cluster)['id_cluster'];
             if (!empty($cid)) $cluster_id = "'" . intval($cid) . "'";
         }
     }
@@ -139,21 +139,21 @@ if (isset($_POST['simpan_pembayaran'])) {
     $daftar_blok_keu = '';
     if ($sumber === 'Unit Rumah') {
         $in_trx = implode(',', array_map('intval', $trx_ids));
-        $q_blok = mysqli_query($koneksi, "SELECT GROUP_CONCAT(r.no_blok ORDER BY r.no_blok SEPARATOR ', ') AS blok FROM data_transaksi t JOIN data_rumah r ON t.id_rumah = r.id_rumah WHERE t.id_transaksi IN ($in_trx)");
-        if ($q_blok && $row = mysqli_fetch_assoc($q_blok)) {
+        $q_blok = sdb_query($koneksi, "SELECT GROUP_CONCAT(r.no_blok ORDER BY r.no_blok SEPARATOR ', ') AS blok FROM data_transaksi t JOIN data_rumah r ON t.id_rumah = r.id_rumah WHERE t.id_transaksi IN ($in_trx)");
+        if ($q_blok && $row = sdb_fetch_assoc($q_blok)) {
             $daftar_blok_keu = trim($row['blok'] ?? '');
         }
     }
 
     // Deskripsi: sertakan penerima untuk kwitansi pengeluaran (PT -> Konsumen)
     if ($sumber === 'Lainnya') {
-        $desk = mysqli_real_escape_string($koneksi, trim("$jenis - $nama_pembayar") . ($keterangan ? " ($keterangan)" : ''));
+        $desk = sdb_real_escape_string($koneksi, trim("$jenis - $nama_pembayar") . ($keterangan ? " ($keterangan)" : ''));
     } else {
         $base_desk = $daftar_blok_keu ? "$jenis (Blok $daftar_blok_keu)" : $jenis;
-        $desk = mysqli_real_escape_string($koneksi, $keterangan ? "$base_desk - $keterangan" : $base_desk);
+        $desk = sdb_real_escape_string($koneksi, $keterangan ? "$base_desk - $keterangan" : $base_desk);
     }
 
-    mysqli_query($koneksi, "INSERT INTO data_keuangan (tanggal, jenis, kategori, cluster_id, deskripsi, nominal, metode_bayar, no_ref)
+    sdb_query($koneksi, "INSERT INTO data_keuangan (tanggal, jenis, kategori, cluster_id, deskripsi, nominal, metode_bayar, no_ref)
                             VALUES ('$tgl_bayar', '$jenis_keuangan', '$kategori_keu', $cluster_id, '$desk', $jumlah, '$metode_keu', '$no_kwitansi')");
 
     header("Location: pembayaran.php");
@@ -410,7 +410,7 @@ $jumlah_total    = pembayaran_jumlah_total($koneksi);
                         <input type="text" id="filterTrx" class="form-control form-control-sm mb-2" placeholder="Cari blok / nama konsumen..." autocomplete="off">
                         <div class="border rounded p-2" style="max-height:220px; overflow-y:auto;" id="daftarTrx">
 							<?php
-							$qt = mysqli_query($koneksi, "SELECT t.id_transaksi, 
+							$qt = sdb_query($koneksi, "SELECT t.id_transaksi, 
 																 k.name_lengkap, 
 																 r.no_blok,
 																 c.cluster_name 
@@ -419,7 +419,7 @@ $jumlah_total    = pembayaran_jumlah_total($koneksi);
 														  LEFT JOIN data_rumah r ON t.id_rumah = r.id_rumah
 														  LEFT JOIN data_cluster c ON r.id_cluster = c.id_cluster
 														  ORDER BY c.cluster_name, r.no_blok");
-							while ($st = mysqli_fetch_assoc($qt)) {
+							while ($st = sdb_fetch_assoc($qt)) {
 								echo "<div class='form-check trx-item'>"
 								   . "<input class='form-check-input trx-chk' type='checkbox' name='id_transaksi[]' value='".$st['id_transaksi']."' id='trx_".$st['id_transaksi']."'>"
 								   . "<label class='form-check-label w-100' for='trx_".$st['id_transaksi']."'>"
@@ -436,8 +436,8 @@ $jumlah_total    = pembayaran_jumlah_total($koneksi);
                         <input type="text" name="nama_pembayar" id="nama_pembayar" class="form-control" list="daftarKonsumen" placeholder="Pilih / ketik nama penerima..." autocomplete="off">
                         <datalist id="daftarKonsumen">
                             <?php
-                            $qk = mysqli_query($koneksi, "SELECT name_lengkap FROM data_konsumen WHERE name_lengkap IS NOT NULL AND name_lengkap <> '' ORDER BY name_lengkap");
-                            while ($sk = mysqli_fetch_assoc($qk)) {
+                            $qk = sdb_query($koneksi, "SELECT name_lengkap FROM data_konsumen WHERE name_lengkap IS NOT NULL AND name_lengkap <> '' ORDER BY name_lengkap");
+                            while ($sk = sdb_fetch_assoc($qk)) {
                                 echo '<option value="' . htmlspecialchars($sk['name_lengkap']) . '">';
                             }
                             ?>

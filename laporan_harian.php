@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 session_start();
 if (!isset($_SESSION['status_login']) || $_SESSION['status_login'] !== true) {
@@ -29,17 +29,17 @@ $koneksi->query("UPDATE data_laporan_harian SET status='Selesai', updated_at=NOW
 
 // Tambah Laporan
 if (isset($_POST['tambah_laporan'])) {
-    $tanggal    = mysqli_real_escape_string($koneksi, $_POST['tanggal']);
-    $kategori   = mysqli_real_escape_string($koneksi, $_POST['kategori']);
-    $nama       = mysqli_real_escape_string($koneksi, $_POST['nama_lengkap']);
-    $judul      = mysqli_real_escape_string($koneksi, $_POST['judul_kegiatan']);
-    $detail     = mysqli_real_escape_string($koneksi, $_POST['detail_kegiatan']);
-    $jam_mulai  = !empty($_POST['jam_mulai']) ? "'" . mysqli_real_escape_string($koneksi, $_POST['jam_mulai']) . "'" : 'NULL';
-    $jam_selesai= !empty($_POST['jam_selesai']) ? "'" . mysqli_real_escape_string($koneksi, $_POST['jam_selesai']) . "'" : 'NULL';
-    $status     = mysqli_real_escape_string($koneksi, $_POST['status']);
-    $catatan    = mysqli_real_escape_string($koneksi, $_POST['catatan']);
+    $tanggal    = sdb_real_escape_string($koneksi, $_POST['tanggal']);
+    $kategori   = sdb_real_escape_string($koneksi, $_POST['kategori']);
+    $nama       = sdb_real_escape_string($koneksi, $_POST['nama_lengkap']);
+    $judul      = sdb_real_escape_string($koneksi, $_POST['judul_kegiatan']);
+    $detail     = sdb_real_escape_string($koneksi, $_POST['detail_kegiatan']);
+    $jam_mulai  = !empty($_POST['jam_mulai']) ? "'" . sdb_real_escape_string($koneksi, $_POST['jam_mulai']) . "'" : 'NULL';
+    $jam_selesai= !empty($_POST['jam_selesai']) ? "'" . sdb_real_escape_string($koneksi, $_POST['jam_selesai']) . "'" : 'NULL';
+    $status     = sdb_real_escape_string($koneksi, $_POST['status']);
+    $catatan    = sdb_real_escape_string($koneksi, $_POST['catatan']);
 
-    mysqli_query($koneksi, "INSERT INTO data_laporan_harian (tanggal, kategori, nama_lengkap, judul_kegiatan, detail_kegiatan, jam_mulai, jam_selesai, status, catatan)
+    sdb_query($koneksi, "INSERT INTO data_laporan_harian (tanggal, kategori, nama_lengkap, judul_kegiatan, detail_kegiatan, jam_mulai, jam_selesai, status, catatan)
                             VALUES ('$tanggal','$kategori','$nama','$judul','$detail',$jam_mulai,$jam_selesai,'$status','$catatan')");
     header("Location: laporan_harian.php");
     exit();
@@ -48,17 +48,17 @@ if (isset($_POST['tambah_laporan'])) {
 // Edit Laporan
 if (isset($_POST['edit_laporan'])) {
     $id         = intval($_POST['id_laporan']);
-    $tanggal    = mysqli_real_escape_string($koneksi, $_POST['tanggal']);
-    $kategori   = mysqli_real_escape_string($koneksi, $_POST['kategori']);
-    $nama       = mysqli_real_escape_string($koneksi, $_POST['nama_lengkap']);
-    $judul      = mysqli_real_escape_string($koneksi, $_POST['judul_kegiatan']);
-    $detail     = mysqli_real_escape_string($koneksi, $_POST['detail_kegiatan']);
-    $jam_mulai  = !empty($_POST['jam_mulai']) ? "'" . mysqli_real_escape_string($koneksi, $_POST['jam_mulai']) . "'" : 'NULL';
-    $jam_selesai= !empty($_POST['jam_selesai']) ? "'" . mysqli_real_escape_string($koneksi, $_POST['jam_selesai']) . "'" : 'NULL';
-    $status     = mysqli_real_escape_string($koneksi, $_POST['status']);
-    $catatan    = mysqli_real_escape_string($koneksi, $_POST['catatan']);
+    $tanggal    = sdb_real_escape_string($koneksi, $_POST['tanggal']);
+    $kategori   = sdb_real_escape_string($koneksi, $_POST['kategori']);
+    $nama       = sdb_real_escape_string($koneksi, $_POST['nama_lengkap']);
+    $judul      = sdb_real_escape_string($koneksi, $_POST['judul_kegiatan']);
+    $detail     = sdb_real_escape_string($koneksi, $_POST['detail_kegiatan']);
+    $jam_mulai  = !empty($_POST['jam_mulai']) ? "'" . sdb_real_escape_string($koneksi, $_POST['jam_mulai']) . "'" : 'NULL';
+    $jam_selesai= !empty($_POST['jam_selesai']) ? "'" . sdb_real_escape_string($koneksi, $_POST['jam_selesai']) . "'" : 'NULL';
+    $status     = sdb_real_escape_string($koneksi, $_POST['status']);
+    $catatan    = sdb_real_escape_string($koneksi, $_POST['catatan']);
 
-    mysqli_query($koneksi, "UPDATE data_laporan_harian SET tanggal='$tanggal', kategori='$kategori', nama_lengkap='$nama', judul_kegiatan='$judul', detail_kegiatan='$detail', jam_mulai=$jam_mulai, jam_selesai=$jam_selesai, status='$status', catatan='$catatan' WHERE id=$id");
+    sdb_query($koneksi, "UPDATE data_laporan_harian SET tanggal='$tanggal', kategori='$kategori', nama_lengkap='$nama', judul_kegiatan='$judul', detail_kegiatan='$detail', jam_mulai=$jam_mulai, jam_selesai=$jam_selesai, status='$status', catatan='$catatan' WHERE id=$id");
     header("Location: laporan_harian.php");
     exit();
 }
@@ -70,7 +70,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
         die("Token keamanan tidak valid.");
     }
     $id_hapus = intval($_GET['id']);
-    mysqli_query($koneksi, "DELETE FROM data_laporan_harian WHERE id = $id_hapus");
+    sdb_query($koneksi, "DELETE FROM data_laporan_harian WHERE id = $id_hapus");
     header("Location: laporan_harian.php");
     exit();
 }
@@ -82,27 +82,27 @@ $filter_kategori  = $_GET['kategori']  ?? '';
 $filter_status    = $_GET['status']    ?? '';
 $filter_keyword   = $_GET['keyword']   ?? '';
 
-if (!empty($filter_tanggal))  $where .= " AND tanggal = '" . mysqli_real_escape_string($koneksi, $filter_tanggal) . "'";
-if (!empty($filter_kategori)) $where .= " AND kategori = '" . mysqli_real_escape_string($koneksi, $filter_kategori) . "'";
-if (!empty($filter_status))   $where .= " AND status = '" . mysqli_real_escape_string($koneksi, $filter_status) . "'";
+if (!empty($filter_tanggal))  $where .= " AND tanggal = '" . sdb_real_escape_string($koneksi, $filter_tanggal) . "'";
+if (!empty($filter_kategori)) $where .= " AND kategori = '" . sdb_real_escape_string($koneksi, $filter_kategori) . "'";
+if (!empty($filter_status))   $where .= " AND status = '" . sdb_real_escape_string($koneksi, $filter_status) . "'";
 if (!empty($filter_keyword))  {
-    $kw = mysqli_real_escape_string($koneksi, $filter_keyword);
+    $kw = sdb_real_escape_string($koneksi, $filter_keyword);
     $where .= " AND (nama_lengkap LIKE '%$kw%' OR judul_kegiatan LIKE '%$kw%' OR detail_kegiatan LIKE '%$kw%')";
 }
 
-$q_laporan = mysqli_query($koneksi, "SELECT * FROM data_laporan_harian WHERE $where ORDER BY tanggal DESC, jam_mulai DESC");
-$jml_data = mysqli_num_rows($q_laporan);
+$q_laporan = sdb_query($koneksi, "SELECT * FROM data_laporan_harian WHERE $where ORDER BY tanggal DESC, jam_mulai DESC");
+$jml_data = sdb_num_rows($q_laporan);
 
 // Statistik
 $stat = ['total'=>0, 'selesai'=>0, 'proses'=>0, 'terhambat'=>0, 'belum'=>0];
-$q_stat = mysqli_query($koneksi, "SELECT 
+$q_stat = sdb_query($koneksi, "SELECT 
     COUNT(*) AS total,
     SUM(status='Selesai') AS selesai,
     SUM(status='Sedang Berlangsung') AS proses,
     SUM(status='Terhambat') AS terhambat,
     SUM(status='Belum Dikerjakan') AS belum
 FROM data_laporan_harian");
-if ($s = mysqli_fetch_assoc($q_stat)) {
+if ($s = sdb_fetch_assoc($q_stat)) {
     $stat['total']    = intval($s['total']);
     $stat['selesai']  = intval($s['selesai']);
     $stat['proses']   = intval($s['proses']);
@@ -264,7 +264,7 @@ $filter_params = http_build_query(array_filter([
                 </thead>
                 <tbody>
                     <?php if ($jml_data > 0): ?>
-                        <?php $no = 1; while ($row = mysqli_fetch_assoc($q_laporan)): ?>
+                        <?php $no = 1; while ($row = sdb_fetch_assoc($q_laporan)): ?>
                             <?php
                                 $badgeStatus = 'badge-status-selesai';
                                 if ($row['status'] === 'Sedang Berlangsung') $badgeStatus = 'badge-status-proses';

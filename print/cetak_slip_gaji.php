@@ -17,8 +17,8 @@ $q = "SELECT g.*, k.nama_lengkap, k.jabatan, k.no_hp, k.alamat
       FROM data_gaji g
       LEFT JOIN data_karyawan k ON g.id_karyawan = k.id_karyawan
       WHERE g.id_gaji = $id";
-$result = mysqli_query($koneksi, $q);
-$data = $result ? mysqli_fetch_assoc($result) : null;
+$result = sdb_query($koneksi, $q);
+$data = $result ? sdb_fetch_assoc($result) : null;
 if (!$data) die("Data slip gaji tidak ditemukan.");
 
 function fmt($n) { return number_format((float)$n, 0, '.', ','); }

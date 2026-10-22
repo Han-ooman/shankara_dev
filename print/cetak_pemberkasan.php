@@ -21,10 +21,10 @@ foreach ([2, 6, 7] as $c) {
 
 // Kumpulkan data yang cocok dengan filter
 $query = "SELECT * FROM view_database_utama ORDER BY id_transaksi DESC";
-$result = mysqli_query($koneksi, $query);
+$result = sdb_query($koneksi, $query);
 $rows = [];
-if ($result && mysqli_num_rows($result) > 0) {
-    while ($row = mysqli_fetch_assoc($result)) {
+if ($result && sdb_num_rows($result) > 0) {
+    while ($row = sdb_fetch_assoc($result)) {
         $skema = $row['skema_bayar'] ?? 'Cash';
         $pekerjaan = $row['pekerjaan'] ?? '';
         $saved_docs = !empty($row['pemberkasan_json']) ? json_decode($row['pemberkasan_json'], true) : [];

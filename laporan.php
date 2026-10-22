@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrf_verify()) {
 }
 
 // 1. REKAP RINGKASAN UTAMA (1 query instead of 5)
-$stat_all = mysqli_fetch_assoc(mysqli_query($koneksi, "SELECT 
+$stat_all = sdb_fetch_assoc(sdb_query($koneksi, "SELECT 
     COUNT(*) as total,
     SUM(UPPER(status_unit) IN ('TERJUAL','ACC-AKAD','AKAD','BAST')) as terjual,
     SUM(UPPER(status_unit) IN ('BOOKING','TERBOOKING','PROSES')) as terbooking,
@@ -27,18 +27,18 @@ $tot_unit      = intval($stat_all['total']);
 $tot_terjual   = intval($stat_all['terjual']);
 $tot_terbooking= intval($stat_all['terbooking']);
 $tot_tersedia  = intval($stat_all['tersedia']);
-$tot_kas = mysqli_fetch_assoc(mysqli_query($koneksi, "SELECT SUM(jumlah_bayar) as total FROM data_pembayaran"))['total'] ?? 0;
+$tot_kas = sdb_fetch_assoc(sdb_query($koneksi, "SELECT SUM(jumlah_bayar) as total FROM data_pembayaran"))['total'] ?? 0;
 
 // 2. DATA UNTUK CHART STATUS UNIT (DOUGHNUT)
 $chart_status_labels = ['Tersedia', 'Terbooking', 'Terjual'];
 $chart_status_data   = [$tot_tersedia, $tot_terbooking, $tot_terjual];
 
 // 3. DATA UNTUK CHART SKEMA PEMBAYARAN (DOUGHNUT)
-$q_skema = mysqli_query($koneksi, "SELECT skema_bayar, COUNT(*) as jumlah FROM data_transaksi GROUP BY skema_bayar");
+$q_skema = sdb_query($koneksi, "SELECT skema_bayar, COUNT(*) as jumlah FROM data_transaksi GROUP BY skema_bayar");
 $skema_labels = [];
 $skema_data   = [];
 if ($q_skema) {
-    while ($row = mysqli_fetch_assoc($q_skema)) {
+    while ($row = sdb_fetch_assoc($q_skema)) {
         $skema_labels[] = !empty($row['skema_bayar']) ? $row['skema_bayar'] : 'Belum Ditentukan';
         $skema_data[]   = (int)$row['jumlah'];
     }
@@ -47,7 +47,7 @@ if ($q_skema) {
 // 4. DATA UNTUK CHART PENJUALAN PER CLUSTER (BAR CHART) & TABEL REKAP
 // Single grouped query instead of 5 queries × N clusters
 $stats_per_cluster = [];
-$q_cstats = mysqli_query($koneksi, "SELECT 
+$q_cstats = sdb_query($koneksi, "SELECT 
     r.id_cluster,
     COUNT(*) as total,
     SUM(UPPER(r.status_unit) IN ('TERJUAL','ACC-AKAD','AKAD','BAST')) as terjual,
@@ -56,25 +56,25 @@ $q_cstats = mysqli_query($koneksi, "SELECT
 FROM data_rumah r
 GROUP BY r.id_cluster");
 if ($q_cstats) {
-    while ($row = mysqli_fetch_assoc($q_cstats)) {
+    while ($row = sdb_fetch_assoc($q_cstats)) {
         $stats_per_cluster[intval($row['id_cluster'])] = $row;
     }
 }
 
 // Dana masuk per cluster (1 grouped query instead of N)
 $dana_per_cluster = [];
-$q_dana = mysqli_query($koneksi, "SELECT r.id_cluster, SUM(p.jumlah_bayar) as total 
+$q_dana = sdb_query($koneksi, "SELECT r.id_cluster, SUM(p.jumlah_bayar) as total 
     FROM data_pembayaran p 
     JOIN data_transaksi t ON p.id_transaksi = t.id_transaksi 
     JOIN data_rumah r ON t.id_rumah = r.id_rumah 
     GROUP BY r.id_cluster");
 if ($q_dana) {
-    while ($row = mysqli_fetch_assoc($q_dana)) {
+    while ($row = sdb_fetch_assoc($q_dana)) {
         $dana_per_cluster[intval($row['id_cluster'])] = floatval($row['total']);
     }
 }
 
-$q_cluster = mysqli_query($koneksi, "SELECT * FROM data_cluster ORDER BY 1 ASC");
+$q_cluster = sdb_query($koneksi, "SELECT * FROM data_cluster ORDER BY 1 ASC");
 $cluster_names      = [];
 $cluster_tersedia   = [];
 $cluster_terbooking = [];
@@ -82,7 +82,7 @@ $cluster_terjual    = [];
 $rekap_cluster_table = [];
 
 if ($q_cluster) {
-    while ($c = mysqli_fetch_assoc($q_cluster)) {
+    while ($c = sdb_fetch_assoc($q_cluster)) {
         $id_c   = $c['id'] ?? $c['id_cluster'] ?? reset($c);
         $nama_c = $c['nama_cluster'] ?? 'Cluster ' . $id_c;
 

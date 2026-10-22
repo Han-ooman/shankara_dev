@@ -24,13 +24,13 @@ if (isset($_POST['simpan'])) {
     $tanggal_akad   = !empty($_POST['tanggal_akad']) ? "'".$_POST['tanggal_akad']."'" : "NULL";
 
     // Query Insert Transaksi
-    $insert = mysqli_query($koneksi, "INSERT INTO data_transaksi (tgl_booking, id_konsumen, id_rumah, skema_bayar, status_konsumen, tanggal_akad) 
+    $insert = sdb_query($koneksi, "INSERT INTO data_transaksi (tgl_booking, id_konsumen, id_rumah, skema_bayar, status_konsumen, tanggal_akad) 
                                      VALUES ('$tgl_booking', '$id_konsumen', '$id_rumah', '$skema_bayar', '$status_konsumen', $tanggal_akad)");
 
     if ($insert) {
         // Logika update status unit rumah otomatis
         $status_unit = ($status_konsumen == 'ACC - AKAD') ? 'TERJUAL' : 'TERBOOKING';
-        mysqli_query($koneksi, "UPDATE data_rumah SET status_unit = '$status_unit' WHERE id_rumah = '$id_rumah'");
+        sdb_query($koneksi, "UPDATE data_rumah SET status_unit = '$status_unit' WHERE id_rumah = '$id_rumah'");
 
         // Redirect kembali ke dashboard utama
         header("Location: ../index.php");

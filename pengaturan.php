@@ -20,13 +20,13 @@ $pesan_sukses = "";
 $pesan_gagal  = "";
 
 // 1. AUTO-CREATE TABEL PENGATURAN & USER JIKA BELUM ADA
-mysqli_query($koneksi, "CREATE TABLE IF NOT EXISTS pengaturan_sistem (
+sdb_query($koneksi, "CREATE TABLE IF NOT EXISTS pengaturan_sistem (
     id INT PRIMARY KEY AUTO_INCREMENT,
     kunci VARCHAR(50) UNIQUE,
     nilai TEXT
 )");
 
-mysqli_query($koneksi, "CREATE TABLE IF NOT EXISTS users (
+sdb_query($koneksi, "CREATE TABLE IF NOT EXISTS users (
     id INT PRIMARY KEY AUTO_INCREMENT,
     nama_lengkap VARCHAR(100),
     username VARCHAR(50) UNIQUE,
@@ -36,19 +36,19 @@ mysqli_query($koneksi, "CREATE TABLE IF NOT EXISTS users (
 )");
 
 // Masukkan admin default jika tabel user masih kosong
-$cek_user = mysqli_query($koneksi, "SELECT id FROM users");
-if ($cek_user && mysqli_num_rows($cek_user) == 0) {
+$cek_user = sdb_query($koneksi, "SELECT id FROM users");
+if ($cek_user && sdb_num_rows($cek_user) == 0) {
     $pass_default = password_hash('admin123', PASSWORD_DEFAULT);
-    mysqli_query($koneksi, "INSERT INTO users (nama_lengkap, username, password, role, status) VALUES 
+    sdb_query($koneksi, "INSERT INTO users (nama_lengkap, username, password, role, status) VALUES 
         ('Admin Utama', 'admin', '$pass_default', 'Super Admin', 'Aktif'),
         ('Staf Lapangan', 'lapangan_shk', '$pass_default', 'Pengawas Lapangan', 'Aktif')");
 }
 
 // HELPER GET SETTING
 function get_setting($koneksi, $kunci, $default = '') {
-    $q = mysqli_query($koneksi, "SELECT nilai FROM pengaturan_sistem WHERE kunci='$kunci'");
-    if ($q && mysqli_num_rows($q) > 0) {
-        $d = mysqli_fetch_assoc($q);
+    $q = sdb_query($koneksi, "SELECT nilai FROM pengaturan_sistem WHERE kunci='$kunci'");
+    if ($q && sdb_num_rows($q) > 0) {
+        $d = sdb_fetch_assoc($q);
         return $d['nilai'];
     }
     return $default;
@@ -57,16 +57,16 @@ function get_setting($koneksi, $kunci, $default = '') {
 // 2. HANDLER: SIMPAN PROFIL PERUSAHAAN
 if (isset($_POST['simpan_profil'])) {
     $data = [
-        'nama_perusahaan'     => mysqli_real_escape_string($koneksi, $_POST['nama_perusahaan']),
-        'pimpinan_perusahaan' => mysqli_real_escape_string($koneksi, $_POST['nama_pimpinan']),
-        'telepon_perusahaan'  => mysqli_real_escape_string($koneksi, $_POST['telepon']),
-        'email_perusahaan'    => mysqli_real_escape_string($koneksi, $_POST['email']),
-        'rekening_perusahaan' => mysqli_real_escape_string($koneksi, $_POST['bank_rekening']),
-        'alamat_perusahaan'   => mysqli_real_escape_string($koneksi, $_POST['alamat'])
+        'nama_perusahaan'     => sdb_real_escape_string($koneksi, $_POST['nama_perusahaan']),
+        'pimpinan_perusahaan' => sdb_real_escape_string($koneksi, $_POST['nama_pimpinan']),
+        'telepon_perusahaan'  => sdb_real_escape_string($koneksi, $_POST['telepon']),
+        'email_perusahaan'    => sdb_real_escape_string($koneksi, $_POST['email']),
+        'rekening_perusahaan' => sdb_real_escape_string($koneksi, $_POST['bank_rekening']),
+        'alamat_perusahaan'   => sdb_real_escape_string($koneksi, $_POST['alamat'])
     ];
 
     foreach ($data as $kunci => $nilai) {
-        mysqli_query($koneksi, "INSERT INTO pengaturan_sistem (kunci, nilai) VALUES ('$kunci', '$nilai') 
+        sdb_query($koneksi, "INSERT INTO pengaturan_sistem (kunci, nilai) VALUES ('$kunci', '$nilai') 
                                 ON DUPLICATE KEY UPDATE nilai='$nilai'");
     }
     $pesan_sukses = "Profil perusahaan berhasil diperbarui!";
@@ -74,13 +74,13 @@ if (isset($_POST['simpan_profil'])) {
 
 // 3. HANDLER: MANAJEMEN USER (TAMBAH, EDIT, & HAPUS)
 if (isset($_POST['tambah_user'])) {
-    $nama     = mysqli_real_escape_string($koneksi, $_POST['nama_lengkap']);
-    $username = mysqli_real_escape_string($koneksi, $_POST['username']);
-    $role     = mysqli_real_escape_string($koneksi, $_POST['role']);
-    $status   = mysqli_real_escape_string($koneksi, $_POST['status']);
+    $nama     = sdb_real_escape_string($koneksi, $_POST['nama_lengkap']);
+    $username = sdb_real_escape_string($koneksi, $_POST['username']);
+    $role     = sdb_real_escape_string($koneksi, $_POST['role']);
+    $status   = sdb_real_escape_string($koneksi, $_POST['status']);
     $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
 
-    $simpan = mysqli_query($koneksi, "INSERT INTO users (nama_lengkap, username, password, role, status) 
+    $simpan = sdb_query($koneksi, "INSERT INTO users (nama_lengkap, username, password, role, status) 
                                       VALUES ('$nama', '$username', '$password', '$role', '$status')");
     if ($simpan) {
         $pesan_sukses = "User baru berhasil ditambahkan!";
@@ -91,15 +91,15 @@ if (isset($_POST['tambah_user'])) {
 
 if (isset($_POST['edit_user'])) {
     $id_user  = intval($_POST['id_user']);
-    $nama     = mysqli_real_escape_string($koneksi, $_POST['nama_lengkap']);
-    $role     = mysqli_real_escape_string($koneksi, $_POST['role']);
-    $status   = mysqli_real_escape_string($koneksi, $_POST['status']);
+    $nama     = sdb_real_escape_string($koneksi, $_POST['nama_lengkap']);
+    $role     = sdb_real_escape_string($koneksi, $_POST['role']);
+    $status   = sdb_real_escape_string($koneksi, $_POST['status']);
 
     if (!empty($_POST['password'])) {
         $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
-        mysqli_query($koneksi, "UPDATE users SET nama_lengkap='$nama', role='$role', status='$status', password='$password' WHERE id=$id_user");
+        sdb_query($koneksi, "UPDATE users SET nama_lengkap='$nama', role='$role', status='$status', password='$password' WHERE id=$id_user");
     } else {
-        mysqli_query($koneksi, "UPDATE users SET nama_lengkap='$nama', role='$role', status='$status' WHERE id=$id_user");
+        sdb_query($koneksi, "UPDATE users SET nama_lengkap='$nama', role='$role', status='$status' WHERE id=$id_user");
     }
     $pesan_sukses = "Data user berhasil diperbarui!";
 }
@@ -109,13 +109,13 @@ if (isset($_POST['hapus_user'])) {
     $id_user = intval($_POST['id_user']);
     
     // Cek username user yang akan dihapus
-    $q_cek = mysqli_query($koneksi, "SELECT username FROM users WHERE id=$id_user");
-    $u_cek = mysqli_fetch_assoc($q_cek);
+    $q_cek = sdb_query($koneksi, "SELECT username FROM users WHERE id=$id_user");
+    $u_cek = sdb_fetch_assoc($q_cek);
 
     if ($u_cek && $u_cek['username'] === 'admin') {
         $pesan_gagal = "Akun Admin Utama (admin) tidak dapat dihapus demi keamanan sistem!";
     } else {
-        $hapus = mysqli_query($koneksi, "DELETE FROM users WHERE id=$id_user");
+        $hapus = sdb_query($koneksi, "DELETE FROM users WHERE id=$id_user");
         if ($hapus) {
             $pesan_sukses = "Pengguna berhasil dihapus dari sistem!";
         } else {
@@ -132,8 +132,8 @@ if (isset($_POST['tambah_bank'])) {
         $arr_bank  = array_map('trim', explode(',', $list_bank));
         if (!in_array($bank_baru, $arr_bank)) {
             $arr_bank[] = $bank_baru;
-            $new_val    = mysqli_real_escape_string($koneksi, implode(', ', $arr_bank));
-            mysqli_query($koneksi, "INSERT INTO pengaturan_sistem (kunci, nilai) VALUES ('master_bank', '$new_val') ON DUPLICATE KEY UPDATE nilai='$new_val'");
+            $new_val    = sdb_real_escape_string($koneksi, implode(', ', $arr_bank));
+            sdb_query($koneksi, "INSERT INTO pengaturan_sistem (kunci, nilai) VALUES ('master_bank', '$new_val') ON DUPLICATE KEY UPDATE nilai='$new_val'");
             $pesan_sukses = "Bank baru berhasil ditambahkan!";
         }
     }
@@ -144,8 +144,8 @@ if (isset($_POST['hapus_bank'])) {
     $list_bank  = get_setting($koneksi, 'master_bank', 'Bank BTN, Bank Mandiri, Bank BRI, Bank BNI');
     $arr_bank   = array_map('trim', explode(',', $list_bank));
     $arr_bank   = array_diff($arr_bank, array($bank_hapus));
-    $new_val    = mysqli_real_escape_string($koneksi, implode(', ', $arr_bank));
-    mysqli_query($koneksi, "INSERT INTO pengaturan_sistem (kunci, nilai) VALUES ('master_bank', '$new_val') ON DUPLICATE KEY UPDATE nilai='$new_val'");
+    $new_val    = sdb_real_escape_string($koneksi, implode(', ', $arr_bank));
+    sdb_query($koneksi, "INSERT INTO pengaturan_sistem (kunci, nilai) VALUES ('master_bank', '$new_val') ON DUPLICATE KEY UPDATE nilai='$new_val'");
     $pesan_sukses = "Bank berhasil dihapus!";
 }
 
@@ -156,8 +156,8 @@ if (isset($_POST['tambah_dokumen'])) {
         $arr_dok  = array_map('trim', explode(',', $list_dok));
         if (!in_array($dok_baru, $arr_dok)) {
             $arr_dok[] = $dok_baru;
-            $new_val   = mysqli_real_escape_string($koneksi, implode(', ', $arr_dok));
-            mysqli_query($koneksi, "INSERT INTO pengaturan_sistem (kunci, nilai) VALUES ('master_dokumen', '$new_val') ON DUPLICATE KEY UPDATE nilai='$new_val'");
+            $new_val   = sdb_real_escape_string($koneksi, implode(', ', $arr_dok));
+            sdb_query($koneksi, "INSERT INTO pengaturan_sistem (kunci, nilai) VALUES ('master_dokumen', '$new_val') ON DUPLICATE KEY UPDATE nilai='$new_val'");
             $pesan_sukses = "Syarat dokumen berhasil ditambahkan!";
         }
     }
@@ -168,20 +168,20 @@ if (isset($_POST['hapus_dokumen'])) {
     $list_dok  = get_setting($koneksi, 'master_dokumen', 'KTP Suami/Istri, NPWP, Slip Gaji 3 Bulan, Rekening Koran');
     $arr_dok   = array_map('trim', explode(',', $list_dok));
     $arr_dok   = array_diff($arr_dok, array($dok_hapus));
-    $new_val   = mysqli_real_escape_string($koneksi, implode(', ', $arr_dok));
-    mysqli_query($koneksi, "INSERT INTO pengaturan_sistem (kunci, nilai) VALUES ('master_dokumen', '$new_val') ON DUPLICATE KEY UPDATE nilai='$new_val'");
+    $new_val   = sdb_real_escape_string($koneksi, implode(', ', $arr_dok));
+    sdb_query($koneksi, "INSERT INTO pengaturan_sistem (kunci, nilai) VALUES ('master_dokumen', '$new_val') ON DUPLICATE KEY UPDATE nilai='$new_val'");
     $pesan_sukses = "Syarat dokumen berhasil dihapus!";
 }
 
 // 5. HANDLER: PENOMORAN FORMAT
 if (isset($_POST['simpan_penomoran'])) {
     $data = [
-        'fmt_kwitansi' => mysqli_real_escape_string($koneksi, $_POST['fmt_kwitansi']),
-        'fmt_bast'     => mysqli_real_escape_string($koneksi, $_POST['fmt_bast']),
-        'fmt_trx'      => mysqli_real_escape_string($koneksi, $_POST['fmt_trx'])
+        'fmt_kwitansi' => sdb_real_escape_string($koneksi, $_POST['fmt_kwitansi']),
+        'fmt_bast'     => sdb_real_escape_string($koneksi, $_POST['fmt_bast']),
+        'fmt_trx'      => sdb_real_escape_string($koneksi, $_POST['fmt_trx'])
     ];
     foreach ($data as $kunci => $nilai) {
-        mysqli_query($koneksi, "INSERT INTO pengaturan_sistem (kunci, nilai) VALUES ('$kunci', '$nilai') 
+        sdb_query($koneksi, "INSERT INTO pengaturan_sistem (kunci, nilai) VALUES ('$kunci', '$nilai') 
                                 ON DUPLICATE KEY UPDATE nilai='$nilai'");
     }
     $pesan_sukses = "Format penomoran berhasil disimpan!";
@@ -190,18 +190,18 @@ if (isset($_POST['simpan_penomoran'])) {
 // 6. HANDLER: BACKUP & RESTORE DATABASE
 if (isset($_POST['download_backup'])) {
     $tables = array();
-    $result = mysqli_query($koneksi, "SHOW TABLES");
-    while ($row = mysqli_fetch_row($result)) { $tables[] = $row[0]; }
+    $result = sdb_query($koneksi, "SHOW TABLES");
+    while ($row = sdb_fetch_row($result)) { $tables[] = $row[0]; }
 
     $return = "-- BACKUP DATABASE SHANKARA DEV\n-- Tanggal: " . date('Y-m-d H:i:s') . "\n\n";
     foreach ($tables as $table) {
-        $result = mysqli_query($koneksi, "SELECT * FROM " . $table);
-        $num_fields = mysqli_num_fields($result);
+        $result = sdb_query($koneksi, "SELECT * FROM " . $table);
+        $num_fields = sdb_num_fields($result);
         $return .= "DROP TABLE IF EXISTS " . $table . ";";
-        $row2 = mysqli_fetch_row(mysqli_query($koneksi, "SHOW CREATE TABLE " . $table));
+        $row2 = sdb_fetch_row(sdb_query($koneksi, "SHOW CREATE TABLE " . $table));
         $return .= "\n\n" . $row2[1] . ";\n\n";
 
-        while ($row = mysqli_fetch_row($result)) {
+        while ($row = sdb_fetch_row($result)) {
             $return .= "INSERT INTO " . $table . " VALUES(";
             for ($j = 0; $j < $num_fields; $j++) {
                 $row[$j] = addslashes($row[$j]);
@@ -229,7 +229,7 @@ if (isset($_POST['restore_database'])) {
             if (substr($line, 0, 2) == '--' || $line == '') continue;
             $query .= $line;
             if (substr(trim($line), -1, 1) == ';') {
-                mysqli_query($koneksi, $query);
+                sdb_query($koneksi, $query);
                 $query = '';
             }
         }
@@ -388,8 +388,8 @@ if (isset($_POST['restore_database'])) {
                         </thead>
                         <tbody>
                             <?php
-                            $q_user = mysqli_query($koneksi, "SELECT * FROM users ORDER BY id ASC");
-                            while ($u = mysqli_fetch_assoc($q_user)):
+                            $q_user = sdb_query($koneksi, "SELECT * FROM users ORDER BY id ASC");
+                            while ($u = sdb_fetch_assoc($q_user)):
                             ?>
                             <tr>
                                 <td class="fw-semibold"><?= htmlspecialchars($u['nama_lengkap']) ?></td>

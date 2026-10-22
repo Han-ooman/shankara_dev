@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 include "includes/koneksi.php";
 include "includes/cluster_hold.php";
 
@@ -27,25 +27,25 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
     $id_transaksi = intval($_GET['id']);
 
     // Step A: Cari id_rumah dari transaksi yang akan dihapus
-    $get_rumah = mysqli_query($koneksi, "SELECT id_rumah FROM data_transaksi WHERE id_transaksi = $id_transaksi");
-    $data = mysqli_fetch_assoc($get_rumah);
+    $get_rumah = sdb_query($koneksi, "SELECT id_rumah FROM data_transaksi WHERE id_transaksi = $id_transaksi");
+    $data = sdb_fetch_assoc($get_rumah);
 
     if ($data) {
         $id_rumah = $data['id_rumah'];
 
         // Step B: Hapus data transaksi
         $delete_query = "DELETE FROM data_transaksi WHERE id_transaksi = $id_transaksi";
-        if (mysqli_query($koneksi, $delete_query)) {
+        if (sdb_query($koneksi, $delete_query)) {
             
             // Step C: Kembalikan status unit rumah menjadi 'TERSEDIA'
             if (!empty($id_rumah)) {
-                mysqli_query($koneksi, "UPDATE data_rumah SET status_unit = 'TERSEDIA' WHERE id_rumah = $id_rumah");
+                sdb_query($koneksi, "UPDATE data_rumah SET status_unit = 'TERSEDIA' WHERE id_rumah = $id_rumah");
             }
 
             header("Location: transaksi.php?status=deleted");
             exit();
         } else {
-            echo "<script>alert('Gagal menghapus transaksi: " . mysqli_error($koneksi) . "');</script>";
+            echo "<script>alert('Gagal menghapus transaksi: " . sdb_error($koneksi) . "');</script>";
         }
     }
 }
@@ -54,35 +54,35 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
 // 2. LOGIKA SIMPAN TRANSAKSI BARU
 // ==========================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['simpan_transaksi']) || isset($_POST['simpan']))) {
-    $tgl_booking     = mysqli_real_escape_string($koneksi, $_POST['tgl_booking']);
+    $tgl_booking     = sdb_real_escape_string($koneksi, $_POST['tgl_booking']);
     $id_konsumen     = intval($_POST['id_konsumen']);
     $id_rumah        = intval($_POST['id_rumah']);
-    $skema_bayar     = mysqli_real_escape_string($koneksi, $_POST['skema_bayar']);
-    $skema_akad      = mysqli_real_escape_string($koneksi, $_POST['skema_akad'] ?? '');
-    $status_konsumen = mysqli_real_escape_string($koneksi, $_POST['status_konsumen']);
+    $skema_bayar     = sdb_real_escape_string($koneksi, $_POST['skema_bayar']);
+    $skema_akad      = sdb_real_escape_string($koneksi, $_POST['skema_akad'] ?? '');
+    $status_konsumen = sdb_real_escape_string($koneksi, $_POST['status_konsumen']);
 
     // Blokir booking / transaksi baru bila cluster sedang di HOLD
     cluster_hold_cek_rumah($koneksi, $id_rumah, 'transaksi.php');
     
     $tgl_akad_input  = $_POST['tanggal_akad'] ?? $_POST['tgl_akad'] ?? '';
-    $tgl_akad_val    = !empty($tgl_akad_input) ? "'".mysqli_real_escape_string($koneksi, $tgl_akad_input)."'" : "NULL";
+    $tgl_akad_val    = !empty($tgl_akad_input) ? "'".sdb_real_escape_string($koneksi, $tgl_akad_input)."'" : "NULL";
     $skema_akad_sql  = !empty($skema_akad) ? "'$skema_akad'" : "NULL";
 
     $sql_transaksi = "INSERT INTO data_transaksi (tgl_booking, id_konsumen, id_rumah, skema_bayar, skema_akad, status_konsumen, tanggal_akad) 
                       VALUES ('$tgl_booking', $id_konsumen, $id_rumah, '$skema_bayar', $skema_akad_sql, '$status_konsumen', $tgl_akad_val)";
 
-    if (mysqli_query($koneksi, $sql_transaksi)) {
+    if (sdb_query($koneksi, $sql_transaksi)) {
         // Cek status konsumen: Jika BATAL maka status unit TERSEDIA, selain itu TERBOOKING
         if ($status_konsumen === 'BATAL') {
-            mysqli_query($koneksi, "UPDATE data_rumah SET status_unit = 'TERSEDIA' WHERE id_rumah = $id_rumah");
+            sdb_query($koneksi, "UPDATE data_rumah SET status_unit = 'TERSEDIA' WHERE id_rumah = $id_rumah");
         } else {
-            mysqli_query($koneksi, "UPDATE data_rumah SET status_unit = 'TERBOOKING' WHERE id_rumah = $id_rumah");
+            sdb_query($koneksi, "UPDATE data_rumah SET status_unit = 'TERBOOKING' WHERE id_rumah = $id_rumah");
         }
 
         header("Location: transaksi.php?status=success");
         exit();
     } else {
-        echo "<script>alert('Gagal menyimpan transaksi: " . mysqli_error($koneksi) . "');</script>";
+        echo "<script>alert('Gagal menyimpan transaksi: " . sdb_error($koneksi) . "');</script>";
     }
 }
 
@@ -91,23 +91,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['simpan_transaksi']) 
 // ==========================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_transaksi'])) {
     $id_transaksi    = intval($_POST['id_transaksi']);
-    $tgl_booking     = mysqli_real_escape_string($koneksi, $_POST['tgl_booking']);
+    $tgl_booking     = sdb_real_escape_string($koneksi, $_POST['tgl_booking']);
     $id_konsumen     = intval($_POST['id_konsumen']);
     $id_rumah_baru   = intval($_POST['id_rumah']);
-    $skema_bayar     = mysqli_real_escape_string($koneksi, $_POST['skema_bayar']);
-    $skema_akad      = mysqli_real_escape_string($koneksi, $_POST['skema_akad'] ?? '');
-    $status_konsumen = mysqli_real_escape_string($koneksi, $_POST['status_konsumen']);
+    $skema_bayar     = sdb_real_escape_string($koneksi, $_POST['skema_bayar']);
+    $skema_akad      = sdb_real_escape_string($koneksi, $_POST['skema_akad'] ?? '');
+    $status_konsumen = sdb_real_escape_string($koneksi, $_POST['status_konsumen']);
     
     $tgl_akad_input  = $_POST['tanggal_akad'] ?? $_POST['tgl_akad'] ?? '';
-    $tgl_akad_val    = !empty($tgl_akad_input) ? "'".mysqli_real_escape_string($koneksi, $tgl_akad_input)."'" : "NULL";
+    $tgl_akad_val    = !empty($tgl_akad_input) ? "'".sdb_real_escape_string($koneksi, $tgl_akad_input)."'" : "NULL";
     $skema_akad_sql  = !empty($skema_akad) ? "'$skema_akad'" : "NULL";
 
     // Blokir pindah ke unit dari cluster yang di HOLD
     cluster_hold_cek_rumah($koneksi, $id_rumah_baru, 'transaksi.php');
 
     // Step A: Dapatkan id_rumah lama dari transaksi ini
-    $get_rumah = mysqli_query($koneksi, "SELECT id_rumah FROM data_transaksi WHERE id_transaksi = $id_transaksi");
-    $data_r = mysqli_fetch_assoc($get_rumah);
+    $get_rumah = sdb_query($koneksi, "SELECT id_rumah FROM data_transaksi WHERE id_transaksi = $id_transaksi");
+    $data_r = sdb_fetch_assoc($get_rumah);
     $id_rumah_lama = $data_r['id_rumah'] ?? 0;
 
     $update_query = "UPDATE data_transaksi SET 
@@ -120,27 +120,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_transaksi'])) {
                      tanggal_akad = $tgl_akad_val
                      WHERE id_transaksi = $id_transaksi";
 
-    if (mysqli_query($koneksi, $update_query)) {
+    if (sdb_query($koneksi, $update_query)) {
         // Kembalikan unit lama ke TERSEDIA jika beda unit
         if ($id_rumah_lama > 0 && $id_rumah_lama != $id_rumah_baru) {
-            mysqli_query($koneksi, "UPDATE data_rumah SET status_unit = 'TERSEDIA' WHERE id_rumah = $id_rumah_lama");
+            sdb_query($koneksi, "UPDATE data_rumah SET status_unit = 'TERSEDIA' WHERE id_rumah = $id_rumah_lama");
         }
 
         // Update status unit baru
         if ($id_rumah_baru > 0) {
             if ($status_konsumen === 'BATAL') {
-                mysqli_query($koneksi, "UPDATE data_rumah SET status_unit = 'TERSEDIA' WHERE id_rumah = $id_rumah_baru");
+                sdb_query($koneksi, "UPDATE data_rumah SET status_unit = 'TERSEDIA' WHERE id_rumah = $id_rumah_baru");
             } elseif ($status_konsumen === 'ACC - AKAD') {
-                mysqli_query($koneksi, "UPDATE data_rumah SET status_unit = 'TERJUAL' WHERE id_rumah = $id_rumah_baru");
+                sdb_query($koneksi, "UPDATE data_rumah SET status_unit = 'TERJUAL' WHERE id_rumah = $id_rumah_baru");
             } else {
-                mysqli_query($koneksi, "UPDATE data_rumah SET status_unit = 'TERBOOKING' WHERE id_rumah = $id_rumah_baru");
+                sdb_query($koneksi, "UPDATE data_rumah SET status_unit = 'TERBOOKING' WHERE id_rumah = $id_rumah_baru");
             }
         }
 
         header("Location: transaksi.php?status=updated");
         exit();
     } else {
-        echo "<script>alert('Gagal mengupdate transaksi: " . mysqli_error($koneksi) . "');</script>";
+        echo "<script>alert('Gagal mengupdate transaksi: " . sdb_error($koneksi) . "');</script>";
     }
 }
 ?>
@@ -262,7 +262,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_transaksi'])) {
                     </thead>
                     <tbody>
                         <?php
-                        $q_trx = mysqli_query($koneksi, "SELECT t.*, 
+                        $q_trx = sdb_query($koneksi, "SELECT t.*, 
                                                                COALESCE(k.name_lengkap) AS konsumen_nama,
                                                                r.no_blok,
                                                                c.cluster_name
@@ -274,16 +274,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_transaksi'])) {
 
                         // Pre-load data untuk dropdown edit modal
                         $arr_konsumen = [];
-                        $qk = mysqli_query($koneksi, "SELECT id_konsumen, name_lengkap, pekerjaan FROM data_konsumen ORDER BY name_lengkap ASC");
-                        while ($row = mysqli_fetch_assoc($qk)) $arr_konsumen[] = $row;
+                        $qk = sdb_query($koneksi, "SELECT id_konsumen, name_lengkap, pekerjaan FROM data_konsumen ORDER BY name_lengkap ASC");
+                        while ($row = sdb_fetch_assoc($qk)) $arr_konsumen[] = $row;
 
                         $arr_rumah = [];
-                        $qr = mysqli_query($koneksi, "SELECT r.id_rumah, r.no_blok, r.tipe_rumah, r.status_unit, c.cluster_name 
+                        $qr = sdb_query($koneksi, "SELECT r.id_rumah, r.no_blok, r.tipe_rumah, r.status_unit, c.cluster_name 
                                                       FROM data_rumah r JOIN data_cluster c ON r.id_cluster = c.id_cluster 
                                                       ORDER BY c.cluster_name, r.no_blok ASC");
-                        while ($row = mysqli_fetch_assoc($qr)) $arr_rumah[] = $row;
+                        while ($row = sdb_fetch_assoc($qr)) $arr_rumah[] = $row;
 
-                        while ($t = mysqli_fetch_assoc($q_trx)) {
+                        while ($t = sdb_fetch_assoc($q_trx)) {
                             // Formatting Status Badge
                             $status = $t['status_konsumen'];
                             $badge_status = 'bg-warning text-dark';
@@ -501,8 +501,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_transaksi'])) {
                                                 LEFT JOIN data_konsumen k ON t.id_konsumen = k.id_konsumen
                                                 ORDER BY c.cluster_name, r.no_blok ASC";
                                 
-                                $rumah = mysqli_query($koneksi, $query_rumah);
-                                while ($r = mysqli_fetch_assoc($rumah)) {
+                                $rumah = sdb_query($koneksi, $query_rumah);
+                                while ($r = sdb_fetch_assoc($rumah)) {
                                     $status = strtolower($r['status_unit']);
                                     $pemesan = !empty($r['pemesan']) ? $r['pemesan'] : 'Konsumen Lain';
                                     $isHold = cluster_is_hold($r['cluster_status'] ?? '');

@@ -19,7 +19,7 @@ if (isset($_GET['ajax']) && isset($_GET['id_konsumen'])) {
     $idk = intval($_GET['id_konsumen']);
     $found = false;
     $data = null;
-    $qq = mysqli_query($koneksi, "SELECT t.id_transaksi, t.tgl_booking, t.skema_bayar, t.skema_akad, t.bank_tujuan, t.status_konsumen,
+    $qq = sdb_query($koneksi, "SELECT t.id_transaksi, t.tgl_booking, t.skema_bayar, t.skema_akad, t.bank_tujuan, t.status_konsumen,
                                          k.name_lengkap, r.id_rumah, r.no_blok, r.tipe_rumah, r.status_unit, c.cluster_name
                                   FROM data_transaksi t
                                   JOIN data_konsumen k ON t.id_konsumen = k.id_konsumen
@@ -27,7 +27,7 @@ if (isset($_GET['ajax']) && isset($_GET['id_konsumen'])) {
                                   JOIN data_cluster c ON r.id_cluster = c.id_cluster
                                   WHERE t.id_konsumen = $idk AND t.status_konsumen != 'BATAL'
                                   ORDER BY t.id_transaksi DESC LIMIT 1");
-    if ($qq && $f = mysqli_fetch_assoc($qq)) {
+    if ($qq && $f = sdb_fetch_assoc($qq)) {
         $found = true;
         $data = $f;
     }
@@ -50,17 +50,17 @@ if (isset($_POST['simpan_rencana'])) {
     // Blokir rencana akad baru bila cluster sedang di HOLD
     cluster_hold_cek_rumah($koneksi, $id_rumah, "rencana_akad.php?bulan=$bulan");
 
-    $skema_bayar     = mysqli_real_escape_string($koneksi, $_POST['skema_bayar']);
-    $skema_akad      = mysqli_real_escape_string($koneksi, $_POST['skema_akad']);
-    $bank_tujuan    = mysqli_real_escape_string($koneksi, $_POST['bank_tujuan'] ?? '');
-    $status_konsumen = mysqli_real_escape_string($koneksi, $_POST['status_konsumen']);
-    $tanggal_akad    = !empty($_POST['tanggal_akad']) ? "'" . mysqli_real_escape_string($koneksi, $_POST['tanggal_akad']) . "'" : "NULL";
+    $skema_bayar     = sdb_real_escape_string($koneksi, $_POST['skema_bayar']);
+    $skema_akad      = sdb_real_escape_string($koneksi, $_POST['skema_akad']);
+    $bank_tujuan    = sdb_real_escape_string($koneksi, $_POST['bank_tujuan'] ?? '');
+    $status_konsumen = sdb_real_escape_string($koneksi, $_POST['status_konsumen']);
+    $tanggal_akad    = !empty($_POST['tanggal_akad']) ? "'" . sdb_real_escape_string($koneksi, $_POST['tanggal_akad']) . "'" : "NULL";
 
     $q = "INSERT INTO data_transaksi (tgl_booking, id_konsumen, id_rumah, skema_bayar, skema_akad, bank_tujuan, status_konsumen, tanggal_akad)
           VALUES ('$tgl_booking', '$id_konsumen', '$id_rumah', '$skema_bayar', '$skema_akad', '$bank_tujuan', '$status_konsumen', $tanggal_akad)";
-    if (mysqli_query($koneksi, $q)) {
+    if (sdb_query($koneksi, $q)) {
         $stUnit = ($status_konsumen === 'ACC - AKAD') ? 'TERJUAL' : 'TERBOOKING';
-        mysqli_query($koneksi, "UPDATE data_rumah SET status_unit = '$stUnit' WHERE id_rumah = '$id_rumah'");
+        sdb_query($koneksi, "UPDATE data_rumah SET status_unit = '$stUnit' WHERE id_rumah = '$id_rumah'");
         log_aktivitas($koneksi, 'TAMBAH', 'Rencana Akad', 'Tambah rencana akad: konsumen #' . $id_konsumen . ', unit #' . $id_rumah, ['id_konsumen' => $id_konsumen, 'id_rumah' => $id_rumah, 'skema_bayar' => $skema_bayar, 'tanggal_akad' => $_POST['tanggal_akad'] ?? null]);
     }
     header("Location: rencana_akad.php?bulan=$bulan");
@@ -69,15 +69,15 @@ if (isset($_POST['simpan_rencana'])) {
 
 if (isset($_POST['ubah_rencana'])) {
     $id_transaksi    = intval($_POST['id_transaksi']);
-    $skema_akad      = mysqli_real_escape_string($koneksi, $_POST['skema_akad']);
-    $bank_tujuan    = mysqli_real_escape_string($koneksi, $_POST['bank_tujuan'] ?? '');
-    $status_konsumen = mysqli_real_escape_string($koneksi, $_POST['status_konsumen']);
-    $tanggal_akad    = !empty($_POST['tanggal_akad']) ? "'" . mysqli_real_escape_string($koneksi, $_POST['tanggal_akad']) . "'" : "NULL";
+    $skema_akad      = sdb_real_escape_string($koneksi, $_POST['skema_akad']);
+    $bank_tujuan    = sdb_real_escape_string($koneksi, $_POST['bank_tujuan'] ?? '');
+    $status_konsumen = sdb_real_escape_string($koneksi, $_POST['status_konsumen']);
+    $tanggal_akad    = !empty($_POST['tanggal_akad']) ? "'" . sdb_real_escape_string($koneksi, $_POST['tanggal_akad']) . "'" : "NULL";
 
     $q = "UPDATE data_transaksi SET skema_akad = '$skema_akad', bank_tujuan = '$bank_tujuan', status_konsumen = '$status_konsumen', tanggal_akad = $tanggal_akad WHERE id_transaksi = '$id_transaksi'";
-    if (mysqli_query($koneksi, $q)) {
+    if (sdb_query($koneksi, $q)) {
         $stUnit = ($status_konsumen === 'ACC - AKAD') ? 'TERJUAL' : 'TERBOOKING';
-        mysqli_query($koneksi, "UPDATE data_rumah SET status_unit = '$stUnit' WHERE id_rumah = (SELECT id_rumah FROM data_transaksi WHERE id_transaksi = '$id_transaksi')");
+        sdb_query($koneksi, "UPDATE data_rumah SET status_unit = '$stUnit' WHERE id_rumah = (SELECT id_rumah FROM data_transaksi WHERE id_transaksi = '$id_transaksi')");
         log_aktivitas($koneksi, 'UBAH', 'Rencana Akad', 'Ubah rencana akad transaksi #' . $id_transaksi, ['id_transaksi' => $id_transaksi, 'skema_akad' => $skema_akad, 'status_konsumen' => $status_konsumen, 'tanggal_akad' => $_POST['tanggal_akad'] ?? null]);
     }
     header("Location: rencana_akad.php?bulan=$bulan");
@@ -86,8 +86,8 @@ if (isset($_POST['ubah_rencana'])) {
 
 if (isset($_POST['selesai_akad'])) {
     $id_transaksi = intval($_POST['id_transaksi']);
-    mysqli_query($koneksi, "UPDATE data_transaksi SET status_konsumen = 'ACC - AKAD' WHERE id_transaksi = '$id_transaksi'");
-    mysqli_query($koneksi, "UPDATE data_rumah SET status_unit = 'TERJUAL' WHERE id_rumah = (SELECT id_rumah FROM data_transaksi WHERE id_transaksi = '$id_transaksi')");
+    sdb_query($koneksi, "UPDATE data_transaksi SET status_konsumen = 'ACC - AKAD' WHERE id_transaksi = '$id_transaksi'");
+    sdb_query($koneksi, "UPDATE data_rumah SET status_unit = 'TERJUAL' WHERE id_rumah = (SELECT id_rumah FROM data_transaksi WHERE id_transaksi = '$id_transaksi')");
     log_aktivitas($koneksi, 'UBAH', 'Rencana Akad', 'Tandai akad selesai transaksi #' . $id_transaksi, ['id_transaksi' => $id_transaksi, 'status_konsumen' => 'ACC - AKAD']);
     header("Location: rencana_akad.php?bulan=$bulan");
     exit();
@@ -95,8 +95,8 @@ if (isset($_POST['selesai_akad'])) {
 
 if (isset($_POST['hapus_rencana'])) {
     $id_transaksi = intval($_POST['id_transaksi']);
-    mysqli_query($koneksi, "UPDATE data_rumah SET status_unit = 'TERBOOKING' WHERE id_rumah = (SELECT id_rumah FROM data_transaksi WHERE id_transaksi = '$id_transaksi')");
-    mysqli_query($koneksi, "DELETE FROM data_transaksi WHERE id_transaksi = '$id_transaksi'");
+    sdb_query($koneksi, "UPDATE data_rumah SET status_unit = 'TERBOOKING' WHERE id_rumah = (SELECT id_rumah FROM data_transaksi WHERE id_transaksi = '$id_transaksi')");
+    sdb_query($koneksi, "DELETE FROM data_transaksi WHERE id_transaksi = '$id_transaksi'");
     log_aktivitas($koneksi, 'HAPUS', 'Rencana Akad', 'Hapus rencana akad transaksi #' . $id_transaksi, ['id_transaksi' => $id_transaksi]);
     header("Location: rencana_akad.php?bulan=$bulan");
     exit();
@@ -283,7 +283,7 @@ if (isset($_POST['hapus_rencana'])) {
                     </thead>
                     <tbody>
                         <?php
-                        $q = mysqli_query($koneksi, "SELECT t.id_transaksi, t.tgl_booking, t.skema_bayar, t.skema_akad, t.bank_tujuan, t.status_konsumen, t.tanggal_akad,
+                        $q = sdb_query($koneksi, "SELECT t.id_transaksi, t.tgl_booking, t.skema_bayar, t.skema_akad, t.bank_tujuan, t.status_konsumen, t.tanggal_akad,
                                                              k.name_lengkap, k.no_whatsapp, r.no_blok, r.tipe_rumah, c.cluster_name
                                                       FROM data_transaksi t
                                                       JOIN data_konsumen k ON t.id_konsumen = k.id_konsumen
@@ -292,9 +292,9 @@ if (isset($_POST['hapus_rencana'])) {
                                                       WHERE DATE_FORMAT(t.tanggal_akad, '%Y-%m') = '$bulan'
                                                       ORDER BY t.tanggal_akad ASC, t.id_transaksi ASC");
                         $no = 1;
-                        $ada = $q && mysqli_num_rows($q) > 0;
+                        $ada = $q && sdb_num_rows($q) > 0;
                         if ($ada) {
-                            while ($r = mysqli_fetch_assoc($q)) {
+                            while ($r = sdb_fetch_assoc($q)) {
                                 $status = $r['status_konsumen'];
                                 if ($status === 'ACC - AKAD') {
                                     $badge = 'bg-success';
@@ -365,8 +365,8 @@ if (isset($_POST['hapus_rencana'])) {
 $optSkemaAkad = ['KPR Bank Konvensional', 'KPR Bank Syariah', 'Cash Tempo (Akad Developer)', 'Cash'];
 $optSkemaBayar = ['KPR Subsidi', 'KPR Komersil', 'Cash Bertahap', 'Cash Keras'];
 $optBank = ['Bank BNI', 'BRI', 'BSI', 'Bank Mandiri', 'Bank Kalbar Syariah'];
-$konsumenOpt = mysqli_query($koneksi, "SELECT * FROM data_konsumen ORDER BY name_lengkap ASC");
-$rumahOpt = mysqli_query($koneksi, "SELECT r.id_rumah, r.no_blok, r.tipe_rumah, r.status_unit, c.cluster_name
+$konsumenOpt = sdb_query($koneksi, "SELECT * FROM data_konsumen ORDER BY name_lengkap ASC");
+$rumahOpt = sdb_query($koneksi, "SELECT r.id_rumah, r.no_blok, r.tipe_rumah, r.status_unit, c.cluster_name
                                     FROM data_rumah r
                                     JOIN data_cluster c ON r.id_cluster = c.id_cluster
                                     WHERE r.status_unit NOT IN ('TERJUAL')
@@ -388,7 +388,7 @@ $rumahOpt = mysqli_query($koneksi, "SELECT r.id_rumah, r.no_blok, r.tipe_rumah, 
                         <label class="form-label small fw-semibold">Konsumen</label>
                         <select name="id_konsumen" id="selKonsumen" class="form-select rounded-3" required>
                             <option value="">-- Pilih Konsumen --</option>
-                            <?php while ($k = mysqli_fetch_assoc($konsumenOpt)) { ?>
+                            <?php while ($k = sdb_fetch_assoc($konsumenOpt)) { ?>
                                 <option value="<?= $k['id_konsumen'] ?>"><?= htmlspecialchars($k['name_lengkap']) ?></option>
                             <?php } ?>
                         </select>
@@ -401,7 +401,7 @@ $rumahOpt = mysqli_query($koneksi, "SELECT r.id_rumah, r.no_blok, r.tipe_rumah, 
                         <label class="form-label small fw-semibold">Unit Rumah</label>
                         <select name="id_rumah" id="selRumah" class="form-select rounded-3" required>
                             <option value="">-- Pilih Unit --</option>
-                            <?php while ($ru = mysqli_fetch_assoc($rumahOpt)) { ?>
+                            <?php while ($ru = sdb_fetch_assoc($rumahOpt)) { ?>
                                 <option value="<?= $ru['id_rumah'] ?>"><?= htmlspecialchars($ru['cluster_name']) ?> - Blok <?= htmlspecialchars($ru['no_blok']) ?> (Tipe <?= htmlspecialchars($ru['tipe_rumah']) ?>)</option>
                             <?php } ?>
                         </select>
@@ -467,9 +467,9 @@ $rumahOpt = mysqli_query($koneksi, "SELECT r.id_rumah, r.no_blok, r.tipe_rumah, 
 </div>
 
 <?php
-mysqli_data_seek($q, 0);
+sdb_data_seek($q, 0);
 if ($ada) {
-    while ($r = mysqli_fetch_assoc($q)) {
+    while ($r = sdb_fetch_assoc($q)) {
         $st = $r['status_konsumen'];
 ?>
 <!-- MODAL UBAH RENCANA -->

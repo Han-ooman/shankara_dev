@@ -18,20 +18,20 @@ $f['f2'] = trim($_GET['f2'] ?? '');
 $f['f3'] = trim($_GET['f3'] ?? '');
 
 $q = "SELECT k.*, c.cluster_name FROM data_keuangan k LEFT JOIN data_cluster c ON k.cluster_id = c.id_cluster WHERE 1=1";
-if ($f['f0'] !== '') $q .= " AND k.tanggal = '" . mysqli_real_escape_string($koneksi, $f['f0']) . "'";
-if ($f['f1'] !== '') $q .= " AND k.jenis = '" . mysqli_real_escape_string($koneksi, $f['f1']) . "'";
-if ($f['f2'] !== '') $q .= " AND k.kategori LIKE '%" . mysqli_real_escape_string($koneksi, $f['f2']) . "%'";
-if ($f['f3'] !== '') $q .= " AND c.cluster_name LIKE '%" . mysqli_real_escape_string($koneksi, $f['f3']) . "%'";
-if ($f['f4'] !== '') $q .= " AND k.deskripsi LIKE '%" . mysqli_real_escape_string($koneksi, $f['f4']) . "%'";
-if ($f['f7'] !== '') $q .= " AND k.metode_bayar LIKE '%" . mysqli_real_escape_string($koneksi, $f['f7']) . "%'";
-if ($f['f8'] !== '') $q .= " AND k.no_ref LIKE '%" . mysqli_real_escape_string($koneksi, $f['f8']) . "%'";
+if ($f['f0'] !== '') $q .= " AND k.tanggal = '" . sdb_real_escape_string($koneksi, $f['f0']) . "'";
+if ($f['f1'] !== '') $q .= " AND k.jenis = '" . sdb_real_escape_string($koneksi, $f['f1']) . "'";
+if ($f['f2'] !== '') $q .= " AND k.kategori LIKE '%" . sdb_real_escape_string($koneksi, $f['f2']) . "%'";
+if ($f['f3'] !== '') $q .= " AND c.cluster_name LIKE '%" . sdb_real_escape_string($koneksi, $f['f3']) . "%'";
+if ($f['f4'] !== '') $q .= " AND k.deskripsi LIKE '%" . sdb_real_escape_string($koneksi, $f['f4']) . "%'";
+if ($f['f7'] !== '') $q .= " AND k.metode_bayar LIKE '%" . sdb_real_escape_string($koneksi, $f['f7']) . "%'";
+if ($f['f8'] !== '') $q .= " AND k.no_ref LIKE '%" . sdb_real_escape_string($koneksi, $f['f8']) . "%'";
 $q .= " ORDER BY k.tanggal DESC, k.id_keuangan DESC";
 
-$result = mysqli_query($koneksi, $q);
+$result = sdb_query($koneksi, $q);
 $rows = [];
 $total_masuk = 0;
 $total_keluar = 0;
-while ($r = mysqli_fetch_assoc($result)) {
+while ($r = sdb_fetch_assoc($result)) {
     $rows[] = $r;
     if ($r['jenis'] === 'Pemasukan') $total_masuk += floatval($r['nominal']);
     else $total_keluar += floatval($r['nominal']);

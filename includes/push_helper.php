@@ -30,10 +30,10 @@ if (!function_exists('push_b64url_decode')) {
 if (!function_exists('pengaturan_get')) {
     function pengaturan_get($koneksi, string $kunci, $default = null) {
         if (!$koneksi) return $default;
-        $k = mysqli_real_escape_string($koneksi, $kunci);
-        $q = mysqli_query($koneksi, "SELECT nilai FROM pengaturan_sistem WHERE kunci = '$k' LIMIT 1");
-        if ($q && mysqli_num_rows($q) > 0) {
-            $r = mysqli_fetch_assoc($q);
+        $k = sdb_real_escape_string($koneksi, $kunci);
+        $q = sdb_query($koneksi, "SELECT nilai FROM pengaturan_sistem WHERE kunci = '$k' LIMIT 1");
+        if ($q && sdb_num_rows($q) > 0) {
+            $r = sdb_fetch_assoc($q);
             return $r['nilai'];
         }
         return $default;
@@ -43,13 +43,13 @@ if (!function_exists('pengaturan_get')) {
 if (!function_exists('pengaturan_set')) {
     function pengaturan_set($koneksi, string $kunci, $nilai): bool {
         if (!$koneksi) return false;
-        $k = mysqli_real_escape_string($koneksi, $kunci);
-        $v = mysqli_real_escape_string($koneksi, (string)$nilai);
-        $q = mysqli_query($koneksi, "SELECT id FROM pengaturan_sistem WHERE kunci = '$k' LIMIT 1");
-        if ($q && mysqli_num_rows($q) > 0) {
-            return (bool)mysqli_query($koneksi, "UPDATE pengaturan_sistem SET nilai = '$v' WHERE kunci = '$k'");
+        $k = sdb_real_escape_string($koneksi, $kunci);
+        $v = sdb_real_escape_string($koneksi, (string)$nilai);
+        $q = sdb_query($koneksi, "SELECT id FROM pengaturan_sistem WHERE kunci = '$k' LIMIT 1");
+        if ($q && sdb_num_rows($q) > 0) {
+            return (bool)sdb_query($koneksi, "UPDATE pengaturan_sistem SET nilai = '$v' WHERE kunci = '$k'");
         }
-        return (bool)mysqli_query($koneksi, "INSERT INTO pengaturan_sistem (kunci, nilai) VALUES ('$k', '$v')");
+        return (bool)sdb_query($koneksi, "INSERT INTO pengaturan_sistem (kunci, nilai) VALUES ('$k', '$v')");
     }
 }
 
@@ -360,7 +360,7 @@ if (!function_exists('push_kirim_subscription')) {
         $msg = 'HTTP ' . $res['status'] . ' ' . $res['data'];
         if ($res['dead']) {
             $id = (int)($sub['id'] ?? 0);
-            if ($id > 0 && $koneksi) mysqli_query($koneksi, "DELETE FROM push_subscriptions WHERE id = $id");
+            if ($id > 0 && $koneksi) sdb_query($koneksi, "DELETE FROM push_subscriptions WHERE id = $id");
             $msg .= ' (subscription dihapus)';
         }
         return ['ok' => $res['ok'], 'status' => $res['status'], 'msg' => $msg, 'dead' => $res['dead']];

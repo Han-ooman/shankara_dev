@@ -2,7 +2,7 @@
 // api/helpers/Database.php - Singleton database connection
 
 class Database {
-    private static ?mysqli $instance = null;
+    private static ?sdb $instance = null;
     private static array $config = [
         'host' => 'localhost',
         'user' => 'root',
@@ -15,9 +15,9 @@ class Database {
     private function __clone() {}
     public function __wakeup() {}
 
-    public static function getInstance(): mysqli {
+    public static function getInstance(): sdb {
         if (self::$instance === null) {
-            self::$instance = new mysqli(
+            self::$instance = new sdb(
                 self::$config['host'],
                 self::$config['user'],
                 self::$config['pass'],
@@ -33,7 +33,7 @@ class Database {
         return self::$instance;
     }
 
-    public static function query(string $sql, array $params = []): mysqli_result|bool {
+    public static function query(string $sql, array $params = []): sdb_result|bool {
         $db = self::getInstance();
         if ($params) {
             $stmt = $db->prepare($sql);

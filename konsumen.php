@@ -19,28 +19,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrf_verify()) {
 
 // Logika Tambah Konsumen
 if (isset($_POST['simpan_konsumen'])) {
-    $nama = mysqli_real_escape_string($koneksi, $_POST['name_lengkap']);
-    $no_ktp = mysqli_real_escape_string($koneksi, $_POST['no_ktp']);
-    $pekerjaan = mysqli_real_escape_string($koneksi, $_POST['pekerjaan']);
-    $telepon = mysqli_real_escape_string($koneksi, $_POST['no_whatsapp']);
-    $alamat = mysqli_real_escape_string($koneksi, $_POST['alamat_ktp'] ?? '');
+    $nama = sdb_real_escape_string($koneksi, $_POST['name_lengkap']);
+    $no_ktp = sdb_real_escape_string($koneksi, $_POST['no_ktp']);
+    $pekerjaan = sdb_real_escape_string($koneksi, $_POST['pekerjaan']);
+    $telepon = sdb_real_escape_string($koneksi, $_POST['no_whatsapp']);
+    $alamat = sdb_real_escape_string($koneksi, $_POST['alamat_ktp'] ?? '');
     
-    mysqli_query($koneksi, "INSERT INTO data_konsumen (name_lengkap, no_ktp, pekerjaan, no_whatsapp, alamat_ktp) VALUES ('$nama', '$no_ktp', '$pekerjaan', '$telepon', '$alamat')");
-    log_aktivitas($koneksi, 'TAMBAH', 'Konsumen', 'Tambah konsumen: ' . $nama, ['id_konsumen' => (int) mysqli_insert_id($koneksi), 'no_ktp' => $no_ktp]);
+    sdb_query($koneksi, "INSERT INTO data_konsumen (name_lengkap, no_ktp, pekerjaan, no_whatsapp, alamat_ktp) VALUES ('$nama', '$no_ktp', '$pekerjaan', '$telepon', '$alamat')");
+    log_aktivitas($koneksi, 'TAMBAH', 'Konsumen', 'Tambah konsumen: ' . $nama, ['id_konsumen' => (int) sdb_insert_id($koneksi), 'no_ktp' => $no_ktp]);
     header("Location: konsumen.php");
     exit();
 }
 
 // Logika Edit Per-Konsumen
 if (isset($_POST['edit_konsumen'])) {
-    $id = mysqli_real_escape_string($koneksi, $_POST['id_konsumen']);
-    $nama = mysqli_real_escape_string($koneksi, $_POST['name_lengkap']);
-    $no_ktp = mysqli_real_escape_string($koneksi, $_POST['no_ktp']);
-    $pekerjaan = mysqli_real_escape_string($koneksi, $_POST['pekerjaan']);
-    $telepon = mysqli_real_escape_string($koneksi, $_POST['no_whatsapp']);
-    $alamat = mysqli_real_escape_string($koneksi, $_POST['alamat_ktp'] ?? '');
+    $id = sdb_real_escape_string($koneksi, $_POST['id_konsumen']);
+    $nama = sdb_real_escape_string($koneksi, $_POST['name_lengkap']);
+    $no_ktp = sdb_real_escape_string($koneksi, $_POST['no_ktp']);
+    $pekerjaan = sdb_real_escape_string($koneksi, $_POST['pekerjaan']);
+    $telepon = sdb_real_escape_string($koneksi, $_POST['no_whatsapp']);
+    $alamat = sdb_real_escape_string($koneksi, $_POST['alamat_ktp'] ?? '');
 
-    mysqli_query($koneksi, "UPDATE data_konsumen SET name_lengkap='$nama', no_ktp='$no_ktp', pekerjaan='$pekerjaan', no_whatsapp='$telepon', alamat_ktp='$alamat' WHERE id_konsumen='$id'");
+    sdb_query($koneksi, "UPDATE data_konsumen SET name_lengkap='$nama', no_ktp='$no_ktp', pekerjaan='$pekerjaan', no_whatsapp='$telepon', alamat_ktp='$alamat' WHERE id_konsumen='$id'");
     log_aktivitas($koneksi, 'UBAH', 'Konsumen', 'Ubah konsumen #' . $id . ': ' . $nama, ['id_konsumen' => (int) $id]);
     header("Location: konsumen.php");
     exit();
@@ -49,13 +49,13 @@ if (isset($_POST['edit_konsumen'])) {
 // Logika Edit Massal (Ubah Pekerjaan Konsumen)
 if (isset($_POST['edit_massal'])) {
     if (!empty($_POST['selected_ids'])) {
-        $pekerjaan = mysqli_real_escape_string($koneksi, $_POST['pekerjaan_massal']);
+        $pekerjaan = sdb_real_escape_string($koneksi, $_POST['pekerjaan_massal']);
         $ids = array_map(function($id) use ($koneksi) {
-            return mysqli_real_escape_string($koneksi, $id);
+            return sdb_real_escape_string($koneksi, $id);
         }, $_POST['selected_ids']);
         
         $ids_string = implode(',', $ids);
-        mysqli_query($koneksi, "UPDATE data_konsumen SET pekerjaan='$pekerjaan' WHERE id_konsumen IN ($ids_string)");
+        sdb_query($koneksi, "UPDATE data_konsumen SET pekerjaan='$pekerjaan' WHERE id_konsumen IN ($ids_string)");
         log_aktivitas($koneksi, 'UBAH_MASSAL', 'Konsumen', 'Ubah pekerjaan massal ' . count($ids) . ' konsumen menjadi: ' . $pekerjaan, ['ids' => array_map('intval', $ids), 'pekerjaan' => $pekerjaan]);
         header("Location: konsumen.php");
         exit();
@@ -68,10 +68,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
         http_response_code(403);
         die("Token keamanan tidak valid.");
     }
-    $id_hapus = mysqli_real_escape_string($koneksi, $_GET['id']);
-    $q_nama = mysqli_query($koneksi, "SELECT name_lengkap FROM data_konsumen WHERE id_konsumen = '$id_hapus'");
-    $nama_hapus = $q_nama ? (string) mysqli_fetch_assoc($q_nama)['name_lengkap'] : '';
-    mysqli_query($koneksi, "DELETE FROM data_konsumen WHERE id_konsumen = '$id_hapus'");
+    $id_hapus = sdb_real_escape_string($koneksi, $_GET['id']);
+    $q_nama = sdb_query($koneksi, "SELECT name_lengkap FROM data_konsumen WHERE id_konsumen = '$id_hapus'");
+    $nama_hapus = $q_nama ? (string) sdb_fetch_assoc($q_nama)['name_lengkap'] : '';
+    sdb_query($koneksi, "DELETE FROM data_konsumen WHERE id_konsumen = '$id_hapus'");
     log_aktivitas($koneksi, 'HAPUS', 'Konsumen', 'Hapus konsumen #' . $id_hapus . ': ' . $nama_hapus, ['id_konsumen' => (int) $id_hapus]);
     header("Location: konsumen.php");
     exit();

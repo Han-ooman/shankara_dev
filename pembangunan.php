@@ -19,19 +19,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrf_verify()) {
 
 // 1. LOGIKA UPDATE SINGLE PROGRES
 if (isset($_POST['simpan_progres'])) {
-    $id_rumah = mysqli_real_escape_string($koneksi, $_POST['id_rumah']);
-    $persentase = mysqli_real_escape_string($koneksi, $_POST['persentase_progres']);
-    $status_p = mysqli_real_escape_string($koneksi, $_POST['status_pembangunan']);
-    $catatan = mysqli_real_escape_string($koneksi, $_POST['catatan_lapangan']);
+    $id_rumah = sdb_real_escape_string($koneksi, $_POST['id_rumah']);
+    $persentase = sdb_real_escape_string($koneksi, $_POST['persentase_progres']);
+    $status_p = sdb_real_escape_string($koneksi, $_POST['status_pembangunan']);
+    $catatan = sdb_real_escape_string($koneksi, $_POST['catatan_lapangan']);
 
-    $cek = mysqli_query($koneksi, "SELECT * FROM data_pembangunan WHERE id_rumah = '$id_rumah'");
-    if (mysqli_num_rows($cek) > 0) {
+    $cek = sdb_query($koneksi, "SELECT * FROM data_pembangunan WHERE id_rumah = '$id_rumah'");
+    if (sdb_num_rows($cek) > 0) {
         $query = "UPDATE data_pembangunan SET persentase_progres='$persentase', status_pembangunan='$status_p', catatan_lapangan='$catatan' WHERE id_rumah='$id_rumah'";
     } else {
         $query = "INSERT INTO data_pembangunan (id_rumah, persentase_progres, status_pembangunan, catatan_lapangan) VALUES ('$id_rumah', '$persentase', '$status_p', '$catatan')";
     }
     
-    mysqli_query($koneksi, $query);
+    sdb_query($koneksi, $query);
     header("Location: pembangunan.php");
     exit();
 }
@@ -39,20 +39,20 @@ if (isset($_POST['simpan_progres'])) {
 // 2. LOGIKA UPDATE MASSAL (BULK EDIT)
 if (isset($_POST['simpan_progres_massal'])) {
     if (!empty($_POST['id_rumah_selected']) && is_array($_POST['id_rumah_selected'])) {
-        $persentase = mysqli_real_escape_string($koneksi, $_POST['massal_persentase']);
-        $status_p   = mysqli_real_escape_string($koneksi, $_POST['massal_status']);
-        $catatan    = mysqli_real_escape_string($koneksi, $_POST['massal_catatan']);
+        $persentase = sdb_real_escape_string($koneksi, $_POST['massal_persentase']);
+        $status_p   = sdb_real_escape_string($koneksi, $_POST['massal_status']);
+        $catatan    = sdb_real_escape_string($koneksi, $_POST['massal_catatan']);
 
         foreach ($_POST['id_rumah_selected'] as $id_rumah_raw) {
             $id_rumah = intval($id_rumah_raw);
             
-            $cek = mysqli_query($koneksi, "SELECT * FROM data_pembangunan WHERE id_rumah = '$id_rumah'");
-            if (mysqli_num_rows($cek) > 0) {
+            $cek = sdb_query($koneksi, "SELECT * FROM data_pembangunan WHERE id_rumah = '$id_rumah'");
+            if (sdb_num_rows($cek) > 0) {
                 $query = "UPDATE data_pembangunan SET persentase_progres='$persentase', status_pembangunan='$status_p', catatan_lapangan='$catatan' WHERE id_rumah='$id_rumah'";
             } else {
                 $query = "INSERT INTO data_pembangunan (id_rumah, persentase_progres, status_pembangunan, catatan_lapangan) VALUES ('$id_rumah', '$persentase', '$status_p', '$catatan')";
             }
-            mysqli_query($koneksi, $query);
+            sdb_query($koneksi, $query);
         }
     }
     header("Location: pembangunan.php");
@@ -240,9 +240,9 @@ if (isset($_POST['simpan_progres_massal'])) {
                     <select id="filterCluster" class="form-select filter-input shadow-none">
                         <option value="">Semua Cluster</option>
                         <?php
-                        $q_cluster = mysqli_query($koneksi, "SELECT DISTINCT cluster_name FROM data_cluster ORDER BY cluster_name ASC");
+                        $q_cluster = sdb_query($koneksi, "SELECT DISTINCT cluster_name FROM data_cluster ORDER BY cluster_name ASC");
                         if ($q_cluster) {
-                            while ($c = mysqli_fetch_assoc($q_cluster)) {
+                            while ($c = sdb_fetch_assoc($q_cluster)) {
                                 echo "<option value='" . htmlspecialchars($c['cluster_name']) . "'>" . htmlspecialchars($c['cluster_name']) . "</option>";
                             }
                         }
@@ -308,12 +308,12 @@ if (isset($_POST['simpan_progres_massal'])) {
                         </thead>
                         <tbody>
                             <?php
-                            $q = mysqli_query($koneksi, "SELECT r.*, c.cluster_name, p.persentase_progres, p.status_pembangunan, p.catatan_lapangan 
+                            $q = sdb_query($koneksi, "SELECT r.*, c.cluster_name, p.persentase_progres, p.status_pembangunan, p.catatan_lapangan 
                                                          FROM data_rumah r 
                                                          LEFT JOIN data_cluster c ON r.id_cluster = c.id_cluster
                                                          LEFT JOIN data_pembangunan p ON r.id_rumah = p.id_rumah 
                                                          ORDER BY r.no_blok ASC");
-                            while ($r = mysqli_fetch_assoc($q)) {
+                            while ($r = sdb_fetch_assoc($q)) {
                                 $progres = $r['persentase_progres'] ?? 0;
                                 $st_lapangan = $r['status_pembangunan'] ?? 'Persiapan';
                                 $cluster_name = $r['cluster_name'] ?? '';

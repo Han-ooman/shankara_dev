@@ -51,7 +51,7 @@ if (!function_exists('konsumen_status_sql')) {
     function konsumen_build_query($koneksi, $f)
     {
         $esc = function ($v) use ($koneksi) {
-            return mysqli_real_escape_string($koneksi, $v);
+            return sdb_real_escape_string($koneksi, $v);
         };
 
         $bi_expr = konsumen_bi_sql();
@@ -133,9 +133,9 @@ if (!function_exists('konsumen_status_sql')) {
     function konsumen_list($koneksi, $f)
     {
         $rows = [];
-        $res = mysqli_query($koneksi, konsumen_build_query($koneksi, $f));
+        $res = sdb_query($koneksi, konsumen_build_query($koneksi, $f));
         if ($res) {
-            while ($r = mysqli_fetch_assoc($res)) {
+            while ($r = sdb_fetch_assoc($res)) {
                 $rows[] = $r;
             }
         }
@@ -146,9 +146,9 @@ if (!function_exists('konsumen_status_sql')) {
     function konsumen_daftar_pekerjaan($koneksi)
     {
         $out = [];
-        $res = mysqli_query($koneksi, "SELECT DISTINCT pekerjaan FROM data_konsumen WHERE pekerjaan IS NOT NULL AND pekerjaan != '' ORDER BY pekerjaan ASC");
+        $res = sdb_query($koneksi, "SELECT DISTINCT pekerjaan FROM data_konsumen WHERE pekerjaan IS NOT NULL AND pekerjaan != '' ORDER BY pekerjaan ASC");
         if ($res) {
-            while ($r = mysqli_fetch_assoc($res)) {
+            while ($r = sdb_fetch_assoc($res)) {
                 $out[] = $r['pekerjaan'];
             }
         }

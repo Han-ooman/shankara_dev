@@ -11,10 +11,10 @@ function rupiah($n) {
     return 'Rp ' . number_format((int)$n, 0, ',', '.');
 }
 
-$filter_keyword = isset($_GET['keyword']) ? mysqli_real_escape_string($koneksi, trim($_GET['keyword'])) : '';
-$filter_cluster = isset($_GET['cluster']) ? mysqli_real_escape_string($koneksi, trim($_GET['cluster'])) : '';
-$filter_status  = isset($_GET['status']) ? mysqli_real_escape_string($koneksi, trim($_GET['status'])) : '';
-$filter_tipe    = isset($_GET['tipe']) ? mysqli_real_escape_string($koneksi, trim($_GET['tipe'])) : '';
+$filter_keyword = isset($_GET['keyword']) ? sdb_real_escape_string($koneksi, trim($_GET['keyword'])) : '';
+$filter_cluster = isset($_GET['cluster']) ? sdb_real_escape_string($koneksi, trim($_GET['cluster'])) : '';
+$filter_status  = isset($_GET['status']) ? sdb_real_escape_string($koneksi, trim($_GET['status'])) : '';
+$filter_tipe    = isset($_GET['tipe']) ? sdb_real_escape_string($koneksi, trim($_GET['tipe'])) : '';
 
 $query = "SELECT r.*, c.cluster_name 
           FROM data_rumah r 
@@ -38,18 +38,18 @@ if ($filter_tipe !== '') {
 }
 
 $query .= " ORDER BY c.cluster_name ASC, r.no_blok ASC";
-$result = mysqli_query($koneksi, $query);
+$result = sdb_query($koneksi, $query);
 $data = [];
-if ($result && mysqli_num_rows($result) > 0) {
-    while ($row = mysqli_fetch_assoc($result)) {
+if ($result && sdb_num_rows($result) > 0) {
+    while ($row = sdb_fetch_assoc($result)) {
         $data[] = $row;
     }
 }
 
 $cluster_label = '';
 if ($filter_cluster !== '') {
-    $cnameRow = mysqli_query($koneksi, "SELECT cluster_name FROM data_cluster WHERE id_cluster = '$filter_cluster' LIMIT 1");
-    $cluster_label = ($cnameRow && $cr = mysqli_fetch_assoc($cnameRow)) ? $cr['cluster_name'] : $filter_cluster;
+    $cnameRow = sdb_query($koneksi, "SELECT cluster_name FROM data_cluster WHERE id_cluster = '$filter_cluster' LIMIT 1");
+    $cluster_label = ($cnameRow && $cr = sdb_fetch_assoc($cnameRow)) ? $cr['cluster_name'] : $filter_cluster;
 }
 ?>
 <!DOCTYPE html>

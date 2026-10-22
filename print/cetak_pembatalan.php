@@ -37,7 +37,7 @@ function terbilang($angka)
 
 $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
-$q = mysqli_query($koneksi, "SELECT p.*,
+$q = sdb_query($koneksi, "SELECT p.*,
                                     k.name_lengkap, k.no_ktp, k.alamat_ktp, k.no_whatsapp,
                                     r.no_blok, r.tipe_rumah, r.luas_tanah, r.luas_bangunan, r.harga_jual, r.no_shm,
                                     c.cluster_name,
@@ -48,7 +48,7 @@ $q = mysqli_query($koneksi, "SELECT p.*,
                              LEFT JOIN data_rumah r ON t.id_rumah = r.id_rumah
                              LEFT JOIN data_cluster c ON r.id_cluster = c.id_cluster
                              WHERE p.id_pembatalan = $id");
-$data = $q ? mysqli_fetch_assoc($q) : null;
+$data = $q ? sdb_fetch_assoc($q) : null;
 
 if (!$data) {
     die("Data surat pembatalan tidak ditemukan.");

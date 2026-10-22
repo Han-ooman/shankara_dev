@@ -18,17 +18,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrf_verify()) {
 
 // Logika Update Pemberkasan
 if (isset($_POST['update_pemberkasan'])) {
-    $id_transaksi    = mysqli_real_escape_string($koneksi, $_POST['id_transaksi']);
-    $status_bank     = mysqli_real_escape_string($koneksi, $_POST['status_bank']);
-    $bank_tujuan     = mysqli_real_escape_string($koneksi, $_POST['bank_tujuan'] ?? '');
-    $deadline_berkas = mysqli_real_escape_string($koneksi, $_POST['deadline_berkas']);
-    $tgl_wawancara   = mysqli_real_escape_string($koneksi, $_POST['tgl_wawancara'] ?? '');
+    $id_transaksi    = sdb_real_escape_string($koneksi, $_POST['id_transaksi']);
+    $status_bank     = sdb_real_escape_string($koneksi, $_POST['status_bank']);
+    $bank_tujuan     = sdb_real_escape_string($koneksi, $_POST['bank_tujuan'] ?? '');
+    $deadline_berkas = sdb_real_escape_string($koneksi, $_POST['deadline_berkas']);
+    $tgl_wawancara   = sdb_real_escape_string($koneksi, $_POST['tgl_wawancara'] ?? '');
     
     $berkas_input = isset($_POST['berkas']) ? $_POST['berkas'] : [];
-    $pemberkasan_json = mysqli_real_escape_string($koneksi, json_encode($berkas_input));
+    $pemberkasan_json = sdb_real_escape_string($koneksi, json_encode($berkas_input));
 
-    $qInfo = mysqli_query($koneksi, "SELECT skema_bayar, pekerjaan FROM view_database_utama WHERE id_transaksi = '$id_transaksi'");
-    if ($qInfo && $rowInfo = mysqli_fetch_assoc($qInfo)) {
+    $qInfo = sdb_query($koneksi, "SELECT skema_bayar, pekerjaan FROM view_database_utama WHERE id_transaksi = '$id_transaksi'");
+    if ($qInfo && $rowInfo = sdb_fetch_assoc($qInfo)) {
         $skema_info = $rowInfo['skema_bayar'] ?? 'Cash';
         $progres = hitungProgresBerkas($berkas_input, $skema_info, $master_dokumen);
         if ($progres['lengkap']) { $deadline_berkas = ''; }
@@ -37,7 +37,7 @@ if (isset($_POST['update_pemberkasan'])) {
     $deadline_sql = !empty($deadline_berkas) ? "'$deadline_berkas'" : "NULL";
     $bank_sql = !empty($bank_tujuan) ? "'$bank_tujuan'" : "NULL";
     $wawancara_sql = !empty($tgl_wawancara) ? "'$tgl_wawancara'" : "NULL";
-    $skema_akad = mysqli_real_escape_string($koneksi, $_POST['skema_akad'] ?? '');
+    $skema_akad = sdb_real_escape_string($koneksi, $_POST['skema_akad'] ?? '');
     $skema_akad_sql = !empty($skema_akad) ? "'$skema_akad'" : "NULL";
 
     $queryUpdate = "UPDATE data_transaksi SET 
@@ -49,7 +49,7 @@ if (isset($_POST['update_pemberkasan'])) {
                     pemberkasan_json = '$pemberkasan_json'
                     WHERE id_transaksi = '$id_transaksi'";
 
-    mysqli_query($koneksi, $queryUpdate);
+    sdb_query($koneksi, $queryUpdate);
     $scrollId = intval($_POST['scroll_to'] ?? 0);
     header("Location: pemberkasan.php?s=1&sid=" . $scrollId);
     exit();
@@ -62,14 +62,14 @@ if (isset($_POST['bulk_update_pemberkasan'])) {
         $id_list = array_map('intval', $ids);
         $id_str = implode(',', $id_list);
         $fields = [];
-        if (!empty($_POST['bulk_skema_akad'])) { $v = mysqli_real_escape_string($koneksi, $_POST['bulk_skema_akad']); $fields[] = "skema_akad = '$v'"; }
-        if (!empty($_POST['bulk_status_bank'])) { $v = mysqli_real_escape_string($koneksi, $_POST['bulk_status_bank']); $fields[] = "status_bank = '$v'"; }
-        if (!empty($_POST['bulk_bank_tujuan'])) { $v = mysqli_real_escape_string($koneksi, $_POST['bulk_bank_tujuan']); $fields[] = "bank_tujuan = '$v'"; }
-        if (!empty($_POST['bulk_deadline_berkas'])) { $v = mysqli_real_escape_string($koneksi, $_POST['bulk_deadline_berkas']); $fields[] = "deadline_berkas = '$v'"; }
-        if (!empty($_POST['bulk_tgl_wawancara'])) { $v = mysqli_real_escape_string($koneksi, $_POST['bulk_tgl_wawancara']); $fields[] = "tgl_wawancara = '$v'"; }
+        if (!empty($_POST['bulk_skema_akad'])) { $v = sdb_real_escape_string($koneksi, $_POST['bulk_skema_akad']); $fields[] = "skema_akad = '$v'"; }
+        if (!empty($_POST['bulk_status_bank'])) { $v = sdb_real_escape_string($koneksi, $_POST['bulk_status_bank']); $fields[] = "status_bank = '$v'"; }
+        if (!empty($_POST['bulk_bank_tujuan'])) { $v = sdb_real_escape_string($koneksi, $_POST['bulk_bank_tujuan']); $fields[] = "bank_tujuan = '$v'"; }
+        if (!empty($_POST['bulk_deadline_berkas'])) { $v = sdb_real_escape_string($koneksi, $_POST['bulk_deadline_berkas']); $fields[] = "deadline_berkas = '$v'"; }
+        if (!empty($_POST['bulk_tgl_wawancara'])) { $v = sdb_real_escape_string($koneksi, $_POST['bulk_tgl_wawancara']); $fields[] = "tgl_wawancara = '$v'"; }
         if (!empty($fields)) {
             $sql = "UPDATE data_transaksi SET " . implode(', ', $fields) . " WHERE id_transaksi IN ($id_str)";
-            mysqli_query($koneksi, $sql);
+            sdb_query($koneksi, $sql);
         }
     }
     header("Location: pemberkasan.php?s=1");
@@ -282,10 +282,10 @@ include "includes/cek_sesi.php";
                     <tbody>
                         <?php
                         $query = "SELECT * FROM view_database_utama ORDER BY id_transaksi DESC";
-                        $result = mysqli_query($koneksi, $query);
+                        $result = sdb_query($koneksi, $query);
 
-                        if ($result && mysqli_num_rows($result) > 0) {
-                            while ($row = mysqli_fetch_assoc($result)) {
+                        if ($result && sdb_num_rows($result) > 0) {
+                            while ($row = sdb_fetch_assoc($result)) {
                                 $skema = $row['skema_bayar'] ?? 'Cash';
                                 $pekerjaan = $row['pekerjaan'] ?? '';
                                 $saved_docs = !empty($row['pemberkasan_json']) ? json_decode($row['pemberkasan_json'], true) : [];

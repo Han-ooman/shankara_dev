@@ -8,7 +8,7 @@ require_once __DIR__ . '/../helpers/Request.php';
 require_once __DIR__ . '/../helpers/Log.php';
 
 abstract class BaseController {
-    protected mysqli $db;
+    protected sdb $db;
 
     public function __construct() {
         $this->db = Database::getInstance();

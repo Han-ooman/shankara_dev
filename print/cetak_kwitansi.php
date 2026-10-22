@@ -13,7 +13,7 @@ include "../includes/koneksi.php";
 $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
 // Query detail pembayaran. LEFT JOIN agar kwitansi di luar unit rumah (tanpa transaksi) tetap bisa dicetak.
-$query = mysqli_query($koneksi, "SELECT p.*, 
+$query = sdb_query($koneksi, "SELECT p.*, 
                                        COALESCE(k.name_lengkap, p.nama_pembayar, 'Pembayar') AS name_lengkap,
                                        r.no_blok, r.tipe_rumah,
                                        c.cluster_name,
@@ -25,7 +25,7 @@ $query = mysqli_query($koneksi, "SELECT p.*,
                                 LEFT JOIN data_konsumen k ON t.id_konsumen = k.id_konsumen
                                 WHERE p.id_pembayaran = '$id'");
 
-$data = mysqli_fetch_assoc($query);
+$data = sdb_fetch_assoc($query);
 
 if (!$data) {
     die("Data kwitansi tidak ditemukan.");
@@ -33,7 +33,7 @@ if (!$data) {
 
 // Query semua blok milik kwitansi ini (kwitansi bisa memuat 2+ blok dari 1 orang)
 $blok_list = [];
-$q_blok = mysqli_query($koneksi, "SELECT r.no_blok, r.tipe_rumah, c.cluster_name, c.lokasi, k.name_lengkap
+$q_blok = sdb_query($koneksi, "SELECT r.no_blok, r.tipe_rumah, c.cluster_name, c.lokasi, k.name_lengkap
                                   FROM data_pembayaran_detail pd
                                   JOIN data_transaksi t ON pd.id_transaksi = t.id_transaksi
                                   LEFT JOIN data_rumah r ON t.id_rumah = r.id_rumah
@@ -42,7 +42,7 @@ $q_blok = mysqli_query($koneksi, "SELECT r.no_blok, r.tipe_rumah, c.cluster_name
                                   WHERE pd.id_pembayaran = '$id'
                                   ORDER BY c.cluster_name, r.no_blok");
 if ($q_blok) {
-    while ($b = mysqli_fetch_assoc($q_blok)) {
+    while ($b = sdb_fetch_assoc($q_blok)) {
         $blok_list[] = $b;
     }
 }

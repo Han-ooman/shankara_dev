@@ -19,12 +19,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrf_verify()) {
 
 // LOGIKA TAMBAH
 if (isset($_POST['tambah_tipe'])) {
-    $tipe_rumah  = mysqli_real_escape_string($koneksi, $_POST['tipe_rumah']);
+    $tipe_rumah  = sdb_real_escape_string($koneksi, $_POST['tipe_rumah']);
     $harga       = str_replace(['.', ' '], '', $_POST['harga']);
     $dp_persen   = str_replace(',', '.', $_POST['dp_persen']);
     $dp_nominal  = str_replace(['.', ' '], '', $_POST['dp_nominal']);
-    $persyaratan = mysqli_real_escape_string($koneksi, $_POST['persyaratan']);
-    $keterangan  = mysqli_real_escape_string($koneksi, $_POST['keterangan']);
+    $persyaratan = sdb_real_escape_string($koneksi, $_POST['persyaratan']);
+    $keterangan  = sdb_real_escape_string($koneksi, $_POST['keterangan']);
     $harga_int   = intval($harga);
     $dp_nom_int  = intval($dp_nominal);
     if ($harga_int > 0 && $dp_nom_int > 0) { $dp_persen = round(($dp_nom_int / $harga_int) * 100, 2); }
@@ -32,35 +32,35 @@ if (isset($_POST['tambah_tipe'])) {
     $q = "INSERT INTO data_tipe_rumah (tipe_rumah, harga, dp_persen, dp_nominal, persyaratan, keterangan)
           VALUES ('$tipe_rumah', " . intval($harga) . ", " . floatval($dp_persen) . ", " . intval($dp_nominal) . ", '$persyaratan', '$keterangan')";
 
-    if (mysqli_query($koneksi, $q)) {
-        $id_baru = mysqli_insert_id($koneksi);
+    if (sdb_query($koneksi, $q)) {
+        $id_baru = sdb_insert_id($koneksi);
         $tenors = $_POST['tenor_bulan'] ?? [];
         $periodes = $_POST['periode'] ?? [];
         $angsurans = $_POST['angsuran'] ?? [];
         for ($i = 0; $i < count($tenors); $i++) {
             $tb  = intval($tenors[$i]);
-            $per = mysqli_real_escape_string($koneksi, $periodes[$i] ?? '');
+            $per = sdb_real_escape_string($koneksi, $periodes[$i] ?? '');
             $ag  = str_replace(['.', ' '], '', $angsurans[$i] ?? '0');
             if ($tb > 0) {
-                mysqli_query($koneksi, "INSERT INTO data_angsuran (id_tipe, tenor_bulan, periode, angsuran) VALUES ($id_baru, $tb, '$per', " . intval($ag) . ")");
+                sdb_query($koneksi, "INSERT INTO data_angsuran (id_tipe, tenor_bulan, periode, angsuran) VALUES ($id_baru, $tb, '$per', " . intval($ag) . ")");
             }
         }
         header("Location: tipe_rumah.php");
         exit();
     } else {
-        echo "<script>alert('Gagal menambah data: " . mysqli_error($koneksi) . "');</script>";
+        echo "<script>alert('Gagal menambah data: " . sdb_error($koneksi) . "');</script>";
     }
 }
 
 // LOGIKA EDIT
 if (isset($_POST['edit_tipe'])) {
-    $id_tipe     = mysqli_real_escape_string($koneksi, $_POST['id_tipe']);
-    $tipe_rumah  = mysqli_real_escape_string($koneksi, $_POST['tipe_rumah']);
+    $id_tipe     = sdb_real_escape_string($koneksi, $_POST['id_tipe']);
+    $tipe_rumah  = sdb_real_escape_string($koneksi, $_POST['tipe_rumah']);
     $harga       = str_replace(['.', ' '], '', $_POST['harga']);
     $dp_persen   = str_replace(',', '.', $_POST['dp_persen']);
     $dp_nominal  = str_replace(['.', ' '], '', $_POST['dp_nominal']);
-    $persyaratan = mysqli_real_escape_string($koneksi, $_POST['persyaratan']);
-    $keterangan  = mysqli_real_escape_string($koneksi, $_POST['keterangan']);
+    $persyaratan = sdb_real_escape_string($koneksi, $_POST['persyaratan']);
+    $keterangan  = sdb_real_escape_string($koneksi, $_POST['keterangan']);
     $harga_int   = intval($harga);
     $dp_nom_int  = intval($dp_nominal);
     if ($harga_int > 0 && $dp_nom_int > 0) { $dp_persen = round(($dp_nom_int / $harga_int) * 100, 2); }
@@ -74,23 +74,23 @@ if (isset($_POST['edit_tipe'])) {
           keterangan = '$keterangan'
           WHERE id_tipe = '$id_tipe'";
 
-    if (mysqli_query($koneksi, $q)) {
-        mysqli_query($koneksi, "DELETE FROM data_angsuran WHERE id_tipe = '$id_tipe'");
+    if (sdb_query($koneksi, $q)) {
+        sdb_query($koneksi, "DELETE FROM data_angsuran WHERE id_tipe = '$id_tipe'");
         $tenors = $_POST['tenor_bulan'] ?? [];
         $periodes = $_POST['periode'] ?? [];
         $angsurans = $_POST['angsuran'] ?? [];
         for ($i = 0; $i < count($tenors); $i++) {
             $tb  = intval($tenors[$i]);
-            $per = mysqli_real_escape_string($koneksi, $periodes[$i] ?? '');
+            $per = sdb_real_escape_string($koneksi, $periodes[$i] ?? '');
             $ag  = str_replace(['.', ' '], '', $angsurans[$i] ?? '0');
             if ($tb > 0) {
-                mysqli_query($koneksi, "INSERT INTO data_angsuran (id_tipe, tenor_bulan, periode, angsuran) VALUES ($id_tipe, $tb, '$per', " . intval($ag) . ")");
+                sdb_query($koneksi, "INSERT INTO data_angsuran (id_tipe, tenor_bulan, periode, angsuran) VALUES ($id_tipe, $tb, '$per', " . intval($ag) . ")");
             }
         }
         header("Location: tipe_rumah.php");
         exit();
     } else {
-        echo "<script>alert('Gagal mengupdate data: " . mysqli_error($koneksi) . "');</script>";
+        echo "<script>alert('Gagal mengupdate data: " . sdb_error($koneksi) . "');</script>";
     }
 }
 
@@ -100,19 +100,19 @@ if (isset($_GET['hapus'])) {
         http_response_code(403);
         die("Token keamanan tidak valid.");
     }
-    $id_hapus = mysqli_real_escape_string($koneksi, $_GET['hapus']);
-    mysqli_query($koneksi, "DELETE FROM data_tipe_rumah WHERE id_tipe = '$id_hapus'");
+    $id_hapus = sdb_real_escape_string($koneksi, $_GET['hapus']);
+    sdb_query($koneksi, "DELETE FROM data_tipe_rumah WHERE id_tipe = '$id_hapus'");
     header("Location: tipe_rumah.php");
     exit();
 }
 
-$q_tipe = mysqli_query($koneksi, "SELECT * FROM data_tipe_rumah ORDER BY CAST(LEFT(tipe_rumah, 3) AS UNSIGNED) ASC, id_tipe ASC");
+$q_tipe = sdb_query($koneksi, "SELECT * FROM data_tipe_rumah ORDER BY CAST(LEFT(tipe_rumah, 3) AS UNSIGNED) ASC, id_tipe ASC");
 $data_tipe = [];
-if ($q_tipe) { while ($r = mysqli_fetch_assoc($q_tipe)) { $data_tipe[] = $r; } }
+if ($q_tipe) { while ($r = sdb_fetch_assoc($q_tipe)) { $data_tipe[] = $r; } }
 
-$q_ang = mysqli_query($koneksi, "SELECT * FROM data_angsuran ORDER BY tenor_bulan ASC, id_angsuran ASC");
+$q_ang = sdb_query($koneksi, "SELECT * FROM data_angsuran ORDER BY tenor_bulan ASC, id_angsuran ASC");
 $data_ang = [];
-if ($q_ang) { while ($r = mysqli_fetch_assoc($q_ang)) { $data_ang[$r['id_tipe']][] = $r; } }
+if ($q_ang) { while ($r = sdb_fetch_assoc($q_ang)) { $data_ang[$r['id_tipe']][] = $r; } }
 ?>
 <!DOCTYPE html>
 <html lang="id">

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 include 'includes/koneksi.php';
 include 'includes/berkas_helper.php';
 include 'includes/cluster_hold.php';
@@ -18,47 +18,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrf_verify()) {
 }
 
 // 1. Ambil Stat Ringkasan (1 query)
-$q_stat = mysqli_query($koneksi, "SELECT COUNT(*) as total,
+$q_stat = sdb_query($koneksi, "SELECT COUNT(*) as total,
     SUM(status_unit = 'terjual') as terjual,
     SUM(status_unit = 'terbooking') as booking,
     SUM(status_unit = 'tersedia') as tersedia
 FROM data_rumah");
-$stat = mysqli_fetch_assoc($q_stat);
+$stat = sdb_fetch_assoc($q_stat);
 $total_unit    = intval($stat['total']);
 $total_terjual = intval($stat['terjual']);
 $total_booking = intval($stat['booking']);
 $total_tersedia= intval($stat['tersedia']);
 
 // 1b. Statistik BI Checking (1 query)
-$q_bi = mysqli_query($koneksi, "SELECT COUNT(*) AS total,
+$q_bi = sdb_query($koneksi, "SELECT COUNT(*) AS total,
     SUM(hasil_bi = 'Lulus') AS lulus,
     SUM(hasil_bi = 'Dalam Proses') AS proses,
     SUM(hasil_bi IN ('Tidak Lulus','Dipertimbangkan')) AS tidak
 FROM data_bi_checking");
-$bi = mysqli_fetch_assoc($q_bi);
+$bi = sdb_fetch_assoc($q_bi);
 $bi_total = intval($bi['total']);
 $bi_lulus = intval($bi['lulus']);
 $bi_proses= intval($bi['proses']);
 $bi_tidak = intval($bi['tidak']);
 
 // 1b2. Data BI Checking Terbaru
-$q_bi_recent = mysqli_query($koneksi, "SELECT b.*, k.name_lengkap
+$q_bi_recent = sdb_query($koneksi, "SELECT b.*, k.name_lengkap
     FROM data_bi_checking b
     LEFT JOIN data_konsumen k ON k.id_konsumen = b.id_konsumen
     ORDER BY b.tgl_cek DESC, b.id_bi_checking DESC LIMIT 5");
 $bi_recent_rows = [];
-if ($q_bi_recent) { while ($br = mysqli_fetch_assoc($q_bi_recent)) $bi_recent_rows[] = $br; }
+if ($q_bi_recent) { while ($br = sdb_fetch_assoc($q_bi_recent)) $bi_recent_rows[] = $br; }
 
 // 1c. Notifikasi Deadline Pemberkasan (deadline <= 7 hari ke depan, berkas belum lengkap)
 $deadline_list = [];
-$q_deadline = mysqli_query($koneksi, "SELECT * FROM view_database_utama 
+$q_deadline = sdb_query($koneksi, "SELECT * FROM view_database_utama 
                                       WHERE deadline_berkas IS NOT NULL 
                                         AND deadline_berkas != '' 
                                         AND deadline_berkas != '0000-00-00' 
                                         AND deadline_berkas <= DATE_ADD(CURDATE(), INTERVAL 7 DAY) 
                                       ORDER BY deadline_berkas ASC");
-if ($q_deadline && mysqli_num_rows($q_deadline) > 0) {
-    while ($drow = mysqli_fetch_assoc($q_deadline)) {
+if ($q_deadline && sdb_num_rows($q_deadline) > 0) {
+    while ($drow = sdb_fetch_assoc($q_deadline)) {
         $saved = !empty($drow['pemberkasan_json']) ? json_decode($drow['pemberkasan_json'], true) : [];
         if (!is_array($saved)) $saved = [];
         $prog = hitungProgresBerkas($saved, $drow['skema_bayar'] ?? 'Cash', $master_dokumen);
@@ -72,11 +72,11 @@ if ($q_deadline && mysqli_num_rows($q_deadline) > 0) {
 
 // 2. Query 10 Data Transaksi Terbaru
 $query = "SELECT * FROM view_database_utama ORDER BY id_transaksi DESC LIMIT 10";
-$result = mysqli_query($koneksi, $query);
+$result = sdb_query($koneksi, $query);
 
 // 3. Laporan Harian Hari Ini
 $today = date('Y-m-d');
-$q_lh = mysqli_query($koneksi, "SELECT *,
+$q_lh = sdb_query($koneksi, "SELECT *,
     CASE
         WHEN status='Selesai' THEN 1
         WHEN status='Sedang Berlangsung' THEN 2
@@ -85,7 +85,7 @@ $q_lh = mysqli_query($koneksi, "SELECT *,
     END AS sort_order
 FROM data_laporan_harian WHERE tanggal='$today' ORDER BY sort_order ASC, jam_mulai ASC");
 $lh_rows = [];
-if ($q_lh) { while ($lr = mysqli_fetch_assoc($q_lh)) $lh_rows[] = $lr; }
+if ($q_lh) { while ($lr = sdb_fetch_assoc($q_lh)) $lh_rows[] = $lr; }
 $lh_count = count($lh_rows);
 ?>
 
@@ -472,8 +472,8 @@ $lh_count = count($lh_rows);
                     <tbody>
                         <?php 
                         $no = 1;
-                        if (mysqli_num_rows($result) > 0) {
-                            while ($row = mysqli_fetch_assoc($result)) { 
+                        if (sdb_num_rows($result) > 0) {
+                            while ($row = sdb_fetch_assoc($result)) { 
                         ?>
                         <tr>
                             <td class="text-muted"><?= $no++; ?></td>
@@ -558,8 +558,8 @@ $lh_count = count($lh_rows);
                                 <select name="id_konsumen" class="form-select border-0 shadow-sm" style="border-radius: 8px;" required>
                                     <option value="">-- Pilih Konsumen --</option>
                                     <?php
-                                    $konsumen = mysqli_query($koneksi, "SELECT * FROM data_konsumen ORDER BY name_lengkap ASC");
-                                    while ($k = mysqli_fetch_assoc($konsumen)) {
+                                    $konsumen = sdb_query($koneksi, "SELECT * FROM data_konsumen ORDER BY name_lengkap ASC");
+                                    while ($k = sdb_fetch_assoc($konsumen)) {
                                         echo "<option value='".$k['id_konsumen']."'>".htmlspecialchars($k['name_lengkap'])." - (".htmlspecialchars($k['pekerjaan']).")</option>";
                                     }
                                     ?>
@@ -580,8 +580,8 @@ $lh_count = count($lh_rows);
                                                     LEFT JOIN data_konsumen k ON t.id_konsumen = k.id_konsumen
                                                     ORDER BY c.cluster_name, r.no_blok ASC";
                                     
-                                    $rumah = mysqli_query($koneksi, $query_rumah);
-                                    while ($r = mysqli_fetch_assoc($rumah)) {
+                                    $rumah = sdb_query($koneksi, $query_rumah);
+                                    while ($r = sdb_fetch_assoc($rumah)) {
                                         $status = strtolower($r['status_unit']);
                                         $pemesan = !empty($r['pemesan']) ? $r['pemesan'] : 'Konsumen Lain';
                                         $cluster = !empty($r['cluster_name']) ? $r['cluster_name'] : 'Shankara Residence';

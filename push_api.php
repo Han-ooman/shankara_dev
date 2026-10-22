@@ -68,14 +68,14 @@ switch ($action) {
             exit();
         }
 
-        $e = mysqli_real_escape_string($koneksi, $endpoint);
-        $p = mysqli_real_escape_string($koneksi, $p256dh);
-        $s = mysqli_real_escape_string($koneksi, $auth);
-        $u = mysqli_real_escape_string($koneksi, $ua);
+        $e = sdb_real_escape_string($koneksi, $endpoint);
+        $p = sdb_real_escape_string($koneksi, $p256dh);
+        $s = sdb_real_escape_string($koneksi, $auth);
+        $u = sdb_real_escape_string($koneksi, $ua);
         $q = "INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth, user_agent, active)
               VALUES ($uid, '$e', '$p', '$s', '$u', 1)
               ON DUPLICATE KEY UPDATE p256dh = '$p', auth = '$s', user_agent = '$u', active = 1, created_at = created_at";
-        $ok = mysqli_query($koneksi, $q);
+        $ok = sdb_query($koneksi, $q);
         echo json_encode(['success' => (bool)$ok, 'message' => $ok ? 'Subscription tersimpan.' : 'Gagal menyimpan subscription.']);
         exit();
     }
@@ -86,8 +86,8 @@ switch ($action) {
             echo json_encode(['success' => false, 'message' => 'Endpoint kosong.']);
             exit();
         }
-        $e = mysqli_real_escape_string($koneksi, $endpoint);
-        mysqli_query($koneksi, "DELETE FROM push_subscriptions WHERE user_id = $uid AND endpoint = '$e'");
+        $e = sdb_real_escape_string($koneksi, $endpoint);
+        sdb_query($koneksi, "DELETE FROM push_subscriptions WHERE user_id = $uid AND endpoint = '$e'");
         echo json_encode(['success' => true, 'message' => 'Subscription dihapus.']);
         exit();
     }
@@ -95,14 +95,14 @@ switch ($action) {
     case 'test': {
         if (!is_dir(__DIR__ . '/logs')) @mkdir(__DIR__ . '/logs', 0777, true);
         require_once __DIR__ . '/includes/push_helper.php';
-        $q = mysqli_query($koneksi, "SELECT * FROM push_subscriptions WHERE user_id = $uid AND active = 1");
-        $n = $q ? mysqli_num_rows($q) : 0;
+        $q = sdb_query($koneksi, "SELECT * FROM push_subscriptions WHERE user_id = $uid AND active = 1");
+        $n = $q ? sdb_num_rows($q) : 0;
         if ($n === 0) {
             echo json_encode(['success' => false, 'message' => 'Belum ada perangkat terdaftar untuk akun ini. Klik \'Aktifkan Notifikasi\' dulu.']);
             exit();
         }
         $sent = 0; $dead = 0; $last = '';
-        while ($row = mysqli_fetch_assoc($q)) {
+        while ($row = sdb_fetch_assoc($q)) {
             $res = push_kirim_subscription($koneksi, $row, 'Test notifikasi Shankara Dev',
                     ($_SESSION['username'] ?? 'shk') . ' test');
             if ($res['ok']) $sent++; else { $dead++; $last = $res['msg']; }

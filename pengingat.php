@@ -82,13 +82,13 @@ function add_item(array &$items, string $jenis, string $nama, string $no, string
 }
 
 // 1. Deadline Pemberkasan (berkas belum lengkap)
-$q1 = mysqli_query($koneksi, "SELECT * FROM view_database_utama
+$q1 = sdb_query($koneksi, "SELECT * FROM view_database_utama
         WHERE deadline_berkas IS NOT NULL AND deadline_berkas != '' AND deadline_berkas != '0000-00-00'
           AND status_konsumen != 'BATAL' AND status_konsumen != 'ACC - AKAD'
           AND deadline_berkas <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)
         ORDER BY deadline_berkas ASC");
 if ($q1) {
-    while ($r = mysqli_fetch_assoc($q1)) {
+    while ($r = sdb_fetch_assoc($q1)) {
         $saved = !empty($r['pemberkasan_json']) ? json_decode($r['pemberkasan_json'], true) : [];
         if (!is_array($saved)) $saved = [];
         // Lewati yang berkasnya sudah lengkap (deadline biasanya dikosongkan, tetapi amankan)
@@ -97,37 +97,37 @@ if ($q1) {
 }
 
 // 2. Wawancara Bank
-$q2 = mysqli_query($koneksi, "SELECT * FROM view_database_utama
+$q2 = sdb_query($koneksi, "SELECT * FROM view_database_utama
         WHERE tgl_wawancara IS NOT NULL AND tgl_wawancara != '' AND tgl_wawancara != '0000-00-00'
           AND status_konsumen != 'BATAL' AND status_konsumen != 'ACC - AKAD'
           AND tgl_wawancara <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)
         ORDER BY tgl_wawancara ASC");
 if ($q2) {
-    while ($r = mysqli_fetch_assoc($q2)) {
+    while ($r = sdb_fetch_assoc($q2)) {
         add_item($items, 'wawancara', $r['name_lengkap'] ?? '', $r['no_whatsapp'] ?? '', ($r['cluster_name'] ?? '') . ' - Blok ' . ($r['no_blok'] ?? ''), $r['cluster_name'] ?? '', $r['tgl_wawancara'], $r['bank_tujuan'] ?? '', $tpl_wawancara, 'Wawancara Bank');
     }
 }
 
 // 3. Akad (hanya yang belum ACC/AKAD selesai)
-$q3 = mysqli_query($koneksi, "SELECT * FROM view_database_utama
+$q3 = sdb_query($koneksi, "SELECT * FROM view_database_utama
         WHERE tanggal_akad IS NOT NULL AND tanggal_akad != '' AND tanggal_akad != '0000-00-00'
           AND status_konsumen NOT IN ('BATAL', 'ACC - AKAD')
           AND tanggal_akad <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)
         ORDER BY tanggal_akad ASC");
 if ($q3) {
-    while ($r = mysqli_fetch_assoc($q3)) {
+    while ($r = sdb_fetch_assoc($q3)) {
         add_item($items, 'akad', $r['name_lengkap'] ?? '', $r['no_whatsapp'] ?? '', ($r['cluster_name'] ?? '') . ' - Blok ' . ($r['no_blok'] ?? ''), $r['cluster_name'] ?? '', $r['tanggal_akad'], $r['bank_tujuan'] ?? '', $tpl_akad, 'Akad KPR');
     }
 }
 
 // 4. Follow-up Prospek
-$q4 = mysqli_query($koneksi, "SELECT * FROM data_prospek
+$q4 = sdb_query($koneksi, "SELECT * FROM data_prospek
         WHERE tanggal_followup IS NOT NULL AND tanggal_followup != ''
           AND status_followup NOT IN ('Deal', 'Tidak Lanjut')
           AND tanggal_followup <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)
         ORDER BY tanggal_followup ASC");
 if ($q4) {
-    while ($r = mysqli_fetch_assoc($q4)) {
+    while ($r = sdb_fetch_assoc($q4)) {
         add_item($items, 'followup', $r['name_lengkap'] ?? '', $r['no_whatsapp'] ?? '', trim(($r['cluster_minat'] ?? '') . ' ' . ($r['unit_minat'] ?? '')), $r['cluster_minat'] ?? '', $r['tanggal_followup'], '', $tpl_followup, 'Follow-up Prospek');
     }
 }

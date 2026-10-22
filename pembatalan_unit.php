@@ -20,23 +20,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrf_verify()) {
 // ===== TAMBAH SURAT PEMBATALAN =====
 if (isset($_POST['simpan_pembatalan'])) {
     $id_transaksi       = intval($_POST['id_transaksi']);
-    $no_surat           = mysqli_real_escape_string($koneksi, trim($_POST['no_surat']));
-    $tgl_surat          = mysqli_real_escape_string($koneksi, $_POST['tgl_surat']);
-    $alasan_pembatalan  = mysqli_real_escape_string($koneksi, trim($_POST['alasan_pembatalan'] ?? ''));
+    $no_surat           = sdb_real_escape_string($koneksi, trim($_POST['no_surat']));
+    $tgl_surat          = sdb_real_escape_string($koneksi, $_POST['tgl_surat']);
+    $alasan_pembatalan  = sdb_real_escape_string($koneksi, trim($_POST['alasan_pembatalan'] ?? ''));
     $booking_fee        = max(0, (int) str_replace(['.', ' '], '', $_POST['booking_fee'] ?? '0'));
-    $rekening_nama      = mysqli_real_escape_string($koneksi, trim($_POST['rekening_nama'] ?? ''));
-    $rekening_bank      = mysqli_real_escape_string($koneksi, trim($_POST['rekening_bank'] ?? ''));
-    $rekening_no        = mysqli_real_escape_string($koneksi, trim($_POST['rekening_no'] ?? ''));
-    $catatan            = mysqli_real_escape_string($koneksi, trim($_POST['catatan'] ?? ''));
+    $rekening_nama      = sdb_real_escape_string($koneksi, trim($_POST['rekening_nama'] ?? ''));
+    $rekening_bank      = sdb_real_escape_string($koneksi, trim($_POST['rekening_bank'] ?? ''));
+    $rekening_no        = sdb_real_escape_string($koneksi, trim($_POST['rekening_no'] ?? ''));
+    $catatan            = sdb_real_escape_string($koneksi, trim($_POST['catatan'] ?? ''));
 
     // Cegah duplikasi untuk transaksi yang sama yang belum dibatalkan
-    $cek = mysqli_query($koneksi, "SELECT id_pembatalan FROM data_pembatalan WHERE id_transaksi = $id_transaksi AND status_pembatalan = 'Disetujui'");
-    if ($cek && mysqli_num_rows($cek) > 0) {
+    $cek = sdb_query($koneksi, "SELECT id_pembatalan FROM data_pembatalan WHERE id_transaksi = $id_transaksi AND status_pembatalan = 'Disetujui'");
+    if ($cek && sdb_num_rows($cek) > 0) {
         header("Location: pembatalan_unit.php?pesan=duplicate");
         exit();
     }
 
-    mysqli_query($koneksi, "INSERT INTO data_pembatalan (id_transaksi, no_surat, tgl_surat, alasan_pembatalan, booking_fee, rekening_nama, rekening_bank, rekening_no, catatan)
+    sdb_query($koneksi, "INSERT INTO data_pembatalan (id_transaksi, no_surat, tgl_surat, alasan_pembatalan, booking_fee, rekening_nama, rekening_bank, rekening_no, catatan)
                             VALUES ($id_transaksi, '$no_surat', '$tgl_surat', '$alasan_pembatalan', $booking_fee, '$rekening_nama', '$rekening_bank', '$rekening_no', '$catatan')");
     log_aktivitas($koneksi, 'TAMBAH', 'Pembatalan Unit', 'Tambah surat pembatalan unit: ' . $no_surat);
     header("Location: pembatalan_unit.php?pesan=simpan");
@@ -47,17 +47,17 @@ if (isset($_POST['simpan_pembatalan'])) {
 if (isset($_POST['edit_pembatalan'])) {
     $id_pembatalan      = intval($_POST['id_pembatalan']);
     $id_transaksi       = intval($_POST['id_transaksi']);
-    $no_surat           = mysqli_real_escape_string($koneksi, trim($_POST['no_surat']));
-    $tgl_surat          = mysqli_real_escape_string($koneksi, $_POST['tgl_surat']);
-    $alasan_pembatalan  = mysqli_real_escape_string($koneksi, trim($_POST['alasan_pembatalan'] ?? ''));
+    $no_surat           = sdb_real_escape_string($koneksi, trim($_POST['no_surat']));
+    $tgl_surat          = sdb_real_escape_string($koneksi, $_POST['tgl_surat']);
+    $alasan_pembatalan  = sdb_real_escape_string($koneksi, trim($_POST['alasan_pembatalan'] ?? ''));
     $booking_fee        = max(0, (int) str_replace(['.', ' '], '', $_POST['booking_fee'] ?? '0'));
-    $rekening_nama      = mysqli_real_escape_string($koneksi, trim($_POST['rekening_nama'] ?? ''));
-    $rekening_bank      = mysqli_real_escape_string($koneksi, trim($_POST['rekening_bank'] ?? ''));
-    $rekening_no        = mysqli_real_escape_string($koneksi, trim($_POST['rekening_no'] ?? ''));
-    $catatan            = mysqli_real_escape_string($koneksi, trim($_POST['catatan'] ?? ''));
+    $rekening_nama      = sdb_real_escape_string($koneksi, trim($_POST['rekening_nama'] ?? ''));
+    $rekening_bank      = sdb_real_escape_string($koneksi, trim($_POST['rekening_bank'] ?? ''));
+    $rekening_no        = sdb_real_escape_string($koneksi, trim($_POST['rekening_no'] ?? ''));
+    $catatan            = sdb_real_escape_string($koneksi, trim($_POST['catatan'] ?? ''));
 
     // Hanya surat berstatus Draft yang bisa diedit
-    mysqli_query($koneksi, "UPDATE data_pembatalan SET
+    sdb_query($koneksi, "UPDATE data_pembatalan SET
                             id_transaksi = $id_transaksi,
                             no_surat = '$no_surat',
                             tgl_surat = '$tgl_surat',
@@ -77,20 +77,20 @@ if (isset($_POST['edit_pembatalan'])) {
 if (isset($_POST['setujui_pembatalan'])) {
     $id_pembatalan = intval($_POST['id_pembatalan']);
 
-    $q = mysqli_query($koneksi, "SELECT p.*, t.id_rumah, t.id_konsumen FROM data_pembatalan p
+    $q = sdb_query($koneksi, "SELECT p.*, t.id_rumah, t.id_konsumen FROM data_pembatalan p
                                  LEFT JOIN data_transaksi t ON p.id_transaksi = t.id_transaksi
                                  WHERE p.id_pembatalan = $id_pembatalan AND p.status_pembatalan = 'Draft'");
-    $row = $q ? mysqli_fetch_assoc($q) : null;
+    $row = $q ? sdb_fetch_assoc($q) : null;
 
     if ($row) {
-        mysqli_query($koneksi, "UPDATE data_pembatalan SET status_pembatalan = 'Disetujui' WHERE id_pembatalan = $id_pembatalan");
+        sdb_query($koneksi, "UPDATE data_pembatalan SET status_pembatalan = 'Disetujui' WHERE id_pembatalan = $id_pembatalan");
         // Unit kembali tersedia
         if (!empty($row['id_rumah'])) {
-            mysqli_query($koneksi, "UPDATE data_rumah SET status_unit = 'TERSEDIA' WHERE id_rumah = " . intval($row['id_rumah']));
+            sdb_query($koneksi, "UPDATE data_rumah SET status_unit = 'TERSEDIA' WHERE id_rumah = " . intval($row['id_rumah']));
         }
         // Transaksi ditandai BATAL
         if (!empty($row['id_transaksi'])) {
-            mysqli_query($koneksi, "UPDATE data_transaksi SET status_konsumen = 'BATAL' WHERE id_transaksi = " . intval($row['id_transaksi']));
+            sdb_query($koneksi, "UPDATE data_transaksi SET status_konsumen = 'BATAL' WHERE id_transaksi = " . intval($row['id_transaksi']));
         }
         log_aktivitas($koneksi, 'UBAH', 'Pembatalan Unit', 'Setujui surat pembatalan unit: ' . $row['no_surat']);
         header("Location: pembatalan_unit.php?pesan=setuju");
@@ -107,7 +107,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
         die("Token keamanan tidak valid.");
     }
     $id_hapus = intval($_GET['id']);
-    mysqli_query($koneksi, "DELETE FROM data_pembatalan WHERE id_pembatalan = $id_hapus AND status_pembatalan = 'Draft'");
+    sdb_query($koneksi, "DELETE FROM data_pembatalan WHERE id_pembatalan = $id_hapus AND status_pembatalan = 'Draft'");
     log_aktivitas($koneksi, 'HAPUS', 'Pembatalan Unit', 'Hapus surat pembatalan unit ID: ' . $id_hapus);
     header("Location: pembatalan_unit.php?pesan=hapus");
     exit();
@@ -172,7 +172,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
                     </thead>
                     <tbody>
                         <?php
-                        $q = mysqli_query($koneksi, "SELECT p.*,
+                        $q = sdb_query($koneksi, "SELECT p.*,
                                                             k.name_lengkap,
                                                             r.no_blok, r.tipe_rumah, r.no_shm,
                                                             t.status_konsumen
@@ -182,8 +182,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
                                                      LEFT JOIN data_rumah r ON t.id_rumah = r.id_rumah
                                                      ORDER BY p.id_pembatalan DESC");
 
-                        if ($q && mysqli_num_rows($q) > 0) {
-                            while ($r = mysqli_fetch_assoc($q)) {
+                        if ($q && sdb_num_rows($q) > 0) {
+                            while ($r = sdb_fetch_assoc($q)) {
                                 $badge = $r['status_pembatalan'] === 'Disetujui' ? 'bg-success' : 'bg-warning text-dark';
                                 $draft = $r['status_pembatalan'] === 'Draft';
                         ?>
@@ -265,11 +265,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
                                                         <select name="id_transaksi" class="form-select" required>
                                                             <option value="">-- Pilih Transaksi --</option>
                                                             <?php
-                                                            $qt = mysqli_query($koneksi, "SELECT t.id_transaksi, k.name_lengkap, r.no_blok
+                                                            $qt = sdb_query($koneksi, "SELECT t.id_transaksi, k.name_lengkap, r.no_blok
                                                                                           FROM data_transaksi t
                                                                                           LEFT JOIN data_konsumen k ON t.id_konsumen = k.id_konsumen
                                                                                           LEFT JOIN data_rumah r ON t.id_rumah = r.id_rumah");
-                                                            while ($st = mysqli_fetch_assoc($qt)) {
+                                                            while ($st = sdb_fetch_assoc($qt)) {
                                                                 $sel2 = ($st['id_transaksi'] == $r['id_transaksi']) ? 'selected' : '';
                                                                 echo "<option value='" . $st['id_transaksi'] . "' $sel2>Blok " . ($st['no_blok'] ?? '-') . " - " . ($st['name_lengkap'] ?? '-') . "</option>";
                                                             }
@@ -374,14 +374,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
                         <select name="id_transaksi" class="form-select" required>
                             <option value="">-- Pilih Transaksi --</option>
                             <?php
-                            $qt = mysqli_query($koneksi, "SELECT t.id_transaksi,
+                            $qt = sdb_query($koneksi, "SELECT t.id_transaksi,
                                                                  k.name_lengkap,
                                                                  r.no_blok,
                                                                  t.status_konsumen
                                                           FROM data_transaksi t
                                                           LEFT JOIN data_konsumen k ON t.id_konsumen = k.id_konsumen
                                                           LEFT JOIN data_rumah r ON t.id_rumah = r.id_rumah");
-                            while ($st = mysqli_fetch_assoc($qt)) {
+                            while ($st = sdb_fetch_assoc($qt)) {
                                 echo "<option value='" . $st['id_transaksi'] . "'>Blok " . ($st['no_blok'] ?? '-') . " - " . ($st['name_lengkap'] ?? '-') . " (" . ($st['status_konsumen'] ?? '-') . ")</option>";
                             }
                             ?>
@@ -446,7 +446,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    var hargaByTransaksi = <?= json_encode(array_column(mysqli_fetch_all(mysqli_query($koneksi, "SELECT t.id_transaksi, r.harga_jual FROM data_transaksi t JOIN data_rumah r ON t.id_rumah = r.id_rumah"), MYSQLI_ASSOC), 'harga_jual', 'id_transaksi')) ?>;
+    var hargaByTransaksi = <?= json_encode(array_column(sdb_fetch_all(sdb_query($koneksi, "SELECT t.id_transaksi, r.harga_jual FROM data_transaksi t JOIN data_rumah r ON t.id_rumah = r.id_rumah"), MYSQLI_ASSOC), 'harga_jual', 'id_transaksi')) ?>;
 
     function formatRibuan(v) {
         var n = String(v).replace(/[^\d]/g, '');

@@ -35,15 +35,15 @@ if (isset($_POST['update_status_kpr'])) {
     ];
 
     if (!empty($ids)) {
-        $stmt = mysqli_prepare($koneksi, "UPDATE data_transaksi SET
+        $stmt = sdb_prepare($koneksi, "UPDATE data_transaksi SET
                                     status_bphtb = ?, status_tapera = ?, status_trilogi = ?, status_sikumbang = ?
                                     WHERE id_transaksi = ?");
         if ($stmt) {
             foreach ($ids as $id) {
-                mysqli_stmt_bind_param($stmt, 'ssssi', $val['bphtb'], $val['tapera'], $val['trilogi'], $val['sikumbang'], $id);
-                mysqli_stmt_execute($stmt);
+                sdb_stmt_bind_param($stmt, 'ssssi', $val['bphtb'], $val['tapera'], $val['trilogi'], $val['sikumbang'], $id);
+                sdb_stmt_execute($stmt);
             }
-            mysqli_stmt_close($stmt);
+            sdb_stmt_close($stmt);
         }
         log_aktivitas($koneksi, 'UBAH', 'Status KPR', 'Update status KPR ' . count($ids) . ' transaksi (#' . implode(',', $ids) . ')', $val);
     }
@@ -62,7 +62,7 @@ if (isset($_POST['update_status_kpr'])) {
 // ==========================================
 // FILTER LENGKAP & PINTAR
 // ==========================================
-$keyword = isset($_GET['k']) ? mysqli_real_escape_string($koneksi, $_GET['k']) : '';
+$keyword = isset($_GET['k']) ? sdb_real_escape_string($koneksi, $_GET['k']) : '';
 $filterF = isset($_GET['f']) ? $_GET['f'] : '';
 $filterF = in_array($filterF, ['bphtb', 'tapera', 'trilogi', 'sikumbang']) ? $filterF : '';
 
@@ -73,11 +73,11 @@ $filterTrilogi = in_array($_GET['f_trilogi'] ?? '', ['belum', 'sudah']) ? $_GET[
 $filterSikumb  = in_array($_GET['f_sikumb']  ?? '', ['belum', 'sudah']) ? $_GET['f_sikumb']  : '';
 
 // Filter tambahan
-$filterCluster   = isset($_GET['f_cluster'])   ? mysqli_real_escape_string($koneksi, $_GET['f_cluster'])   : '';
-$filterStatusK   = isset($_GET['f_status'])    ? mysqli_real_escape_string($koneksi, $_GET['f_status'])    : '';
-$filterSkema     = isset($_GET['f_skema'])     ? mysqli_real_escape_string($koneksi, $_GET['f_skema'])     : '';
-$filterAkadDari  = isset($_GET['f_akad_dari']) ? mysqli_real_escape_string($koneksi, $_GET['f_akad_dari']) : '';
-$filterAkadSampai= isset($_GET['f_akad_sampai']) ? mysqli_real_escape_string($koneksi, $_GET['f_akad_sampai']) : '';
+$filterCluster   = isset($_GET['f_cluster'])   ? sdb_real_escape_string($koneksi, $_GET['f_cluster'])   : '';
+$filterStatusK   = isset($_GET['f_status'])    ? sdb_real_escape_string($koneksi, $_GET['f_status'])    : '';
+$filterSkema     = isset($_GET['f_skema'])     ? sdb_real_escape_string($koneksi, $_GET['f_skema'])     : '';
+$filterAkadDari  = isset($_GET['f_akad_dari']) ? sdb_real_escape_string($koneksi, $_GET['f_akad_dari']) : '';
+$filterAkadSampai= isset($_GET['f_akad_sampai']) ? sdb_real_escape_string($koneksi, $_GET['f_akad_sampai']) : '';
 
 $whereBase = "t.status_konsumen != 'BATAL' AND (t.skema_bayar = 'KPR Subsidi' OR r.tipe_rumah = '36') AND t.skema_bayar NOT IN ('Cash Tempo', 'Cash Keras')";
 
@@ -124,7 +124,7 @@ $durPart = "ROW_NUMBER() OVER (PARTITION BY t.id_konsumen, t.id_rumah ORDER BY (
 // STATISTIK (dedup tanpa filter status, sesuai makna kartu "Belum")
 // ==========================================
 $stat = ['total' => 0, 'bphtb' => 0, 'tapera' => 0, 'trilogi' => 0, 'sikumbang' => 0];
-$q_stat = mysqli_query($koneksi, "SELECT
+$q_stat = sdb_query($koneksi, "SELECT
     COUNT(*) AS total,
     SUM(bphtb0) AS bphtb,
     SUM(tapera0) AS tapera,
@@ -143,7 +143,7 @@ FROM (
     WHERE $whereBase
 ) sub
 WHERE sub.rn = 1");
-if ($s = mysqli_fetch_assoc($q_stat)) {
+if ($s = sdb_fetch_assoc($q_stat)) {
     $stat['total']     = intval($s['total']);
     $stat['bphtb']     = intval($s['bphtb']);
     $stat['tapera']    = intval($s['tapera']);
@@ -153,16 +153,16 @@ if ($s = mysqli_fetch_assoc($q_stat)) {
 
 // Ambil daftar untuk dropdown filter
 $clusters = [];
-$q_cl = mysqli_query($koneksi, "SELECT DISTINCT cluster_name FROM data_cluster ORDER BY cluster_name");
-while ($r = mysqli_fetch_assoc($q_cl)) $clusters[] = $r['cluster_name'];
+$q_cl = sdb_query($koneksi, "SELECT DISTINCT cluster_name FROM data_cluster ORDER BY cluster_name");
+while ($r = sdb_fetch_assoc($q_cl)) $clusters[] = $r['cluster_name'];
 
 $skemas = [];
-$q_sk = mysqli_query($koneksi, "SELECT DISTINCT skema_bayar FROM data_transaksi WHERE skema_bayar IS NOT NULL AND skema_bayar != '' ORDER BY skema_bayar");
-while ($r = mysqli_fetch_assoc($q_sk)) $skemas[] = $r['skema_bayar'];
+$q_sk = sdb_query($koneksi, "SELECT DISTINCT skema_bayar FROM data_transaksi WHERE skema_bayar IS NOT NULL AND skema_bayar != '' ORDER BY skema_bayar");
+while ($r = sdb_fetch_assoc($q_sk)) $skemas[] = $r['skema_bayar'];
 
 $statuses = [];
-$q_st = mysqli_query($koneksi, "SELECT DISTINCT status_konsumen FROM data_transaksi WHERE status_konsumen IS NOT NULL AND status_konsumen != '' ORDER BY status_konsumen");
-while ($r = mysqli_fetch_assoc($q_st)) $statuses[] = $r['status_konsumen'];
+$q_st = sdb_query($koneksi, "SELECT DISTINCT status_konsumen FROM data_transaksi WHERE status_konsumen IS NOT NULL AND status_konsumen != '' ORDER BY status_konsumen");
+while ($r = sdb_fetch_assoc($q_st)) $statuses[] = $r['status_konsumen'];
 
 function status_nilai_html($v) {
     if ($v === null || $v === '' || strpos($v, 'Belum') === 0) {
@@ -450,7 +450,7 @@ function status_nilai_html($v) {
                         </thead>
                         <tbody>
                             <?php
-                            $q = mysqli_query($koneksi, "SELECT * FROM (
+                            $q = sdb_query($koneksi, "SELECT * FROM (
                                 SELECT t.id_transaksi, t.skema_bayar, t.skema_akad, t.status_konsumen, t.tanggal_akad,
                                        t.status_bphtb, t.status_tapera, t.status_trilogi, t.status_sikumbang,
                                        k.name_lengkap, k.no_whatsapp, r.no_blok, r.tipe_rumah, c.cluster_name,
@@ -464,9 +464,9 @@ function status_nilai_html($v) {
                             WHERE sub.rn = 1$whereFilt
                             ORDER BY IFNULL(sub.tanggal_akad, '9999-12-31') ASC, sub.id_transaksi DESC");
                             $no = 1;
-                            $ada = $q && mysqli_num_rows($q) > 0;
+                            $ada = $q && sdb_num_rows($q) > 0;
                             if ($ada) {
-                                while ($r = mysqli_fetch_assoc($q)) {
+                                while ($r = sdb_fetch_assoc($q)) {
                                     $status = $r['status_konsumen'];
                                     if ($status === 'ACC - AKAD') { $badge = 'bg-success'; }
                                     elseif ($status === 'BATAL')  { $badge = 'bg-danger'; }

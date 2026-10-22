@@ -30,9 +30,9 @@ if (!function_exists('cluster_id_dari_rumah')) {
     function cluster_id_dari_rumah($koneksi, int $id_rumah): int
     {
         if ($id_rumah <= 0) return 0;
-        $res = mysqli_query($koneksi, "SELECT id_cluster FROM data_rumah WHERE id_rumah = " . (int)$id_rumah . " LIMIT 1");
-        if ($res && mysqli_num_rows($res) > 0) {
-            $row = mysqli_fetch_assoc($res);
+        $res = sdb_query($koneksi, "SELECT id_cluster FROM data_rumah WHERE id_rumah = " . (int)$id_rumah . " LIMIT 1");
+        if ($res && sdb_num_rows($res) > 0) {
+            $row = sdb_fetch_assoc($res);
             return (int)($row['id_cluster'] ?? 0);
         }
         return 0;
@@ -49,16 +49,16 @@ if (!function_exists('cluster_info_dari_rumah')) {
         $default = ['id' => 0, 'nama' => '', 'status' => '', 'hold' => false];
         if ($id_rumah <= 0) return $default;
 
-        $res = mysqli_query(
+        $res = sdb_query(
             $koneksi,
             "SELECT c.id_cluster, COALESCE(c.cluster_name,'-') AS cluster_name, COALESCE(c.cluster_status,'') AS cluster_status
              FROM data_rumah r
              JOIN data_cluster c ON r.id_cluster = c.id_cluster
              WHERE r.id_rumah = " . (int)$id_rumah . " LIMIT 1"
         );
-        if (!$res || mysqli_num_rows($res) === 0) return $default;
+        if (!$res || sdb_num_rows($res) === 0) return $default;
 
-        $row = mysqli_fetch_assoc($res);
+        $row = sdb_fetch_assoc($res);
         return [
             'id'     => (int)($row['id_cluster'] ?? 0),
             'nama'   => (string)($row['cluster_name'] ?? '-'),

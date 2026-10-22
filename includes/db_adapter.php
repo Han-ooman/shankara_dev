@@ -1,8 +1,8 @@
 <?php
-// includes/db_adapter.php — Adapter kompatibilitas mysqli -> Supabase PostgreSQL (PDO pgsql)
-// Menyediakan API mysqli-ish (mysqli_connect, mysqli_query, $koneksi->prepare, dll)
+// includes/db_adapter.php — Adapter kompatibilitas sdb -> Supabase PostgreSQL (PDO pgsql)
+// Menyediakan API mysqli-ish (sdb_connect, sdb_query, $koneksi->prepare, dll)
 // di atas Supabase agar 60+ file PHP aplikasi tidak perlu diubah besar-besaran.
-// Catatan penting: ekstensi mysqli HARUS dinonaktifkan di php.ini agar definisi
+// Catatan penting: ekstensi sdb HARUS dinonaktifkan di php.ini agar definisi
 // fungsi/class di sini tidak fatal error karena redeclare.
 
 if (defined('DB_ADAPTER_VERSION')) return;
@@ -433,9 +433,9 @@ function dbx_pg_describe_table(string $t): ?string {
 }
 
 /* =========================================================================
- *  CLASS mysqli (compat) — connect adalah Supabase, bukan MySQL lama
+ *  CLASS sdb (compat) — connect adalah Supabase, bukan MySQL lama
  * ========================================================================= */
-class mysqli {
+class sdb {
     public $connect_error  = '';
     public $connect_errno  = 0;
     public $error          = '';
@@ -492,7 +492,7 @@ class mysqli {
                     return false;
                 }
                 $stmt->execute();
-                return new mysqli_result($stmt);
+                return new sdb_result($stmt);
             }
             // UPDATE / INSERT / DELETE / DDL
             $st = $this->pdo->exec($t);
@@ -512,7 +512,7 @@ class mysqli {
         if ($this->pdo === null) return false;
         try {
             $t = dbx_translate((string)$sql, $this->pdo);
-            return new mysqli_stmt($this, $t);
+            return new sdb_stmt($this, $t);
         } catch (Throwable $e) {
             $this->markError($e);
             return false;
@@ -558,15 +558,15 @@ class mysqli {
     public function select_db($db) { return strtolower($db) === 'postgres'; }
     public function ping() { return $this->pdo !== null; }
     public function ssl_set() { return true; }
-    public function stmt_init() { return new mysqli_stmt($this, ''); }
+    public function stmt_init() { return new sdb_stmt($this, ''); }
     public function close() { $this->pdo = null; return true; }
     public function __destruct() { $this->pdo = null; }
 }
 
 /* =========================================================================
- *  CLASS mysqli_result (compat)
+ *  CLASS sdb_result (compat)
  * ========================================================================= */
-class mysqli_result implements IteratorAggregate {
+class sdb_result implements IteratorAggregate {
     public int $num_rows      = 0;
     public int $field_count   = 0;
     public int $current_field = 0;
@@ -655,9 +655,9 @@ class mysqli_result implements IteratorAggregate {
 }
 
 /* =========================================================================
- *  CLASS mysqli_stmt (compat)
+ *  CLASS sdb_stmt (compat)
  * ========================================================================= */
-class mysqli_stmt {
+class sdb_stmt {
     public string $error         = '';
     public int    $errno         = 0;
     public int    $affected_rows = 0;
@@ -665,15 +665,15 @@ class mysqli_stmt {
     public int    $num_rows      = 0;
     public int    $param_count   = 0;
     public int    $field_count   = 0;
-    private mysqli $owner;
+    private sdb $owner;
     private string $sql;
     /** @var array<int,mixed> nilai param (menyimpan referensi) */
     private array $params        = [];
     private array $types         = [];
-    private ?mysqli_result $res  = null;
+    private ?sdb_result $res  = null;
     private bool $executed       = false;
 
-    public function __construct(mysqli $owner, string $sql) {
+    public function __construct(sdb $owner, string $sql) {
         $this->owner = $owner;
         $this->sql = $sql;
         $this->param_count = preg_match_all('/\?/', $sql);
@@ -714,7 +714,7 @@ class mysqli_stmt {
             $st->execute();
             $this->executed = true;
             if (preg_match('/^(SELECT|WITH|SHOW)\b/i', ltrim($sql)) || preg_match('/\bRETURNING\b/i', $sql)) {
-                $this->res = new mysqli_result($st);
+                $this->res = new sdb_result($st);
                 $this->num_rows = $this->res->num_rows;
                 $this->affected_rows = $this->res->num_rows;
             } else {
@@ -738,7 +738,7 @@ class mysqli_stmt {
 
     public function get_result() {
         if (!$this->executed) return false;
-        if ($this->res === null) return new mysqli_result([], ['']);
+        if ($this->res === null) return new sdb_result([], ['']);
         return $this->res;
     }
     public function store_result(): bool {
@@ -753,49 +753,49 @@ class mysqli_stmt {
 }
 
 /* =========================================================================
- *  FUNGSI PROSEDURAL mysqli_* (compat)
+ *  FUNGSI PROSEDURAL sdb_* (compat)
  * ========================================================================= */
-function mysqli_connect($host = null, $user = null, $pass = null, $db = null, $port = null) {
-    return new mysqli($host, $user, $pass, $db, $port);
+function sdb_connect($host = null, $user = null, $pass = null, $db = null, $port = null) {
+    return new sdb($host, $user, $pass, $db, $port);
 }
-function mysqli_connect_error() { return ''; }
-function mysqli_select_db(mysqli $c, string $db): bool { return $c->select_db($db); }
-function mysqli_query(mysqli $c, string $sql, int $mode = 0) { return $c->query($sql, $mode); }
-function mysqli_real_escape_string(mysqli $c, string $s) { return $c->real_escape_string($s); }
-function mysqli_escape_string(mysqli $c, string $s) { return $c->real_escape_string($s); }
-function mysqli_set_charset(mysqli $c, string $cs): bool { return $c->set_charset($cs); }
-function mysqli_error(mysqli $c): string { return $c->error; }
-function mysqli_errno(mysqli $c): int { return $c->errno; }
-function mysqli_fetch_assoc($r) { return ($r instanceof mysqli_result) ? $r->fetch_assoc() : null; }
-function mysqli_fetch_row($r)   { return ($r instanceof mysqli_result) ? $r->fetch_row() : null; }
-function mysqli_fetch_object($r, $class = null, array $ca = []) { return ($r instanceof mysqli_result) ? $r->fetch_object($class, $ca) : null; }
-function mysqli_fetch_array($r, $m = MYSQLI_BOTH) { return ($r instanceof mysqli_result) ? $r->fetch_array($m) : null; }
-function mysqli_fetch_all($r, $m = MYSQLI_ASSOC) { return ($r instanceof mysqli_result) ? $r->fetch_all($m) : []; }
-function mysqli_num_rows($r): int { return ($r instanceof mysqli_result) ? $r->num_rows : 0; }
-function mysqli_num_fields($r): int { return ($r instanceof mysqli_result) ? $r->field_count : 0; }
-function mysqli_fetch_fields($r): array { return ($r instanceof mysqli_result) ? $r->fields : []; }
-function mysqli_fetch_field($r) { return ($r instanceof mysqli_result) ? $r->fetch_field() : false; }
-function mysqli_fetch_field_direct($r, $i) { return ($r instanceof mysqli_result) ? $r->fetch_field_direct($i) : false; }
-function mysqli_field_seek($r, $i) { return ($r instanceof mysqli_result) ? $r->field_seek($i) : false; }
-function mysqli_data_seek($r, $i) { return ($r instanceof mysqli_result) ? $r->data_seek($i) : false; }
-function mysqli_free_result($r) { if ($r instanceof mysqli_result) $r->free(); }
-function mysqli_insert_id(mysqli $c): int { return $c->insert_id; }
-function mysqli_affected_rows(mysqli $c): int { return $c->affected_rows; }
-function mysqli_prepare(mysqli $c, string $sql) { return $c->prepare($sql); }
-function mysqli_stmt_bind_param(mysqli_stmt $st, string $types, &...$args): bool { return $st->bind_param($types, ...$args); }
-function mysqli_stmt_execute(mysqli_stmt $st): bool { return $st->execute(); }
-function mysqli_stmt_get_result(mysqli_stmt $st) { return $st->get_result(); }
-function mysqli_stmt_fetch(mysqli_stmt $st) { return $st->fetch(); }
-function mysqli_stmt_close(mysqli_stmt $st): bool { return $st->close(); }
-function mysqli_stmt_free_result(mysqli_stmt $st): void { $st->free_result(); }
-function mysqli_stmt_num_rows(mysqli_stmt $st): int { return $st->num_rows; }
-function mysqli_stmt_errno(mysqli_stmt $st): int { return $st->errno; }
-function mysqli_stmt_error(mysqli_stmt $st): string { return $st->error; }
-function mysqli_stmt_insert_id(mysqli_stmt $st): int { return $st->insert_id; }
-function mysqli_stmt_affected_rows(mysqli_stmt $st): int { return $st->affected_rows; }
-function mysqli_begin_transaction(mysqli $c): bool { return $c->begin_transaction(); }
-function mysqli_commit(mysqli $c): bool { return $c->commit(); }
-function mysqli_rollback(mysqli $c): bool { return $c->rollback(); }
-function mysqli_autocommit(mysqli $c, bool $m): bool { return $c->autocommit($m); }
-function mysqli_close(mysqli $c): bool { return $c->close(); }
-function mysqli_ping(mysqli $c): bool { return $c->ping(); }
+function sdb_connect_error() { return ''; }
+function sdb_select_db(sdb $c, string $db): bool { return $c->select_db($db); }
+function sdb_query(sdb $c, string $sql, int $mode = 0) { return $c->query($sql, $mode); }
+function sdb_real_escape_string(sdb $c, string $s) { return $c->real_escape_string($s); }
+function sdb_escape_string(sdb $c, string $s) { return $c->real_escape_string($s); }
+function sdb_set_charset(sdb $c, string $cs): bool { return $c->set_charset($cs); }
+function sdb_error(sdb $c): string { return $c->error; }
+function sdb_errno(sdb $c): int { return $c->errno; }
+function sdb_fetch_assoc($r) { return ($r instanceof sdb_result) ? $r->fetch_assoc() : null; }
+function sdb_fetch_row($r)   { return ($r instanceof sdb_result) ? $r->fetch_row() : null; }
+function sdb_fetch_object($r, $class = null, array $ca = []) { return ($r instanceof sdb_result) ? $r->fetch_object($class, $ca) : null; }
+function sdb_fetch_array($r, $m = MYSQLI_BOTH) { return ($r instanceof sdb_result) ? $r->fetch_array($m) : null; }
+function sdb_fetch_all($r, $m = MYSQLI_ASSOC) { return ($r instanceof sdb_result) ? $r->fetch_all($m) : []; }
+function sdb_num_rows($r): int { return ($r instanceof sdb_result) ? $r->num_rows : 0; }
+function sdb_num_fields($r): int { return ($r instanceof sdb_result) ? $r->field_count : 0; }
+function sdb_fetch_fields($r): array { return ($r instanceof sdb_result) ? $r->fields : []; }
+function sdb_fetch_field($r) { return ($r instanceof sdb_result) ? $r->fetch_field() : false; }
+function sdb_fetch_field_direct($r, $i) { return ($r instanceof sdb_result) ? $r->fetch_field_direct($i) : false; }
+function sdb_field_seek($r, $i) { return ($r instanceof sdb_result) ? $r->field_seek($i) : false; }
+function sdb_data_seek($r, $i) { return ($r instanceof sdb_result) ? $r->data_seek($i) : false; }
+function sdb_free_result($r) { if ($r instanceof sdb_result) $r->free(); }
+function sdb_insert_id(sdb $c): int { return $c->insert_id; }
+function sdb_affected_rows(sdb $c): int { return $c->affected_rows; }
+function sdb_prepare(sdb $c, string $sql) { return $c->prepare($sql); }
+function sdb_stmt_bind_param(sdb_stmt $st, string $types, &...$args): bool { return $st->bind_param($types, ...$args); }
+function sdb_stmt_execute(sdb_stmt $st): bool { return $st->execute(); }
+function sdb_stmt_get_result(sdb_stmt $st) { return $st->get_result(); }
+function sdb_stmt_fetch(sdb_stmt $st) { return $st->fetch(); }
+function sdb_stmt_close(sdb_stmt $st): bool { return $st->close(); }
+function sdb_stmt_free_result(sdb_stmt $st): void { $st->free_result(); }
+function sdb_stmt_num_rows(sdb_stmt $st): int { return $st->num_rows; }
+function sdb_stmt_errno(sdb_stmt $st): int { return $st->errno; }
+function sdb_stmt_error(sdb_stmt $st): string { return $st->error; }
+function sdb_stmt_insert_id(sdb_stmt $st): int { return $st->insert_id; }
+function sdb_stmt_affected_rows(sdb_stmt $st): int { return $st->affected_rows; }
+function sdb_begin_transaction(sdb $c): bool { return $c->begin_transaction(); }
+function sdb_commit(sdb $c): bool { return $c->commit(); }
+function sdb_rollback(sdb $c): bool { return $c->rollback(); }
+function sdb_autocommit(sdb $c, bool $m): bool { return $c->autocommit($m); }
+function sdb_close(sdb $c): bool { return $c->close(); }
+function sdb_ping(sdb $c): bool { return $c->ping(); }

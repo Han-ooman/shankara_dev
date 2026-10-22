@@ -18,16 +18,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrf_verify()) {
 
 // Tambah Transaksi
 if (isset($_POST['tambah_transaksi'])) {
-    $tanggal  = mysqli_real_escape_string($koneksi, $_POST['tanggal']);
-    $jenis    = mysqli_real_escape_string($koneksi, $_POST['jenis']);
-    $kategori = mysqli_real_escape_string($koneksi, $_POST['kategori']);
+    $tanggal  = sdb_real_escape_string($koneksi, $_POST['tanggal']);
+    $jenis    = sdb_real_escape_string($koneksi, $_POST['jenis']);
+    $kategori = sdb_real_escape_string($koneksi, $_POST['kategori']);
     $cluster  = intval($_POST['cluster_id'] ?? 0) ?: 'NULL';
-    $desk     = mysqli_real_escape_string($koneksi, $_POST['deskripsi']);
+    $desk     = sdb_real_escape_string($koneksi, $_POST['deskripsi']);
     $nominal  = floatval($_POST['nominal']);
-    $metode   = mysqli_real_escape_string($koneksi, $_POST['metode_bayar']);
-    $noref    = mysqli_real_escape_string($koneksi, $_POST['no_ref']);
+    $metode   = sdb_real_escape_string($koneksi, $_POST['metode_bayar']);
+    $noref    = sdb_real_escape_string($koneksi, $_POST['no_ref']);
 
-    mysqli_query($koneksi, "INSERT INTO data_keuangan (tanggal, jenis, kategori, cluster_id, deskripsi, nominal, metode_bayar, no_ref)
+    sdb_query($koneksi, "INSERT INTO data_keuangan (tanggal, jenis, kategori, cluster_id, deskripsi, nominal, metode_bayar, no_ref)
                             VALUES ('$tanggal','$jenis','$kategori',$cluster,'$desk',$nominal,'$metode','$noref')");
     header("Location: keuangan.php");
     exit();
@@ -36,16 +36,16 @@ if (isset($_POST['tambah_transaksi'])) {
 // Edit Transaksi
 if (isset($_POST['edit_transaksi'])) {
     $id       = intval($_POST['id_keuangan']);
-    $tanggal  = mysqli_real_escape_string($koneksi, $_POST['tanggal']);
-    $jenis    = mysqli_real_escape_string($koneksi, $_POST['jenis']);
-    $kategori = mysqli_real_escape_string($koneksi, $_POST['kategori']);
+    $tanggal  = sdb_real_escape_string($koneksi, $_POST['tanggal']);
+    $jenis    = sdb_real_escape_string($koneksi, $_POST['jenis']);
+    $kategori = sdb_real_escape_string($koneksi, $_POST['kategori']);
     $cluster  = intval($_POST['cluster_id'] ?? 0) ?: 'NULL';
-    $desk     = mysqli_real_escape_string($koneksi, $_POST['deskripsi']);
+    $desk     = sdb_real_escape_string($koneksi, $_POST['deskripsi']);
     $nominal  = floatval($_POST['nominal']);
-    $metode   = mysqli_real_escape_string($koneksi, $_POST['metode_bayar']);
-    $noref    = mysqli_real_escape_string($koneksi, $_POST['no_ref']);
+    $metode   = sdb_real_escape_string($koneksi, $_POST['metode_bayar']);
+    $noref    = sdb_real_escape_string($koneksi, $_POST['no_ref']);
 
-    mysqli_query($koneksi, "UPDATE data_keuangan SET tanggal='$tanggal', jenis='$jenis', kategori='$kategori', cluster_id=$cluster, deskripsi='$desk', nominal=$nominal, metode_bayar='$metode', no_ref='$noref' WHERE id_keuangan=$id");
+    sdb_query($koneksi, "UPDATE data_keuangan SET tanggal='$tanggal', jenis='$jenis', kategori='$kategori', cluster_id=$cluster, deskripsi='$desk', nominal=$nominal, metode_bayar='$metode', no_ref='$noref' WHERE id_keuangan=$id");
     header("Location: keuangan.php");
     exit();
 }
@@ -57,15 +57,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
         die("Token keamanan tidak valid.");
     }
     $id_hapus = intval($_GET['id']);
-    mysqli_query($koneksi, "DELETE FROM data_keuangan WHERE id_keuangan = '$id_hapus'");
+    sdb_query($koneksi, "DELETE FROM data_keuangan WHERE id_keuangan = '$id_hapus'");
     header("Location: keuangan.php");
     exit();
 }
 
 // Statistik
 $stat = ['pemasukan'=>0, 'pengeluaran'=>0, 'saldo'=>0, 'jml_transaksi'=>0];
-$q = mysqli_query($koneksi, "SELECT jenis, COUNT(*) AS jml, SUM(nominal) AS total FROM data_keuangan GROUP BY jenis");
-while ($r = mysqli_fetch_assoc($q)) {
+$q = sdb_query($koneksi, "SELECT jenis, COUNT(*) AS jml, SUM(nominal) AS total FROM data_keuangan GROUP BY jenis");
+while ($r = sdb_fetch_assoc($q)) {
     if ($r['jenis'] === 'Pemasukan') { $stat['pemasukan'] = floatval($r['total']); $stat['jml_transaksi'] += $r['jml']; }
     else { $stat['pengeluaran'] = floatval($r['total']); $stat['jml_transaksi'] += $r['jml']; }
 }
@@ -73,18 +73,18 @@ $stat['saldo'] = $stat['pemasukan'] - $stat['pengeluaran'];
 
 // Pemasukan & Pengeluaran bulan ini
 $bulan_ini = date('Y-m');
-$qbi = mysqli_query($koneksi, "SELECT COALESCE(SUM(nominal),0) AS t FROM data_keuangan WHERE jenis='Pemasukan' AND DATE_FORMAT(tanggal,'%Y-%m')='$bulan_ini'");
-$masuk_bulan = floatval(mysqli_fetch_assoc($qbi)['t']);
-$qbo = mysqli_query($koneksi, "SELECT COALESCE(SUM(nominal),0) AS t FROM data_keuangan WHERE jenis='Pengeluaran' AND DATE_FORMAT(tanggal,'%Y-%m')='$bulan_ini'");
-$keluar_bulan = floatval(mysqli_fetch_assoc($qbo)['t']);
+$qbi = sdb_query($koneksi, "SELECT COALESCE(SUM(nominal),0) AS t FROM data_keuangan WHERE jenis='Pemasukan' AND DATE_FORMAT(tanggal,'%Y-%m')='$bulan_ini'");
+$masuk_bulan = floatval(sdb_fetch_assoc($qbi)['t']);
+$qbo = sdb_query($koneksi, "SELECT COALESCE(SUM(nominal),0) AS t FROM data_keuangan WHERE jenis='Pengeluaran' AND DATE_FORMAT(tanggal,'%Y-%m')='$bulan_ini'");
+$keluar_bulan = floatval(sdb_fetch_assoc($qbo)['t']);
 
 $kategori_pemasukan = ['Penjualan Unit', 'DP Rumah', 'Angsuran', 'Booking Fee', 'Biaya Provisi', 'Lainnya'];
 $kategori_pengeluaran = ['Gaji Karyawan', 'Biaya Operasional', 'Biaya Marketing', 'Perawatan', 'Material Bangunan', 'Fee Broker', 'Pajak', 'Lainnya'];
 $metode_bayar_list = ['Tunai', 'Transfer BCA', 'Transfer BRI', 'Transfer Mandiri', 'Transfer BSI', 'Lainnya'];
 
 $clusters = [];
-$qcl = mysqli_query($koneksi, "SELECT id_cluster, cluster_name FROM data_cluster ORDER BY cluster_name");
-while ($cl = mysqli_fetch_assoc($qcl)) $clusters[] = $cl;
+$qcl = sdb_query($koneksi, "SELECT id_cluster, cluster_name FROM data_cluster ORDER BY cluster_name");
+while ($cl = sdb_fetch_assoc($qcl)) $clusters[] = $cl;
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -201,9 +201,9 @@ while ($cl = mysqli_fetch_assoc($qcl)) $clusters[] = $cl;
                     </thead>
                     <tbody>
                         <?php
-                        $qk = mysqli_query($koneksi, "SELECT k.*, c.cluster_name FROM data_keuangan k LEFT JOIN data_cluster c ON k.cluster_id = c.id_cluster ORDER BY k.tanggal DESC, k.id_keuangan DESC");
-                        if ($qk && mysqli_num_rows($qk) > 0) {
-                            while ($k = mysqli_fetch_assoc($qk)) {
+                        $qk = sdb_query($koneksi, "SELECT k.*, c.cluster_name FROM data_keuangan k LEFT JOIN data_cluster c ON k.cluster_id = c.id_cluster ORDER BY k.tanggal DESC, k.id_keuangan DESC");
+                        if ($qk && sdb_num_rows($qk) > 0) {
+                            while ($k = sdb_fetch_assoc($qk)) {
                                 $badge_j = $k['jenis'] === 'Pemasukan' ? 'bg-success' : 'bg-danger';
                                 $nom_cls = $k['jenis'] === 'Pemasukan' ? 'nominal-in' : 'nominal-out';
                                 $nom_prefix = $k['jenis'] === 'Pemasukan' ? '+' : '-';

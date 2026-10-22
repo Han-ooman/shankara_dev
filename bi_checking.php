@@ -20,13 +20,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrf_verify()) {
 if (isset($_POST['simpan_bi'])) {
     $id_konsumen = intval($_POST['id_konsumen']);
     $id_marketing = !empty($_POST['id_marketing']) ? intval($_POST['id_marketing']) : 'NULL';
-    $tgl_cek     = mysqli_real_escape_string($koneksi, $_POST['tgl_cek']);
-    $lembaga     = mysqli_real_escape_string($koneksi, $_POST['lembaga']);
-    $no_pengajuan = mysqli_real_escape_string($koneksi, $_POST['no_pengajuan']);
-    $hasil_bi    = mysqli_real_escape_string($koneksi, $_POST['hasil_bi']);
-    $catatan     = mysqli_real_escape_string($koneksi, $_POST['catatan']);
+    $tgl_cek     = sdb_real_escape_string($koneksi, $_POST['tgl_cek']);
+    $lembaga     = sdb_real_escape_string($koneksi, $_POST['lembaga']);
+    $no_pengajuan = sdb_real_escape_string($koneksi, $_POST['no_pengajuan']);
+    $hasil_bi    = sdb_real_escape_string($koneksi, $_POST['hasil_bi']);
+    $catatan     = sdb_real_escape_string($koneksi, $_POST['catatan']);
 
-    mysqli_query($koneksi, "INSERT INTO data_bi_checking (id_konsumen, id_marketing, tgl_cek, lembaga, no_pengajuan, hasil_bi, catatan)
+    sdb_query($koneksi, "INSERT INTO data_bi_checking (id_konsumen, id_marketing, tgl_cek, lembaga, no_pengajuan, hasil_bi, catatan)
                             VALUES ($id_konsumen, $id_marketing, '$tgl_cek', '$lembaga', '$no_pengajuan', '$hasil_bi', '$catatan')");
     header("Location: bi_checking.php?status=success");
     exit();
@@ -39,13 +39,13 @@ if (isset($_POST['edit_bi'])) {
     $id_bi        = intval($_POST['id_bi_checking']);
     $id_konsumen  = intval($_POST['id_konsumen']);
     $id_marketing = !empty($_POST['id_marketing']) ? intval($_POST['id_marketing']) : 'NULL';
-    $tgl_cek      = mysqli_real_escape_string($koneksi, $_POST['tgl_cek']);
-    $lembaga      = mysqli_real_escape_string($koneksi, $_POST['lembaga']);
-    $no_pengajuan = mysqli_real_escape_string($koneksi, $_POST['no_pengajuan']);
-    $hasil_bi     = mysqli_real_escape_string($koneksi, $_POST['hasil_bi']);
-    $catatan      = mysqli_real_escape_string($koneksi, $_POST['catatan']);
+    $tgl_cek      = sdb_real_escape_string($koneksi, $_POST['tgl_cek']);
+    $lembaga      = sdb_real_escape_string($koneksi, $_POST['lembaga']);
+    $no_pengajuan = sdb_real_escape_string($koneksi, $_POST['no_pengajuan']);
+    $hasil_bi     = sdb_real_escape_string($koneksi, $_POST['hasil_bi']);
+    $catatan      = sdb_real_escape_string($koneksi, $_POST['catatan']);
 
-    mysqli_query($koneksi, "UPDATE data_bi_checking SET
+    sdb_query($koneksi, "UPDATE data_bi_checking SET
                             id_konsumen = $id_konsumen,
                             id_marketing = $id_marketing,
                             tgl_cek = '$tgl_cek',
@@ -67,7 +67,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
         die("Token keamanan tidak valid.");
     }
     $id_hapus = intval($_GET['id']);
-    mysqli_query($koneksi, "DELETE FROM data_bi_checking WHERE id_bi_checking = $id_hapus");
+    sdb_query($koneksi, "DELETE FROM data_bi_checking WHERE id_bi_checking = $id_hapus");
     header("Location: bi_checking.php?status=deleted");
     exit();
 }
@@ -75,9 +75,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
 // ==========================================
 // FILTER
 // ==========================================
-$filter_keyword = isset($_GET['keyword']) ? mysqli_real_escape_string($koneksi, $_GET['keyword']) : '';
-$filter_hasil   = isset($_GET['hasil']) ? mysqli_real_escape_string($koneksi, $_GET['hasil']) : '';
-$filter_sort    = isset($_GET['sort']) ? mysqli_real_escape_string($koneksi, $_GET['sort']) : '';
+$filter_keyword = isset($_GET['keyword']) ? sdb_real_escape_string($koneksi, $_GET['keyword']) : '';
+$filter_hasil   = isset($_GET['hasil']) ? sdb_real_escape_string($koneksi, $_GET['hasil']) : '';
+$filter_sort    = isset($_GET['sort']) ? sdb_real_escape_string($koneksi, $_GET['sort']) : '';
 $filter_marketing = isset($_GET['marketing']) ? intval($_GET['marketing']) : 0;
 
 // Preselect konsumen dari halaman lain (mis. tombol "Cek BI" di halaman konsumen)
@@ -87,13 +87,13 @@ $preselect_konsumen = isset($_GET['konsumen']) ? intval($_GET['konsumen']) : 0;
 // STATISTIK (1 query untuk 4 data)
 // ==========================================
 $stat = ['total'=>0, 'lulus'=>0, 'proses'=>0, 'tidak'=>0];
-$q_stat = mysqli_query($koneksi, "SELECT 
+$q_stat = sdb_query($koneksi, "SELECT 
     COUNT(*) AS total,
     SUM(hasil_bi = 'Lulus') AS lulus,
     SUM(hasil_bi = 'Dalam Proses') AS proses,
     SUM(hasil_bi IN ('Tidak Lulus','Dipertimbangkan')) AS tidak
 FROM data_bi_checking");
-if ($s = mysqli_fetch_assoc($q_stat)) {
+if ($s = sdb_fetch_assoc($q_stat)) {
     $stat['total']  = intval($s['total']);
     $stat['lulus']  = intval($s['lulus']);
     $stat['proses'] = intval($s['proses']);
@@ -214,8 +214,8 @@ if ($s = mysqli_fetch_assoc($q_stat)) {
                         <select name="marketing" class="form-select rounded-pill bg-light border-0 px-3 py-2">
                             <option value="">-- Semua Marketing --</option>
                             <?php
-                            $q_mkt = mysqli_query($koneksi, "SELECT id_marketing, nama_marketing FROM data_marketing WHERE status_aktif = 'Aktif' ORDER BY nama_marketing ASC");
-                            while ($mkt = mysqli_fetch_assoc($q_mkt)) {
+                            $q_mkt = sdb_query($koneksi, "SELECT id_marketing, nama_marketing FROM data_marketing WHERE status_aktif = 'Aktif' ORDER BY nama_marketing ASC");
+                            while ($mkt = sdb_fetch_assoc($q_mkt)) {
                                 $sel_mkt = ($filter_marketing == $mkt['id_marketing']) ? 'selected' : '';
                                 echo "<option value='" . $mkt['id_marketing'] . "' $sel_mkt>" . htmlspecialchars($mkt['nama_marketing']) . "</option>";
                             }
@@ -295,19 +295,19 @@ if ($s = mysqli_fetch_assoc($q_stat)) {
                                 $query .= " ORDER BY b.tgl_cek DESC, b.id_bi_checking DESC";
                         }
 
-                        $q_bi = mysqli_query($koneksi, $query);
+                        $q_bi = sdb_query($koneksi, $query);
 
                         // Pre-load data untuk dropdown (hindari N+1 query)
                         $arr_konsumen = [];
-                        $qk = mysqli_query($koneksi, "SELECT id_konsumen, name_lengkap, pekerjaan FROM data_konsumen ORDER BY name_lengkap ASC");
-                        while ($row = mysqli_fetch_assoc($qk)) $arr_konsumen[] = $row;
+                        $qk = sdb_query($koneksi, "SELECT id_konsumen, name_lengkap, pekerjaan FROM data_konsumen ORDER BY name_lengkap ASC");
+                        while ($row = sdb_fetch_assoc($qk)) $arr_konsumen[] = $row;
 
                         $arr_marketing = [];
-                        $qm = mysqli_query($koneksi, "SELECT id_marketing, nama_marketing FROM data_marketing WHERE status_aktif = 'Aktif' ORDER BY nama_marketing ASC");
-                        while ($row = mysqli_fetch_assoc($qm)) $arr_marketing[] = $row;
+                        $qm = sdb_query($koneksi, "SELECT id_marketing, nama_marketing FROM data_marketing WHERE status_aktif = 'Aktif' ORDER BY nama_marketing ASC");
+                        while ($row = sdb_fetch_assoc($qm)) $arr_marketing[] = $row;
 
-                        if ($q_bi && mysqli_num_rows($q_bi) > 0) {
-                            while ($b = mysqli_fetch_assoc($q_bi)) {
+                        if ($q_bi && sdb_num_rows($q_bi) > 0) {
+                            while ($b = sdb_fetch_assoc($q_bi)) {
                                 $badge = 'bg-warning text-dark';
                                 $ikon  = 'bi-hourglass-split';
                                 if ($b['hasil_bi'] == 'Lulus')            { $badge = 'bg-success text-white'; $ikon = 'bi-check-circle'; }

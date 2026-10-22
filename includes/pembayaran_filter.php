@@ -38,7 +38,7 @@ if (!function_exists('pembayaran_get_filters')) {
     function pembayaran_build_query($koneksi, $f)
     {
         $esc = function ($v) use ($koneksi) {
-            return mysqli_real_escape_string($koneksi, $v);
+            return sdb_real_escape_string($koneksi, $v);
         };
 
         $q = "SELECT p.*, "
@@ -107,9 +107,9 @@ if (!function_exists('pembayaran_get_filters')) {
     function pembayaran_list($koneksi, $f)
     {
         $rows = [];
-        $res = mysqli_query($koneksi, pembayaran_build_query($koneksi, $f));
+        $res = sdb_query($koneksi, pembayaran_build_query($koneksi, $f));
         if ($res) {
-            while ($r = mysqli_fetch_assoc($res)) {
+            while ($r = sdb_fetch_assoc($res)) {
                 $rows[] = $r;
             }
         }
@@ -119,17 +119,17 @@ if (!function_exists('pembayaran_get_filters')) {
     // Total semua kwitansi (tanpa filter) untuk ringkasan
     function pembayaran_jumlah_total($koneksi)
     {
-        $res = mysqli_query($koneksi, "SELECT COUNT(*) AS jml FROM data_pembayaran");
-        return ($res && ($row = mysqli_fetch_assoc($res))) ? (int) $row['jml'] : 0;
+        $res = sdb_query($koneksi, "SELECT COUNT(*) AS jml FROM data_pembayaran");
+        return ($res && ($row = sdb_fetch_assoc($res))) ? (int) $row['jml'] : 0;
     }
 
     // Daftar jenis pembayaran unik yang sudah dipakai di data
     function pembayaran_daftar_jenis($koneksi)
     {
         $out = [];
-        $res = mysqli_query($koneksi, "SELECT DISTINCT jenis_pembayaran FROM data_pembayaran WHERE jenis_pembayaran IS NOT NULL AND jenis_pembayaran <> '' ORDER BY jenis_pembayaran ASC");
+        $res = sdb_query($koneksi, "SELECT DISTINCT jenis_pembayaran FROM data_pembayaran WHERE jenis_pembayaran IS NOT NULL AND jenis_pembayaran <> '' ORDER BY jenis_pembayaran ASC");
         if ($res) {
-            while ($r = mysqli_fetch_assoc($res)) {
+            while ($r = sdb_fetch_assoc($res)) {
                 $out[] = $r['jenis_pembayaran'];
             }
         }

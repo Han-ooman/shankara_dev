@@ -17,15 +17,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrf_verify()) {
 }
 
 if (isset($_POST['simpan_bast'])) {
-    $id_transaksi = mysqli_real_escape_string($koneksi, $_POST['id_transaksi']);
-    $no_bast      = mysqli_real_escape_string($koneksi, $_POST['no_bast']);
-    $tgl_serah    = mysqli_real_escape_string($koneksi, $_POST['tgl_serah_terima']);
-    $status_r     = mysqli_real_escape_string($koneksi, $_POST['status_retensi']);
-    $catatan      = mysqli_real_escape_string($koneksi, $_POST['catatan_komplain']);
+    $id_transaksi = sdb_real_escape_string($koneksi, $_POST['id_transaksi']);
+    $no_bast      = sdb_real_escape_string($koneksi, $_POST['no_bast']);
+    $tgl_serah    = sdb_real_escape_string($koneksi, $_POST['tgl_serah_terima']);
+    $status_r     = sdb_real_escape_string($koneksi, $_POST['status_retensi']);
+    $catatan      = sdb_real_escape_string($koneksi, $_POST['catatan_komplain']);
 
     $query = "INSERT INTO data_bast (id_transaksi, no_bast, tgl_serah_terima, status_retensi, catatan_komplain)
               VALUES ('$id_transaksi', '$no_bast', '$tgl_serah', '$status_r', '$catatan')";
-    mysqli_query($koneksi, $query);
+    sdb_query($koneksi, $query);
     header("Location: serah_terima.php");
     exit();
 }
@@ -33,13 +33,13 @@ if (isset($_POST['simpan_bast'])) {
 // Logika Edit BAST
 if (isset($_POST['edit_bast'])) {
     $id_bast      = intval($_POST['id_bast']);
-    $id_transaksi = mysqli_real_escape_string($koneksi, $_POST['id_transaksi']);
-    $no_bast      = mysqli_real_escape_string($koneksi, $_POST['no_bast']);
-    $tgl_serah    = mysqli_real_escape_string($koneksi, $_POST['tgl_serah_terima']);
-    $status_r     = mysqli_real_escape_string($koneksi, $_POST['status_retensi']);
-    $catatan      = mysqli_real_escape_string($koneksi, $_POST['catatan_komplain']);
+    $id_transaksi = sdb_real_escape_string($koneksi, $_POST['id_transaksi']);
+    $no_bast      = sdb_real_escape_string($koneksi, $_POST['no_bast']);
+    $tgl_serah    = sdb_real_escape_string($koneksi, $_POST['tgl_serah_terima']);
+    $status_r     = sdb_real_escape_string($koneksi, $_POST['status_retensi']);
+    $catatan      = sdb_real_escape_string($koneksi, $_POST['catatan_komplain']);
 
-    mysqli_query($koneksi, "UPDATE data_bast SET
+    sdb_query($koneksi, "UPDATE data_bast SET
                             id_transaksi = '$id_transaksi',
                             no_bast = '$no_bast',
                             tgl_serah_terima = '$tgl_serah',
@@ -57,7 +57,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
         die("Token keamanan tidak valid.");
     }
     $id_hapus = intval($_GET['id']);
-    mysqli_query($koneksi, "DELETE FROM data_bast WHERE id_bast = '$id_hapus'");
+    sdb_query($koneksi, "DELETE FROM data_bast WHERE id_bast = '$id_hapus'");
     header("Location: serah_terima.php");
     exit();
 }
@@ -106,7 +106,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
                     </thead>
                     <tbody>
                         <?php
-							$q = mysqli_query($koneksi, "SELECT b.*, 
+							$q = sdb_query($koneksi, "SELECT b.*, 
 																k.name_lengkap, 
 																r.no_blok 
 														 FROM data_bast b
@@ -115,8 +115,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
 														 LEFT JOIN data_rumah r ON t.id_rumah = r.id_rumah
 														 ORDER BY b.id_bast DESC");
 
-							if ($q && mysqli_num_rows($q) > 0) {
-								while ($r = mysqli_fetch_assoc($q)) {
+							if ($q && sdb_num_rows($q) > 0) {
+								while ($r = sdb_fetch_assoc($q)) {
 									$badge = 'bg-warning text-dark';
 									if ($r['status_retensi'] == 'Selesai Garansi') $badge = 'bg-success';
 									elseif ($r['status_retensi'] == 'Ada Komplain') $badge = 'bg-danger';
@@ -161,11 +161,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
 															<select name="id_transaksi" class="form-select" required>
 																<option value="">-- Pilih Transaksi --</option>
 																<?php
-																$qt = mysqli_query($koneksi, "SELECT t.id_transaksi, k.name_lengkap, r.no_blok
+																$qt = sdb_query($koneksi, "SELECT t.id_transaksi, k.name_lengkap, r.no_blok
 																							  FROM data_transaksi t
 																							  LEFT JOIN data_konsumen k ON t.id_konsumen = k.id_konsumen
 																							  LEFT JOIN data_rumah r ON t.id_rumah = r.id_rumah");
-																while ($st = mysqli_fetch_assoc($qt)) {
+																while ($st = sdb_fetch_assoc($qt)) {
 																	$sel2 = ($st['id_transaksi'] == $r['id_transaksi']) ? 'selected' : '';
 																	echo "<option value='".$st['id_transaksi']."' $sel2>Blok ".($st['no_blok'] ?? '-')." - ".($st['name_lengkap'] ?? '-')."</option>";
 																}
@@ -255,13 +255,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
                         <select name="id_transaksi" class="form-select" required>
 							<option value="">-- Pilih Transaksi --</option>
 							<?php
-							$qt = mysqli_query($koneksi, "SELECT t.id_transaksi, 
+							$qt = sdb_query($koneksi, "SELECT t.id_transaksi, 
 																 k.name_lengkap, 
 																 r.no_blok 
 														  FROM data_transaksi t 
 														  LEFT JOIN data_konsumen k ON t.id_konsumen = k.id_konsumen
 														  LEFT JOIN data_rumah r ON t.id_rumah = r.id_rumah");
-							while ($st = mysqli_fetch_assoc($qt)) {
+							while ($st = sdb_fetch_assoc($qt)) {
 								echo "<option value='".$st['id_transaksi']."'>Blok ".($st['no_blok'] ?? '-')." - ".($st['name_lengkap'] ?? '-')."</option>";
 							}
 							?>

@@ -15,18 +15,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrf_verify()) {
 }
 
 // Auto-update status magang yang sudah selesai
-mysqli_query($koneksi, "UPDATE data_karyawan SET status = 'Selesai Magang' WHERE jenis_karyawan = 'Magang' AND tgl_akhir IS NOT NULL AND tgl_akhir < CURDATE() AND status = 'Aktif'");
+sdb_query($koneksi, "UPDATE data_karyawan SET status = 'Selesai Magang' WHERE jenis_karyawan = 'Magang' AND tgl_akhir IS NOT NULL AND tgl_akhir < CURDATE() AND status = 'Aktif'");
 
 // Tambah Karyawan
 if (isset($_POST['tambah_karyawan'])) {
-    $nama       = mysqli_real_escape_string($koneksi, $_POST['nama_lengkap']);
-    $jabatan    = mysqli_real_escape_string($koneksi, $_POST['jabatan']);
-    $no_hp      = mysqli_real_escape_string($koneksi, $_POST['no_hp']);
-    $email      = mysqli_real_escape_string($koneksi, $_POST['email']);
-    $alamat     = mysqli_real_escape_string($koneksi, $_POST['alamat']);
-    $jenis      = mysqli_real_escape_string($koneksi, $_POST['jenis_karyawan']);
-    $ket_magang = mysqli_real_escape_string($koneksi, $_POST['keterangan_magang']);
-    $tgl_mulai  = mysqli_real_escape_string($koneksi, $_POST['tgl_mulai']);
+    $nama       = sdb_real_escape_string($koneksi, $_POST['nama_lengkap']);
+    $jabatan    = sdb_real_escape_string($koneksi, $_POST['jabatan']);
+    $no_hp      = sdb_real_escape_string($koneksi, $_POST['no_hp']);
+    $email      = sdb_real_escape_string($koneksi, $_POST['email']);
+    $alamat     = sdb_real_escape_string($koneksi, $_POST['alamat']);
+    $jenis      = sdb_real_escape_string($koneksi, $_POST['jenis_karyawan']);
+    $ket_magang = sdb_real_escape_string($koneksi, $_POST['keterangan_magang']);
+    $tgl_mulai  = sdb_real_escape_string($koneksi, $_POST['tgl_mulai']);
     $durasi     = intval($_POST['durasi_bulan'] ?? 0);
 
     $tgl_akhir = 'NULL';
@@ -38,10 +38,10 @@ if (isset($_POST['tambah_karyawan'])) {
         $tgl_akhir = 'NULL';
         $durasi = 0;
     } elseif ($jenis === 'Kontrak' && !empty($_POST['tgl_akhir'])) {
-        $tgl_akhir = "'" . mysqli_real_escape_string($koneksi, $_POST['tgl_akhir']) . "'";
+        $tgl_akhir = "'" . sdb_real_escape_string($koneksi, $_POST['tgl_akhir']) . "'";
     }
 
-    mysqli_query($koneksi, "INSERT INTO data_karyawan (nama_lengkap, jabatan, no_hp, email, alamat, jenis_karyawan, keterangan_magang, tgl_mulai, tgl_akhir, durasi_bulan, status)
+    sdb_query($koneksi, "INSERT INTO data_karyawan (nama_lengkap, jabatan, no_hp, email, alamat, jenis_karyawan, keterangan_magang, tgl_mulai, tgl_akhir, durasi_bulan, status)
                             VALUES ('$nama','$jabatan','$no_hp','$email','$alamat','$jenis','$ket_magang'," . ($tgl_mulai ? "'$tgl_mulai'" : "NULL") . ",$tgl_akhir," . ($durasi ?: 'NULL') . ",'$status')");
     header("Location: karyawan.php");
     exit();
@@ -50,15 +50,15 @@ if (isset($_POST['tambah_karyawan'])) {
 // Edit Karyawan
 if (isset($_POST['edit_karyawan'])) {
     $id         = intval($_POST['id_karyawan']);
-    $nama       = mysqli_real_escape_string($koneksi, $_POST['nama_lengkap']);
-    $jabatan    = mysqli_real_escape_string($koneksi, $_POST['jabatan']);
-    $no_hp      = mysqli_real_escape_string($koneksi, $_POST['no_hp']);
-    $email      = mysqli_real_escape_string($koneksi, $_POST['email']);
-    $alamat     = mysqli_real_escape_string($koneksi, $_POST['alamat']);
-    $jenis      = mysqli_real_escape_string($koneksi, $_POST['jenis_karyawan']);
-    $ket_magang = mysqli_real_escape_string($koneksi, $_POST['keterangan_magang']);
-    $tgl_mulai  = mysqli_real_escape_string($koneksi, $_POST['tgl_mulai']);
-    $status     = mysqli_real_escape_string($koneksi, $_POST['status']);
+    $nama       = sdb_real_escape_string($koneksi, $_POST['nama_lengkap']);
+    $jabatan    = sdb_real_escape_string($koneksi, $_POST['jabatan']);
+    $no_hp      = sdb_real_escape_string($koneksi, $_POST['no_hp']);
+    $email      = sdb_real_escape_string($koneksi, $_POST['email']);
+    $alamat     = sdb_real_escape_string($koneksi, $_POST['alamat']);
+    $jenis      = sdb_real_escape_string($koneksi, $_POST['jenis_karyawan']);
+    $ket_magang = sdb_real_escape_string($koneksi, $_POST['keterangan_magang']);
+    $tgl_mulai  = sdb_real_escape_string($koneksi, $_POST['tgl_mulai']);
+    $status     = sdb_real_escape_string($koneksi, $_POST['status']);
     $durasi     = intval($_POST['durasi_bulan'] ?? 0);
 
     $tgl_akhir = 'NULL';
@@ -66,10 +66,10 @@ if (isset($_POST['edit_karyawan'])) {
         $end = date('Y-m-d', strtotime("$tgl_mulai +$durasi months"));
         $tgl_akhir = "'$end'";
     } elseif ($jenis === 'Kontrak' && !empty($_POST['tgl_akhir'])) {
-        $tgl_akhir = "'" . mysqli_real_escape_string($koneksi, $_POST['tgl_akhir']) . "'";
+        $tgl_akhir = "'" . sdb_real_escape_string($koneksi, $_POST['tgl_akhir']) . "'";
     }
 
-    mysqli_query($koneksi, "UPDATE data_karyawan SET nama_lengkap='$nama', jabatan='$jabatan', no_hp='$no_hp', email='$email', alamat='$alamat', jenis_karyawan='$jenis', keterangan_magang='$ket_magang', tgl_mulai=" . ($tgl_mulai ? "'$tgl_mulai'" : "NULL") . ", tgl_akhir=$tgl_akhir, durasi_bulan=" . ($durasi ?: 'NULL') . ", status='$status' WHERE id_karyawan=$id");
+    sdb_query($koneksi, "UPDATE data_karyawan SET nama_lengkap='$nama', jabatan='$jabatan', no_hp='$no_hp', email='$email', alamat='$alamat', jenis_karyawan='$jenis', keterangan_magang='$ket_magang', tgl_mulai=" . ($tgl_mulai ? "'$tgl_mulai'" : "NULL") . ", tgl_akhir=$tgl_akhir, durasi_bulan=" . ($durasi ?: 'NULL') . ", status='$status' WHERE id_karyawan=$id");
     header("Location: karyawan.php");
     exit();
 }
@@ -81,15 +81,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
         die("Token keamanan tidak valid.");
     }
     $id_hapus = intval($_GET['id']);
-    mysqli_query($koneksi, "DELETE FROM data_karyawan WHERE id_karyawan = '$id_hapus'");
+    sdb_query($koneksi, "DELETE FROM data_karyawan WHERE id_karyawan = '$id_hapus'");
     header("Location: karyawan.php");
     exit();
 }
 
 // Hitung statistik
 $stat = ['total'=>0, 'tetap'=>0, 'kontrak'=>0, 'magang'=>0, 'aktif'=>0, 'selesai'=>0];
-$q = mysqli_query($koneksi, "SELECT jenis_karyawan, status, COUNT(*) AS jml FROM data_karyawan GROUP BY jenis_karyawan, status");
-while ($r = mysqli_fetch_assoc($q)) {
+$q = sdb_query($koneksi, "SELECT jenis_karyawan, status, COUNT(*) AS jml FROM data_karyawan GROUP BY jenis_karyawan, status");
+while ($r = sdb_fetch_assoc($q)) {
     $stat['total'] += $r['jml'];
     if ($r['jenis_karyawan'] === 'Tetap') $stat['tetap'] += $r['jml'];
     elseif ($r['jenis_karyawan'] === 'Kontrak') $stat['kontrak'] += $r['jml'];
@@ -223,13 +223,13 @@ while ($r = mysqli_fetch_assoc($q)) {
                     </thead>
                     <tbody>
                         <?php
-                        $qk = mysqli_query($koneksi, "SELECT * FROM data_karyawan ORDER BY
+                        $qk = sdb_query($koneksi, "SELECT * FROM data_karyawan ORDER BY
                             CASE status WHEN 'Aktif' THEN 0 WHEN 'Selesai Magang' THEN 1 ELSE 2 END,
                             CASE jenis_karyawan WHEN 'Tetap' THEN 0 WHEN 'Kontrak' THEN 1 WHEN 'Magang' THEN 2 END,
                             id_karyawan DESC");
 
-                        if ($qk && mysqli_num_rows($qk) > 0) {
-                            while ($k = mysqli_fetch_assoc($qk)) {
+                        if ($qk && sdb_num_rows($qk) > 0) {
+                            while ($k = sdb_fetch_assoc($qk)) {
                                 $badge_jenis = 'bg-primary';
                                 if ($k['jenis_karyawan'] === 'Magang') $badge_jenis = 'bg-warning text-dark';
                                 elseif ($k['jenis_karyawan'] === 'Tetap') $badge_jenis = 'bg-success';

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 include "includes/koneksi.php";
 
 session_start();
@@ -17,37 +17,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrf_verify()) {
 
 // LOGIKA TAMBAH UNIT BARU
 if (isset($_POST['tambah_unit'])) {
-    $id_cluster = mysqli_real_escape_string($koneksi, $_POST['id_cluster']);
-    $no_blok    = mysqli_real_escape_string($koneksi, $_POST['no_blok']);
-    $tipe_rumah = mysqli_real_escape_string($koneksi, $_POST['tipe_rumah']);
-    $no_shm     = mysqli_real_escape_string($koneksi, $_POST['no_shm']);
-    $luas_tanah = mysqli_real_escape_string($koneksi, $_POST['luas_tanah']);
-    $luas_bangunan = mysqli_real_escape_string($koneksi, $_POST['luas_bangunan']);
-    $harga_jual = mysqli_real_escape_string($koneksi, $_POST['harga_jual']);
-    $status_unit= mysqli_real_escape_string($koneksi, $_POST['status_unit']);
+    $id_cluster = sdb_real_escape_string($koneksi, $_POST['id_cluster']);
+    $no_blok    = sdb_real_escape_string($koneksi, $_POST['no_blok']);
+    $tipe_rumah = sdb_real_escape_string($koneksi, $_POST['tipe_rumah']);
+    $no_shm     = sdb_real_escape_string($koneksi, $_POST['no_shm']);
+    $luas_tanah = sdb_real_escape_string($koneksi, $_POST['luas_tanah']);
+    $luas_bangunan = sdb_real_escape_string($koneksi, $_POST['luas_bangunan']);
+    $harga_jual = sdb_real_escape_string($koneksi, $_POST['harga_jual']);
+    $status_unit= sdb_real_escape_string($koneksi, $_POST['status_unit']);
 
     $queryInsert = "INSERT INTO data_rumah (id_cluster, no_blok, tipe_rumah, no_shm, luas_tanah, luas_bangunan, harga_jual, status_unit) 
                     VALUES ('$id_cluster', '$no_blok', '$tipe_rumah', '$no_shm', '$luas_tanah', '$luas_bangunan', '$harga_jual', '$status_unit')";
     
-    if (mysqli_query($koneksi, $queryInsert)) {
+    if (sdb_query($koneksi, $queryInsert)) {
         header("Location: unit.php");
         exit();
     } else {
-        echo "<script>alert('Gagal menambah unit: " . mysqli_error($koneksi) . "');</script>";
+        echo "<script>alert('Gagal menambah unit: " . sdb_error($koneksi) . "');</script>";
     }
 }
 
 // LOGIKA EDIT UNIT
 if (isset($_POST['edit_unit'])) {
-    $id_rumah   = mysqli_real_escape_string($koneksi, $_POST['id_rumah']);
-    $id_cluster = mysqli_real_escape_string($koneksi, $_POST['id_cluster']);
-    $no_blok    = mysqli_real_escape_string($koneksi, $_POST['no_blok']);
-    $tipe_rumah = mysqli_real_escape_string($koneksi, $_POST['tipe_rumah']);
-    $no_shm     = mysqli_real_escape_string($koneksi, $_POST['no_shm']);
-    $luas_tanah = mysqli_real_escape_string($koneksi, $_POST['luas_tanah']);
-    $luas_bangunan = mysqli_real_escape_string($koneksi, $_POST['luas_bangunan']);
-    $harga_jual = mysqli_real_escape_string($koneksi, $_POST['harga_jual']);
-    $status_unit= mysqli_real_escape_string($koneksi, $_POST['status_unit']);
+    $id_rumah   = sdb_real_escape_string($koneksi, $_POST['id_rumah']);
+    $id_cluster = sdb_real_escape_string($koneksi, $_POST['id_cluster']);
+    $no_blok    = sdb_real_escape_string($koneksi, $_POST['no_blok']);
+    $tipe_rumah = sdb_real_escape_string($koneksi, $_POST['tipe_rumah']);
+    $no_shm     = sdb_real_escape_string($koneksi, $_POST['no_shm']);
+    $luas_tanah = sdb_real_escape_string($koneksi, $_POST['luas_tanah']);
+    $luas_bangunan = sdb_real_escape_string($koneksi, $_POST['luas_bangunan']);
+    $harga_jual = sdb_real_escape_string($koneksi, $_POST['harga_jual']);
+    $status_unit= sdb_real_escape_string($koneksi, $_POST['status_unit']);
 
     $queryUpdate = "UPDATE data_rumah SET 
                     id_cluster = '$id_cluster',
@@ -60,11 +60,11 @@ if (isset($_POST['edit_unit'])) {
                     status_unit = '$status_unit'
                     WHERE id_rumah = '$id_rumah'";
 
-    if (mysqli_query($koneksi, $queryUpdate)) {
+    if (sdb_query($koneksi, $queryUpdate)) {
         header("Location: unit.php");
         exit();
     } else {
-        echo "<script>alert('Gagal mengupdate unit: " . mysqli_error($koneksi) . "');</script>";
+        echo "<script>alert('Gagal mengupdate unit: " . sdb_error($koneksi) . "');</script>";
     }
 }
 
@@ -74,17 +74,17 @@ if (isset($_GET['hapus'])) {
         http_response_code(403);
         die("Token keamanan tidak valid.");
     }
-    $id_hapus = mysqli_real_escape_string($koneksi, $_GET['hapus']);
-    mysqli_query($koneksi, "DELETE FROM data_rumah WHERE id_rumah = '$id_hapus'");
+    $id_hapus = sdb_real_escape_string($koneksi, $_GET['hapus']);
+    sdb_query($koneksi, "DELETE FROM data_rumah WHERE id_rumah = '$id_hapus'");
     header("Location: unit.php");
     exit();
 }
 
 // LOGIKA PENANGKAPAN FILTER
-$filter_keyword = isset($_GET['keyword']) ? mysqli_real_escape_string($koneksi, $_GET['keyword']) : '';
-$filter_cluster = isset($_GET['cluster']) ? mysqli_real_escape_string($koneksi, $_GET['cluster']) : '';
-$filter_status  = isset($_GET['status']) ? mysqli_real_escape_string($koneksi, $_GET['status']) : '';
-$filter_tipe    = isset($_GET['tipe']) ? mysqli_real_escape_string($koneksi, $_GET['tipe']) : '';
+$filter_keyword = isset($_GET['keyword']) ? sdb_real_escape_string($koneksi, $_GET['keyword']) : '';
+$filter_cluster = isset($_GET['cluster']) ? sdb_real_escape_string($koneksi, $_GET['cluster']) : '';
+$filter_status  = isset($_GET['status']) ? sdb_real_escape_string($koneksi, $_GET['status']) : '';
+$filter_tipe    = isset($_GET['tipe']) ? sdb_real_escape_string($koneksi, $_GET['tipe']) : '';
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -200,8 +200,8 @@ $filter_tipe    = isset($_GET['tipe']) ? mysqli_real_escape_string($koneksi, $_G
                     <select name="cluster" class="form-select filter-select-pill">
                         <option value="">-- Semua Cluster --</option>
                         <?php
-                        $q_cluster = mysqli_query($koneksi, "SELECT * FROM data_cluster ORDER BY cluster_name ASC");
-                        while ($cl = mysqli_fetch_assoc($q_cluster)) {
+                        $q_cluster = sdb_query($koneksi, "SELECT * FROM data_cluster ORDER BY cluster_name ASC");
+                        while ($cl = sdb_fetch_assoc($q_cluster)) {
                             $selected = ($filter_cluster == $cl['id_cluster']) ? 'selected' : '';
                             echo "<option value='".$cl['id_cluster']."' $selected>".htmlspecialchars($cl['cluster_name'])."</option>";
                         }
@@ -224,8 +224,8 @@ $filter_tipe    = isset($_GET['tipe']) ? mysqli_real_escape_string($koneksi, $_G
                     <select name="tipe" class="form-select filter-select-pill">
                         <option value="">-- Semua Tipe --</option>
                         <?php
-                        $q_tipe = mysqli_query($koneksi, "SELECT DISTINCT tipe_rumah FROM data_rumah WHERE tipe_rumah IS NOT NULL AND tipe_rumah != '' ORDER BY tipe_rumah ASC");
-                        while ($tp = mysqli_fetch_assoc($q_tipe)) {
+                        $q_tipe = sdb_query($koneksi, "SELECT DISTINCT tipe_rumah FROM data_rumah WHERE tipe_rumah IS NOT NULL AND tipe_rumah != '' ORDER BY tipe_rumah ASC");
+                        while ($tp = sdb_fetch_assoc($q_tipe)) {
                             $selected = ($filter_tipe == $tp['tipe_rumah']) ? 'selected' : '';
                             echo "<option value='".htmlspecialchars($tp['tipe_rumah'])."' $selected>Tipe ".htmlspecialchars($tp['tipe_rumah'])."</option>";
                         }
@@ -295,10 +295,10 @@ $filter_tipe    = isset($_GET['tipe']) ? mysqli_real_escape_string($koneksi, $_G
                         }
 
                         $query .= " ORDER BY c.cluster_name ASC, r.no_blok ASC";
-                        $result = mysqli_query($koneksi, $query);
+                        $result = sdb_query($koneksi, $query);
 
-                        if ($result && mysqli_num_rows($result) > 0) {
-                            while ($row = mysqli_fetch_assoc($result)) {
+                        if ($result && sdb_num_rows($result) > 0) {
+                            while ($row = sdb_fetch_assoc($result)) {
                                 $statusRaw = $row['status_unit'] ?? 'TERSEDIA';
                                 $status = strtoupper(trim($statusRaw));
 
@@ -349,8 +349,8 @@ $filter_tipe    = isset($_GET['tipe']) ? mysqli_real_escape_string($koneksi, $_G
                                                         <label class="form-label small fw-semibold">Cluster Perumahan</label>
                                                         <select name="id_cluster" class="form-select rounded-3" required>
                                                             <?php
-                                                            $qCluster = mysqli_query($koneksi, "SELECT * FROM data_cluster");
-                                                            while ($c = mysqli_fetch_assoc($qCluster)) {
+                                                            $qCluster = sdb_query($koneksi, "SELECT * FROM data_cluster");
+                                                            while ($c = sdb_fetch_assoc($qCluster)) {
                                                                 $selected = ($c['id_cluster'] == $row['id_cluster']) ? 'selected' : '';
                                                                 echo "<option value='".$c['id_cluster']."' $selected>".htmlspecialchars($c['cluster_name'])."</option>";
                                                             }
@@ -437,8 +437,8 @@ $filter_tipe    = isset($_GET['tipe']) ? mysqli_real_escape_string($koneksi, $_G
                         <select name="id_cluster" class="form-select rounded-3" required>
                             <option value="">-- Pilih Cluster --</option>
                             <?php
-                            $qCluster = mysqli_query($koneksi, "SELECT * FROM data_cluster");
-                            while ($c = mysqli_fetch_assoc($qCluster)) {
+                            $qCluster = sdb_query($koneksi, "SELECT * FROM data_cluster");
+                            while ($c = sdb_fetch_assoc($qCluster)) {
                                 echo "<option value='".$c['id_cluster']."'>".htmlspecialchars($c['cluster_name'])."</option>";
                             }
                             ?>

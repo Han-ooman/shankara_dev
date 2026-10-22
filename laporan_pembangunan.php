@@ -18,8 +18,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrf_verify()) {
 }
 
 // Filter dari URL (GET) untuk tampilan layar & print
-$filterStatus = isset($_GET['filter']) ? mysqli_real_escape_string($koneksi, $_GET['filter']) : '';
-$filterCluster = isset($_GET['cluster']) ? mysqli_real_escape_string($koneksi, $_GET['cluster']) : '';
+$filterStatus = isset($_GET['filter']) ? sdb_real_escape_string($koneksi, $_GET['filter']) : '';
+$filterCluster = isset($_GET['cluster']) ? sdb_real_escape_string($koneksi, $_GET['cluster']) : '';
 
 // Query: unit + cluster + pembangunan + konsumen transaksi terbaru per unit
 $sql = "SELECT r.id_rumah, r.no_blok, r.tipe_rumah, c.cluster_name,
@@ -49,10 +49,10 @@ if ($filterCluster !== '') {
 }
 $sql .= " ORDER BY c.cluster_name ASC, r.no_blok ASC";
 
-$q = mysqli_query($koneksi, $sql);
+$q = sdb_query($koneksi, $sql);
 
 // Daftar nama konsumen untuk filter multi pilih
-$q_nama = mysqli_query($koneksi, "SELECT DISTINCT k.name_lengkap
+$q_nama = sdb_query($koneksi, "SELECT DISTINCT k.name_lengkap
                                   FROM data_rumah r
                                   LEFT JOIN (
                                       SELECT t1.id_rumah, t1.id_konsumen
@@ -69,7 +69,7 @@ $q_nama = mysqli_query($koneksi, "SELECT DISTINCT k.name_lengkap
                                   ORDER BY k.name_lengkap ASC");
 $listNama = [];
 if ($q_nama) {
-    while ($n = mysqli_fetch_assoc($q_nama)) {
+    while ($n = sdb_fetch_assoc($q_nama)) {
         $listNama[] = trim($n['name_lengkap']);
     }
 }
@@ -83,8 +83,8 @@ $statSql = "SELECT
 if ($filterCluster !== '') {
     $statSql .= " JOIN data_cluster c2 ON r.id_cluster = c2.id_cluster AND c2.cluster_name = '$filterCluster'";
 }
-$stat = mysqli_query($koneksi, $statSql);
-$st = mysqli_fetch_assoc($stat);
+$stat = sdb_query($koneksi, $statSql);
+$st = sdb_fetch_assoc($stat);
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -351,9 +351,9 @@ $st = mysqli_fetch_assoc($stat);
                     <select id="filterCluster" class="form-select filter-input shadow-none">
                         <option value="">Semua Cluster</option>
                         <?php
-                        $q_cluster = mysqli_query($koneksi, "SELECT DISTINCT cluster_name FROM data_cluster ORDER BY cluster_name ASC");
+                        $q_cluster = sdb_query($koneksi, "SELECT DISTINCT cluster_name FROM data_cluster ORDER BY cluster_name ASC");
                         if ($q_cluster) {
-                            while ($c = mysqli_fetch_assoc($q_cluster)) {
+                            while ($c = sdb_fetch_assoc($q_cluster)) {
                                 $sel = ($filterCluster===$c['cluster_name']) ? 'selected' : '';
                                 echo "<option value='" . htmlspecialchars($c['cluster_name']) . "' $sel>" . htmlspecialchars($c['cluster_name']) . "</option>";
                             }
@@ -396,7 +396,7 @@ $st = mysqli_fetch_assoc($stat);
                     <tbody>
                         <?php
                         $no = 1;
-                        while ($r = mysqli_fetch_assoc($q)) {
+                        while ($r = sdb_fetch_assoc($q)) {
                             $progres = (int)($r['persentase_progres'] ?? 0);
                             $st_lapangan = $r['status_pembangunan'] ?? 'Persiapan';
                             $cluster_name = $r['cluster_name'] ?? '';
@@ -428,7 +428,7 @@ $st = mysqli_fetch_assoc($stat);
                         <?php } ?>
                     </tbody>
                 </table>
-                <?php if (mysqli_num_rows($q) === 0) { ?>
+                <?php if (sdb_num_rows($q) === 0) { ?>
                     <div class="text-center text-muted py-5">
                         <i class="bi bi-inbox fs-1 d-block mb-2"></i>
                         Tidak ada data ditemukan.

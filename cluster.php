@@ -18,14 +18,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrf_verify()) {
 
 // LOGIKA TAMBAH CLUSTER
 if (isset($_POST['tambah_cluster'])) {
-    $cluster_name   = mysqli_real_escape_string($koneksi, $_POST['cluster_name']);
-    $lokasi         = mysqli_real_escape_string($koneksi, $_POST['lokasi']);
-    $total_unit     = mysqli_real_escape_string($koneksi, $_POST['total_unit']);
-    $cluster_status = mysqli_real_escape_string($koneksi, $_POST['cluster_status']);
+    $cluster_name   = sdb_real_escape_string($koneksi, $_POST['cluster_name']);
+    $lokasi         = sdb_real_escape_string($koneksi, $_POST['lokasi']);
+    $total_unit     = sdb_real_escape_string($koneksi, $_POST['total_unit']);
+    $cluster_status = sdb_real_escape_string($koneksi, $_POST['cluster_status']);
 
     $qInsert = "INSERT INTO data_cluster (cluster_name, lokasi, total_unit, cluster_status) 
                 VALUES ('$cluster_name', '$lokasi', '$total_unit', '$cluster_status')";
-    if (mysqli_query($koneksi, $qInsert)) {
+    if (sdb_query($koneksi, $qInsert)) {
         header("Location: cluster.php");
         exit();
     }
@@ -33,11 +33,11 @@ if (isset($_POST['tambah_cluster'])) {
 
 // LOGIKA EDIT CLUSTER
 if (isset($_POST['edit_cluster'])) {
-    $id_cluster     = mysqli_real_escape_string($koneksi, $_POST['id_cluster']);
-    $cluster_name   = mysqli_real_escape_string($koneksi, $_POST['cluster_name']);
-    $lokasi         = mysqli_real_escape_string($koneksi, $_POST['lokasi']);
-    $total_unit     = mysqli_real_escape_string($koneksi, $_POST['total_unit']);
-    $cluster_status = mysqli_real_escape_string($koneksi, $_POST['cluster_status']);
+    $id_cluster     = sdb_real_escape_string($koneksi, $_POST['id_cluster']);
+    $cluster_name   = sdb_real_escape_string($koneksi, $_POST['cluster_name']);
+    $lokasi         = sdb_real_escape_string($koneksi, $_POST['lokasi']);
+    $total_unit     = sdb_real_escape_string($koneksi, $_POST['total_unit']);
+    $cluster_status = sdb_real_escape_string($koneksi, $_POST['cluster_status']);
 
     $qUpdate = "UPDATE data_cluster SET 
                 cluster_name='$cluster_name', 
@@ -45,7 +45,7 @@ if (isset($_POST['edit_cluster'])) {
                 total_unit='$total_unit', 
                 cluster_status='$cluster_status' 
                 WHERE id_cluster='$id_cluster'";
-    if (mysqli_query($koneksi, $qUpdate)) {
+    if (sdb_query($koneksi, $qUpdate)) {
         header("Location: cluster.php");
         exit();
     }
@@ -57,19 +57,19 @@ if (isset($_GET['hapus'])) {
         http_response_code(403);
         die("Token keamanan tidak valid.");
     }
-    $id_hapus = mysqli_real_escape_string($koneksi, $_GET['hapus']);
-    mysqli_query($koneksi, "DELETE FROM data_cluster WHERE id_cluster = '$id_hapus'");
+    $id_hapus = sdb_real_escape_string($koneksi, $_GET['hapus']);
+    sdb_query($koneksi, "DELETE FROM data_cluster WHERE id_cluster = '$id_hapus'");
     header("Location: cluster.php");
     exit();
 }
 
 // MENENTUKAN CLUSTER YANG SEDANG DIPILIH / AKTIF UNTUK SITEPLAN & STATISTIK
-$selected_cluster_id = isset($_GET['active_cluster']) ? mysqli_real_escape_string($koneksi, $_GET['active_cluster']) : '';
+$selected_cluster_id = isset($_GET['active_cluster']) ? sdb_real_escape_string($koneksi, $_GET['active_cluster']) : '';
 
 // Jika belum dipilih, ambil cluster pertama
 if (empty($selected_cluster_id)) {
-    $q_first = mysqli_query($koneksi, "SELECT id_cluster FROM data_cluster ORDER BY id_cluster ASC LIMIT 1");
-    if ($r_first = mysqli_fetch_assoc($q_first)) {
+    $q_first = sdb_query($koneksi, "SELECT id_cluster FROM data_cluster ORDER BY id_cluster ASC LIMIT 1");
+    if ($r_first = sdb_fetch_assoc($q_first)) {
         $selected_cluster_id = $r_first['id_cluster'];
     }
 }
@@ -81,14 +81,14 @@ $stat_terbooking= 0;
 $stat_terjual   = 0;
 
 if (!empty($selected_cluster_id)) {
-    $qStat = mysqli_query($koneksi, "SELECT 
+    $qStat = sdb_query($koneksi, "SELECT 
         COUNT(*) as total,
         SUM(CASE WHEN UPPER(status_unit) = 'TERSEDIA' THEN 1 ELSE 0 END) as tersedia,
         SUM(CASE WHEN UPPER(status_unit) = 'TERBOOKING' THEN 1 ELSE 0 END) as terbooking,
         SUM(CASE WHEN UPPER(status_unit) = 'TERJUAL' THEN 1 ELSE 0 END) as terjual
         FROM data_rumah WHERE id_cluster = '$selected_cluster_id'");
     
-    if ($resStat = mysqli_fetch_assoc($qStat)) {
+    if ($resStat = sdb_fetch_assoc($qStat)) {
         $stat_total      = $resStat['total'] ?? 0;
         $stat_tersedia   = $resStat['tersedia'] ?? 0;
         $stat_terbooking = $resStat['terbooking'] ?? 0;
@@ -184,8 +184,8 @@ if (!empty($selected_cluster_id)) {
                     <form method="GET" action="cluster.php" id="formSelectCluster">
                         <select name="active_cluster" class="form-select select-pill fw-semibold text-success border-success" onchange="document.getElementById('formSelectCluster').submit()">
                             <?php
-                            $q_all_cluster = mysqli_query($koneksi, "SELECT * FROM data_cluster ORDER BY id_cluster ASC");
-                            while ($c = mysqli_fetch_assoc($q_all_cluster)) {
+                            $q_all_cluster = sdb_query($koneksi, "SELECT * FROM data_cluster ORDER BY id_cluster ASC");
+                            while ($c = sdb_fetch_assoc($q_all_cluster)) {
                                 $sel = ($c['id_cluster'] == $selected_cluster_id) ? 'selected' : '';
                                 echo "<option value='".$c['id_cluster']."' $sel>&#127970; ".htmlspecialchars($c['cluster_name'])." (".$c['lokasi'].")</option>";
                             }
@@ -235,9 +235,9 @@ if (!empty($selected_cluster_id)) {
             <!-- BLOK INTERAKTIF (PERBAIKAN SINTAKS HTML & ATTRIBUTE TITLE) -->
 			<div class="d-flex flex-wrap gap-2 overflow-auto p-2" style="max-height: 380px;">
 				<?php
-				$q_units = mysqli_query($koneksi, "SELECT * FROM data_rumah WHERE id_cluster = '$selected_cluster_id' ORDER BY no_blok ASC");
-				if ($q_units && mysqli_num_rows($q_units) > 0) {
-					while ($u = mysqli_fetch_assoc($q_units)) {
+				$q_units = sdb_query($koneksi, "SELECT * FROM data_rumah WHERE id_cluster = '$selected_cluster_id' ORDER BY no_blok ASC");
+				if ($q_units && sdb_num_rows($q_units) > 0) {
+					while ($u = sdb_fetch_assoc($q_units)) {
 						$st = strtoupper(trim($u['status_unit'] ?? 'TERSEDIA'));
 						$class_st = 'status-tersedia';
 						if ($st === 'TERBOOKING') $class_st = 'status-terbooking';
@@ -283,8 +283,8 @@ if (!empty($selected_cluster_id)) {
                     </thead>
                     <tbody>
                         <?php
-                        $q_table_cluster = mysqli_query($koneksi, "SELECT * FROM data_cluster ORDER BY id_cluster ASC");
-                        while ($row_c = mysqli_fetch_assoc($q_table_cluster)) {
+                        $q_table_cluster = sdb_query($koneksi, "SELECT * FROM data_cluster ORDER BY id_cluster ASC");
+                        while ($row_c = sdb_fetch_assoc($q_table_cluster)) {
                             // Formatting status badge
                             $st_lower = strtolower(trim($row_c['cluster_status']));
 if ($st_lower === 'done') {

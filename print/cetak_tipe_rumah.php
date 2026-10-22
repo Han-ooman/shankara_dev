@@ -7,13 +7,13 @@ if (!isset($_SESSION['status_login']) || $_SESSION['status_login'] !== true) {
 include "../includes/cek_sesi.php";
 include "../includes/koneksi.php";
 
-$q_tipe = mysqli_query($koneksi, "SELECT * FROM data_tipe_rumah ORDER BY CAST(LEFT(tipe_rumah, 3) AS UNSIGNED) ASC, id_tipe ASC");
+$q_tipe = sdb_query($koneksi, "SELECT * FROM data_tipe_rumah ORDER BY CAST(LEFT(tipe_rumah, 3) AS UNSIGNED) ASC, id_tipe ASC");
 $data_tipe = [];
-if ($q_tipe) { while ($r = mysqli_fetch_assoc($q_tipe)) { $data_tipe[] = $r; } }
+if ($q_tipe) { while ($r = sdb_fetch_assoc($q_tipe)) { $data_tipe[] = $r; } }
 
-$q_ang = mysqli_query($koneksi, "SELECT * FROM data_angsuran ORDER BY tenor_bulan ASC, id_angsuran ASC");
+$q_ang = sdb_query($koneksi, "SELECT * FROM data_angsuran ORDER BY tenor_bulan ASC, id_angsuran ASC");
 $data_ang = [];
-if ($q_ang) { while ($r = mysqli_fetch_assoc($q_ang)) { $data_ang[$r['id_tipe']][] = $r; } }
+if ($q_ang) { while ($r = sdb_fetch_assoc($q_ang)) { $data_ang[$r['id_tipe']][] = $r; } }
 
 function rupiah($n) {
     return 'Rp ' . number_format((int)$n, 0, ',', '.');

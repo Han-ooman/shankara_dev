@@ -16,9 +16,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrf_verify()) {
 
 $dari  = isset($_GET['dari']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['dari']) ? $_GET['dari'] : '';
 $sampai = isset($_GET['sampai']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['sampai']) ? $_GET['sampai'] : '';
-$filterAksi  = isset($_GET['aksi']) ? mysqli_real_escape_string($koneksi, $_GET['aksi']) : '';
-$filterModul = isset($_GET['modul']) ? mysqli_real_escape_string($koneksi, $_GET['modul']) : '';
-$keyword     = isset($_GET['q']) ? mysqli_real_escape_string($koneksi, $_GET['q']) : '';
+$filterAksi  = isset($_GET['aksi']) ? sdb_real_escape_string($koneksi, $_GET['aksi']) : '';
+$filterModul = isset($_GET['modul']) ? sdb_real_escape_string($koneksi, $_GET['modul']) : '';
+$keyword     = isset($_GET['q']) ? sdb_real_escape_string($koneksi, $_GET['q']) : '';
 
 $where = "1=1";
 if (!empty($dari))     $where .= " AND DATE(l.created_at) >= '$dari'";
@@ -30,18 +30,18 @@ if ($keyword !== '') {
 }
 
 // Daftar aksi & modul unik untuk dropdown filter
-$opsiAksi = mysqli_query($koneksi, "SELECT DISTINCT aksi FROM log_aktivitas ORDER BY aksi");
-$opsiModul = mysqli_query($koneksi, "SELECT DISTINCT modul FROM log_aktivitas ORDER BY modul");
+$opsiAksi = sdb_query($koneksi, "SELECT DISTINCT aksi FROM log_aktivitas ORDER BY aksi");
+$opsiModul = sdb_query($koneksi, "SELECT DISTINCT modul FROM log_aktivitas ORDER BY modul");
 
 // Statistik
 $stat = ['total' => 0, 'hari_ini' => 0, 'login' => 0, 'gagal' => 0, 'perubahan' => 0];
-$q_stat = mysqli_query($koneksi, "SELECT
+$q_stat = sdb_query($koneksi, "SELECT
     (SELECT COUNT(*) FROM log_aktivitas) AS total,
     (SELECT COUNT(*) FROM log_aktivitas WHERE DATE(created_at) = CURDATE()) AS hari_ini,
     (SELECT COUNT(*) FROM log_aktivitas WHERE aksi = 'LOGIN' AND DATE(created_at) = CURDATE()) AS login,
     (SELECT COUNT(*) FROM log_aktivitas WHERE aksi IN ('LOGIN_GAGAL','LOGIN_PENUH') AND DATE(created_at) = CURDATE()) AS gagal,
     (SELECT COUNT(*) FROM log_aktivitas WHERE aksi IN ('TAMBAH','UBAH','UBAH_MASSAL','HAPUS') AND DATE(created_at) = CURDATE()) AS perubahan");
-if ($s = mysqli_fetch_assoc($q_stat)) {
+if ($s = sdb_fetch_assoc($q_stat)) {
     $stat['total']     = intval($s['total']);
     $stat['hari_ini']  = intval($s['hari_ini']);
     $stat['login']     = intval($s['login']);
@@ -53,8 +53,8 @@ if ($s = mysqli_fetch_assoc($q_stat)) {
 $perHal = 25;
 $curHal = isset($_GET['hlm']) ? max(1, intval($_GET['hlm'])) : 1;
 $offset = ($curHal - 1) * $perHal;
-$q_total = mysqli_query($koneksi, "SELECT COUNT(*) AS jml FROM log_aktivitas l LEFT JOIN users u ON l.user_id = u.id WHERE $where");
-$jml_data = (int) mysqli_fetch_assoc($q_total)['jml'];
+$q_total = sdb_query($koneksi, "SELECT COUNT(*) AS jml FROM log_aktivitas l LEFT JOIN users u ON l.user_id = u.id WHERE $where");
+$jml_data = (int) sdb_fetch_assoc($q_total)['jml'];
 $jmlHal = max(1, ceil($jml_data / $perHal));
 
 $query = "SELECT l.aksi, l.modul, l.deskripsi, l.detail, l.ip_address, l.created_at,
@@ -64,7 +64,7 @@ $query = "SELECT l.aksi, l.modul, l.deskripsi, l.detail, l.ip_address, l.created
           WHERE $where
           ORDER BY l.created_at DESC, l.id_log DESC
           LIMIT $perHal OFFSET $offset";
-$hasil = mysqli_query($koneksi, $query);
+$hasil = sdb_query($koneksi, $query);
 
 // Parameter tambahan untuk dipertahankan pada link pagination
 $qs = [];
@@ -184,7 +184,7 @@ function aksi_html($aksi) {
                         <label class="form-label small fw-semibold text-muted mb-1">Aksi</label>
                         <select name="aksi" class="form-select filter-input shadow-none">
                             <option value="">Semua Aksi</option>
-                            <?php while ($a = mysqli_fetch_assoc($opsiAksi)): ?>
+                            <?php while ($a = sdb_fetch_assoc($opsiAksi)): ?>
                                 <option value="<?= htmlspecialchars($a['aksi']) ?>" <?= $filterAksi === $a['aksi'] ? 'selected' : '' ?>><?= htmlspecialchars($a['aksi']) ?></option>
                             <?php endwhile; ?>
                         </select>
@@ -193,7 +193,7 @@ function aksi_html($aksi) {
                         <label class="form-label small fw-semibold text-muted mb-1">Modul</label>
                         <select name="modul" class="form-select filter-input shadow-none">
                             <option value="">Semua Modul</option>
-                            <?php while ($m = mysqli_fetch_assoc($opsiModul)): ?>
+                            <?php while ($m = sdb_fetch_assoc($opsiModul)): ?>
                                 <option value="<?= htmlspecialchars($m['modul']) ?>" <?= $filterModul === $m['modul'] ? 'selected' : '' ?>><?= htmlspecialchars($m['modul']) ?></option>
                             <?php endwhile; ?>
                         </select>
@@ -226,8 +226,8 @@ function aksi_html($aksi) {
                             </tr>
                         </thead>
                         <tbody>
-                            <?php if ($hasil && mysqli_num_rows($hasil) > 0): ?>
-                                <?php while ($r = mysqli_fetch_assoc($hasil)): ?>
+                            <?php if ($hasil && sdb_num_rows($hasil) > 0): ?>
+                                <?php while ($r = sdb_fetch_assoc($hasil)): ?>
                                     <tr>
                                         <td class="small text-nowrap"><?= date('d/m/Y H:i:s', strtotime($r['created_at'])) ?></td>
                                         <td><?= !empty($r['nama_lengkap']) ? htmlspecialchars($r['nama_lengkap']) : '<span class="badge bg-light text-muted rounded-pill">Sistem</span>' ?></td>

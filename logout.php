@@ -10,7 +10,7 @@ if (isset($_SESSION['user_id']) && isset($_SESSION['username'])) {
 
 // Hapus sesi aktif dari tabel user_sesi
 if (isset($_SESSION['user_id']) && session_id() !== '') {
-    mysqli_query($koneksi, "DELETE FROM user_sesi WHERE user_id = " . intval($_SESSION['user_id']) . " AND session_id = '" . mysqli_real_escape_string($koneksi, session_id()) . "'");
+    sdb_query($koneksi, "DELETE FROM user_sesi WHERE user_id = " . intval($_SESSION['user_id']) . " AND session_id = '" . sdb_real_escape_string($koneksi, session_id()) . "'");
 }
 
 // Hapus semua variabel sesi

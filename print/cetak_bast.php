@@ -11,7 +11,7 @@ include "../includes/koneksi.php";
 
 $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
-$query = mysqli_query($koneksi, "SELECT b.*, 
+$query = sdb_query($koneksi, "SELECT b.*, 
                                        k.name_lengkap, k.no_ktp, k.pekerjaan, k.no_whatsapp, k.alamat_ktp,
                                        r.no_blok, r.tipe_rumah, r.luas_bangunan, r.luas_tanah,
                                        c.cluster_name,
@@ -23,7 +23,7 @@ $query = mysqli_query($koneksi, "SELECT b.*,
                                 LEFT JOIN data_konsumen k ON t.id_konsumen = k.id_konsumen
                                 WHERE b.id_bast = '$id'");
 
-$data = mysqli_fetch_assoc($query);
+$data = sdb_fetch_assoc($query);
 
 if (!$data) {
     die("Data BAST tidak ditemukan.");

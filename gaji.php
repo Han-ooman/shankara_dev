@@ -19,19 +19,19 @@ function rp($n) { return 'Rp ' . number_format((float)$n, 0, ',', '.'); }
 // Tambah slip gaji
 if (isset($_POST['tambah_gaji'])) {
     $id_karyawan = intval($_POST['id_karyawan'] ?? 0);
-    $periode     = mysqli_real_escape_string($koneksi, $_POST['periode'] ?? '');
-    $tanggal     = !empty($_POST['tanggal_gaji']) ? "'" . mysqli_real_escape_string($koneksi, $_POST['tanggal_gaji']) . "'" : 'NULL';
+    $periode     = sdb_real_escape_string($koneksi, $_POST['periode'] ?? '');
+    $tanggal     = !empty($_POST['tanggal_gaji']) ? "'" . sdb_real_escape_string($koneksi, $_POST['tanggal_gaji']) . "'" : 'NULL';
     $pokok       = (float)str_replace(['.', ','], '', $_POST['gaji_pokok'] ?? 0);
     $makan       = (float)str_replace(['.', ','], '', $_POST['tunjangan_makan'] ?? 0);
     $transport   = (float)str_replace(['.', ','], '', $_POST['tunjangan_transport'] ?? 0);
     $jabatan     = (float)str_replace(['.', ','], '', $_POST['tunjangan_jabatan'] ?? 0);
     $bonus       = (float)str_replace(['.', ','], '', $_POST['bonus'] ?? 0);
     $potongan    = (float)str_replace(['.', ','], '', $_POST['potongan'] ?? 0);
-    $ket_pot     = mysqli_real_escape_string($koneksi, trim($_POST['keterangan_potongan'] ?? ''));
-    $keterangan  = mysqli_real_escape_string($koneksi, trim($_POST['keterangan'] ?? ''));
+    $ket_pot     = sdb_real_escape_string($koneksi, trim($_POST['keterangan_potongan'] ?? ''));
+    $keterangan  = sdb_real_escape_string($koneksi, trim($_POST['keterangan'] ?? ''));
 
     if ($id_karyawan > 0 && !empty($periode)) {
-        mysqli_query($koneksi, "INSERT INTO data_gaji (id_karyawan, periode, gaji_pokok, tunjangan_makan, tunjangan_transport, tunjangan_jabatan, bonus, potongan, keterangan_potongan, tanggal_gaji, keterangan)
+        sdb_query($koneksi, "INSERT INTO data_gaji (id_karyawan, periode, gaji_pokok, tunjangan_makan, tunjangan_transport, tunjangan_jabatan, bonus, potongan, keterangan_potongan, tanggal_gaji, keterangan)
                                 VALUES ($id_karyawan, '$periode', $pokok, $makan, $transport, $jabatan, $bonus, $potongan, " . ($ket_pot !== '' ? "'$ket_pot'" : 'NULL') . ", $tanggal, " . ($keterangan !== '' ? "'$keterangan'" : 'NULL') . ")
                                 ON DUPLICATE KEY UPDATE gaji_pokok=VALUES(gaji_pokok), tunjangan_makan=VALUES(tunjangan_makan), tunjangan_transport=VALUES(tunjangan_transport), tunjangan_jabatan=VALUES(tunjangan_jabatan), bonus=VALUES(bonus), potongan=VALUES(potongan), keterangan_potongan=VALUES(keterangan_potongan), tanggal_gaji=VALUES(tanggal_gaji), keterangan=VALUES(keterangan)");
     }
@@ -42,18 +42,18 @@ if (isset($_POST['tambah_gaji'])) {
 // Edit slip gaji
 if (isset($_POST['edit_gaji'])) {
     $id_gaji     = intval($_POST['id_gaji']);
-    $periode     = mysqli_real_escape_string($koneksi, $_POST['periode'] ?? '');
-    $tanggal     = !empty($_POST['tanggal_gaji']) ? "'" . mysqli_real_escape_string($koneksi, $_POST['tanggal_gaji']) . "'" : 'NULL';
+    $periode     = sdb_real_escape_string($koneksi, $_POST['periode'] ?? '');
+    $tanggal     = !empty($_POST['tanggal_gaji']) ? "'" . sdb_real_escape_string($koneksi, $_POST['tanggal_gaji']) . "'" : 'NULL';
     $pokok       = (float)str_replace(['.', ','], '', $_POST['gaji_pokok'] ?? 0);
     $makan       = (float)str_replace(['.', ','], '', $_POST['tunjangan_makan'] ?? 0);
     $transport   = (float)str_replace(['.', ','], '', $_POST['tunjangan_transport'] ?? 0);
     $jabatan     = (float)str_replace(['.', ','], '', $_POST['tunjangan_jabatan'] ?? 0);
     $bonus       = (float)str_replace(['.', ','], '', $_POST['bonus'] ?? 0);
     $potongan    = (float)str_replace(['.', ','], '', $_POST['potongan'] ?? 0);
-    $ket_pot     = mysqli_real_escape_string($koneksi, trim($_POST['keterangan_potongan'] ?? ''));
-    $keterangan  = mysqli_real_escape_string($koneksi, trim($_POST['keterangan'] ?? ''));
+    $ket_pot     = sdb_real_escape_string($koneksi, trim($_POST['keterangan_potongan'] ?? ''));
+    $keterangan  = sdb_real_escape_string($koneksi, trim($_POST['keterangan'] ?? ''));
 
-    mysqli_query($koneksi, "UPDATE data_gaji SET periode='$periode', gaji_pokok=$pokok, tunjangan_makan=$makan, tunjangan_transport=$transport, tunjangan_jabatan=$jabatan, bonus=$bonus, potongan=$potongan, keterangan_potongan=" . ($ket_pot !== '' ? "'$ket_pot'" : 'NULL') . ", tanggal_gaji=$tanggal, keterangan=" . ($keterangan !== '' ? "'$keterangan'" : 'NULL') . " WHERE id_gaji=$id_gaji");
+    sdb_query($koneksi, "UPDATE data_gaji SET periode='$periode', gaji_pokok=$pokok, tunjangan_makan=$makan, tunjangan_transport=$transport, tunjangan_jabatan=$jabatan, bonus=$bonus, potongan=$potongan, keterangan_potongan=" . ($ket_pot !== '' ? "'$ket_pot'" : 'NULL') . ", tanggal_gaji=$tanggal, keterangan=" . ($keterangan !== '' ? "'$keterangan'" : 'NULL') . " WHERE id_gaji=$id_gaji");
     header("Location: gaji.php");
     exit();
 }
@@ -64,7 +64,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
         http_response_code(403);
         die("Token keamanan tidak valid.");
     }
-    mysqli_query($koneksi, "DELETE FROM data_gaji WHERE id_gaji = " . intval($_GET['id']));
+    sdb_query($koneksi, "DELETE FROM data_gaji WHERE id_gaji = " . intval($_GET['id']));
     header("Location: gaji.php");
     exit();
 }
@@ -75,22 +75,22 @@ if (!preg_match('/^\d{4}-\d{2}$/', $f_periode)) $f_periode = '';
 
 // Statistik
 $stat = ['total'=>0, 'bulan'=>0, 'nominal'=>0];
-$q = mysqli_query($koneksi, "SELECT COUNT(*) AS jml, COALESCE(SUM(gaji_pokok+tunjangan_makan+tunjangan_transport+tunjangan_jabatan+bonus-potongan),0) AS total FROM data_gaji");
-if (($r = mysqli_fetch_assoc($q))) { $stat['total'] = (int)$r['jml']; $stat['nominal'] = (float)$r['total']; }
+$q = sdb_query($koneksi, "SELECT COUNT(*) AS jml, COALESCE(SUM(gaji_pokok+tunjangan_makan+tunjangan_transport+tunjangan_jabatan+bonus-potongan),0) AS total FROM data_gaji");
+if (($r = sdb_fetch_assoc($q))) { $stat['total'] = (int)$r['jml']; $stat['nominal'] = (float)$r['total']; }
 
 $bulan_ini = date('Y-m');
-$q = mysqli_query($koneksi, "SELECT COUNT(*) AS jml FROM data_gaji WHERE periode = '$bulan_ini'");
-if (($r = mysqli_fetch_assoc($q))) $stat['bulan'] = (int)$r['jml'];
+$q = sdb_query($koneksi, "SELECT COUNT(*) AS jml FROM data_gaji WHERE periode = '$bulan_ini'");
+if (($r = sdb_fetch_assoc($q))) $stat['bulan'] = (int)$r['jml'];
 
 // Data karyawan untuk dropdown
 $karyawan_opts = [];
-$qk = mysqli_query($koneksi, "SELECT id_karyawan, nama_lengkap, jabatan FROM data_karyawan WHERE status='Aktif' ORDER BY nama_lengkap");
-while ($rk = mysqli_fetch_assoc($qk)) $karyawan_opts[] = $rk;
+$qk = sdb_query($koneksi, "SELECT id_karyawan, nama_lengkap, jabatan FROM data_karyawan WHERE status='Aktif' ORDER BY nama_lengkap");
+while ($rk = sdb_fetch_assoc($qk)) $karyawan_opts[] = $rk;
 
 // Daftar periode unik
 $periode_unik = [];
-$qp = mysqli_query($koneksi, "SELECT DISTINCT periode FROM data_gaji ORDER BY periode DESC");
-while ($rp = mysqli_fetch_assoc($qp)) $periode_unik[] = $rp['periode'];
+$qp = sdb_query($koneksi, "SELECT DISTINCT periode FROM data_gaji ORDER BY periode DESC");
+while ($rp = sdb_fetch_assoc($qp)) $periode_unik[] = $rp['periode'];
 
 // Nama bulan Indonesia
 function nama_bulan($ym) {
@@ -196,12 +196,12 @@ function nama_bulan($ym) {
                         <?php
                         $qg = "SELECT g.*, k.nama_lengkap, k.jabatan FROM data_gaji g
                                LEFT JOIN data_karyawan k ON g.id_karyawan = k.id_karyawan";
-                        if ($f_periode !== '') $qg .= " WHERE g.periode = '" . mysqli_real_escape_string($koneksi, $f_periode) . "'";
+                        if ($f_periode !== '') $qg .= " WHERE g.periode = '" . sdb_real_escape_string($koneksi, $f_periode) . "'";
                         $qg .= " ORDER BY g.periode DESC, k.nama_lengkap ASC";
-                        $rg = mysqli_query($koneksi, $qg);
+                        $rg = sdb_query($koneksi, $qg);
 
-                        if ($rg && mysqli_num_rows($rg) > 0) {
-                            while ($g = mysqli_fetch_assoc($rg)) {
+                        if ($rg && sdb_num_rows($rg) > 0) {
+                            while ($g = sdb_fetch_assoc($rg)) {
                                 $tunj = (float)$g['tunjangan_makan'] + (float)$g['tunjangan_transport'] + (float)$g['tunjangan_jabatan'];
                                 $total = (float)$g['gaji_pokok'] + $tunj + (float)$g['bonus'] - (float)$g['potongan'];
                         ?>

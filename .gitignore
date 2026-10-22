@@ -75,3 +75,5 @@ funnel_log.txt
 /data/
 /data_konsumen_clean.csv
 /data_transaksi_clean.csv
+.vercel
+.env*

@@ -9,8 +9,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrf_verify()) {
     die("Token keamanan tidak valid. Muat ulang halaman lalu coba lagi.");
 }
 
-$konsumen = mysqli_query($koneksi, "SELECT * FROM data_konsumen ORDER BY name_lengkap ASC");
-$rumah = mysqli_query($koneksi, "SELECT r.*, c.cluster_name 
+$konsumen = sdb_query($koneksi, "SELECT * FROM data_konsumen ORDER BY name_lengkap ASC");
+$rumah = sdb_query($koneksi, "SELECT r.*, c.cluster_name 
                                 FROM data_rumah r 
                                 JOIN data_cluster c ON r.id_cluster = c.id_cluster 
                                 ORDER BY c.cluster_name, r.no_blok ASC");
@@ -23,12 +23,12 @@ if (isset($_POST['simpan'])) {
     $status_konsumen = $_POST['status_konsumen'];
     $tanggal_akad    = !empty($_POST['tanggal_akad']) ? "'".$_POST['tanggal_akad']."'" : "NULL";
 
-    $insert = mysqli_query($koneksi, "INSERT INTO data_transaksi (tgl_booking, id_konsumen, id_rumah, skema_bayar, status_konsumen, tanggal_akad) 
+    $insert = sdb_query($koneksi, "INSERT INTO data_transaksi (tgl_booking, id_konsumen, id_rumah, skema_bayar, status_konsumen, tanggal_akad) 
                                       VALUES ('$tgl_booking', '$id_konsumen', '$id_rumah', '$skema_bayar', '$status_konsumen', $tanggal_akad)");
 
     if ($insert) {
         $status_unit = ($status_konsumen == 'ACC - AKAD') ? 'terjual' : 'terbooking';
-        mysqli_query($koneksi, "UPDATE data_rumah SET status_unit = '$status_unit' WHERE id_rumah = '$id_rumah'");
+        sdb_query($koneksi, "UPDATE data_rumah SET status_unit = '$status_unit' WHERE id_rumah = '$id_rumah'");
         header("Location: index.php");
     } else {
         echo "<script>alert('Gagal menyimpan transaksi!');</script>";
@@ -63,7 +63,7 @@ if (isset($_POST['simpan'])) {
                     <label class="form-label">Pilih Konsumen</label>
                     <select name="id_konsumen" class="form-select" required>
                         <option value="">-- Pilih Konsumen --</option>
-                        <?php while ($k = mysqli_fetch_assoc($konsumen)) { ?>
+                        <?php while ($k = sdb_fetch_assoc($konsumen)) { ?>
                             <option value="<?= $k['id_konsumen']; ?>"><?= $k['name_lengkap']; ?> (<?= $k['pekerjaan']; ?>)</option>
                         <?php } ?>
                     </select>
@@ -73,7 +73,7 @@ if (isset($_POST['simpan'])) {
                     <label class="form-label">Pilih Rumah / Unit</label>
                     <select name="id_rumah" class="form-select" required>
                         <option value="">-- Pilih Unit Rumah --</option>
-                        <?php while ($r = mysqli_fetch_assoc($rumah)) { ?>
+                        <?php while ($r = sdb_fetch_assoc($rumah)) { ?>
                             <option value="<?= $r['id_rumah']; ?>">
                                 <?= $r['cluster_name']; ?> - Blok <?= $r['no_blok']; ?> (Tipe <?= $r['tipe_rumah']; ?>) - Status: <?= $r['status_unit']; ?>
                             </option>

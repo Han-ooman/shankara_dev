@@ -57,11 +57,11 @@ if (isset($_POST['login'])) {
                     $limit_device = in_array(intval($user['id']), [1, 5], true) ? 2 : 1;
 
                     // Bersihkan sesi yang sudah basi (terakhir aktif lebih dari 30 menit lalu)
-                    mysqli_query($koneksi, "DELETE FROM user_sesi WHERE user_id = " . intval($user['id']) . " AND last_active < (NOW() - INTERVAL 30 MINUTE)");
+                    sdb_query($koneksi, "DELETE FROM user_sesi WHERE user_id = " . intval($user['id']) . " AND last_active < (NOW() - INTERVAL 30 MINUTE)");
 
                     // Hitung jumlah sesi aktif untuk akun ini
-                    $count_result = mysqli_query($koneksi, "SELECT COUNT(*) AS jml FROM user_sesi WHERE user_id = " . intval($user['id']));
-                    $jml_aktif = (int) mysqli_fetch_assoc($count_result)['jml'];
+                    $count_result = sdb_query($koneksi, "SELECT COUNT(*) AS jml FROM user_sesi WHERE user_id = " . intval($user['id']));
+                    $jml_aktif = (int) sdb_fetch_assoc($count_result)['jml'];
 
                     if ($jml_aktif >= $limit_device) {
                         if ($limit_device === 2) {

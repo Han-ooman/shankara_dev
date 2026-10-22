@@ -14,17 +14,17 @@ $filter_kategori = $_GET['kategori'] ?? '';
 $filter_status   = $_GET['status']   ?? '';
 $filter_keyword  = $_GET['keyword']  ?? '';
 
-if (!empty($filter_tanggal))  $where .= " AND tanggal = '" . mysqli_real_escape_string($koneksi, $filter_tanggal) . "'";
-if (!empty($filter_kategori)) $where .= " AND kategori = '" . mysqli_real_escape_string($koneksi, $filter_kategori) . "'";
-if (!empty($filter_status))   $where .= " AND status = '" . mysqli_real_escape_string($koneksi, $filter_status) . "'";
+if (!empty($filter_tanggal))  $where .= " AND tanggal = '" . sdb_real_escape_string($koneksi, $filter_tanggal) . "'";
+if (!empty($filter_kategori)) $where .= " AND kategori = '" . sdb_real_escape_string($koneksi, $filter_kategori) . "'";
+if (!empty($filter_status))   $where .= " AND status = '" . sdb_real_escape_string($koneksi, $filter_status) . "'";
 if (!empty($filter_keyword))  {
-    $kw = mysqli_real_escape_string($koneksi, $filter_keyword);
+    $kw = sdb_real_escape_string($koneksi, $filter_keyword);
     $where .= " AND (nama_lengkap LIKE '%$kw%' OR judul_kegiatan LIKE '%$kw%' OR detail_kegiatan LIKE '%$kw%')";
 }
 
-$result = mysqli_query($koneksi, "SELECT * FROM data_laporan_harian WHERE $where ORDER BY tanggal DESC, jam_mulai DESC");
+$result = sdb_query($koneksi, "SELECT * FROM data_laporan_harian WHERE $where ORDER BY tanggal DESC, jam_mulai DESC");
 $rows = [];
-while ($r = mysqli_fetch_assoc($result)) $rows[] = $r;
+while ($r = sdb_fetch_assoc($result)) $rows[] = $r;
 
 $has_filter = !empty($filter_tanggal) || !empty($filter_kategori) || !empty($filter_status) || !empty($filter_keyword);
 

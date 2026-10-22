@@ -17,11 +17,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrf_verify()) {
 }
 
 if (isset($_POST['tambah_marketing'])) {
-    $nama = mysqli_real_escape_string($koneksi, $_POST['nama_marketing']);
-    $no_hp = mysqli_real_escape_string($koneksi, $_POST['no_hp']);
-    $email = mysqli_real_escape_string($koneksi, $_POST['email']);
+    $nama = sdb_real_escape_string($koneksi, $_POST['nama_marketing']);
+    $no_hp = sdb_real_escape_string($koneksi, $_POST['no_hp']);
+    $email = sdb_real_escape_string($koneksi, $_POST['email']);
 
-    mysqli_query($koneksi, "INSERT INTO data_marketing (nama_marketing, no_hp, email) VALUES ('$nama', '$no_hp', '$email')");
+    sdb_query($koneksi, "INSERT INTO data_marketing (nama_marketing, no_hp, email) VALUES ('$nama', '$no_hp', '$email')");
     header("Location: marketing.php");
     exit();
 }
@@ -54,11 +54,11 @@ if (isset($_POST['tambah_marketing'])) {
         </div>
 
         <?php
-        $qm = mysqli_query($koneksi, "SELECT * FROM data_marketing ORDER BY id_marketing DESC");
+        $qm = sdb_query($koneksi, "SELECT * FROM data_marketing ORDER BY id_marketing DESC");
         $jml_aktif = 0;
         $jml_total = 0;
         $marketing_list = [];
-        while ($m = mysqli_fetch_assoc($qm)) {
+        while ($m = sdb_fetch_assoc($qm)) {
             $marketing_list[] = $m;
             $jml_total++;
             if ($m['status_aktif'] == 'Aktif') $jml_aktif++;
