@@ -51,3 +51,10 @@ $_SERVER['PHP_SELF'] = $path;
 $_SERVER['SCRIPT_FILENAME'] = $real;
 
 require $real;
+try {
+    require $real;
+} catch (Throwable $__e) {
+    http_response_code(500);
+    echo 'DISPATCH ERROR: ' . get_class($__e) . ': ' . $__e->getMessage()
+        . ' @ ' . str_replace($root, '', $__e->getFile()) . ':' . $__e->getLine();
+}
