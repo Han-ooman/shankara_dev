@@ -4,9 +4,9 @@ if (!isset($_SESSION['status_login']) || $_SESSION['status_login'] !== true) {
     header("Location: ../login.php");
     exit();
 }
-include "../includes/cek_sesi.php";
-include "../includes/koneksi.php";
-include "../includes/berkas_helper.php";
+include __DIR__ . "/../includes/cek_sesi.php";
+include __DIR__ . "/../includes/koneksi.php";
+include __DIR__ . "/../includes/berkas_helper.php";
 
 // Ambil parameter filter (dari URL yang dibuat tombol Export PDF)
 // Column indices (setelah penambahan kolom checkbox):

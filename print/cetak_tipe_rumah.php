@@ -4,8 +4,8 @@ if (!isset($_SESSION['status_login']) || $_SESSION['status_login'] !== true) {
     header("Location: ../login.php");
     exit();
 }
-include "../includes/cek_sesi.php";
-include "../includes/koneksi.php";
+include __DIR__ . "/../includes/cek_sesi.php";
+include __DIR__ . "/../includes/koneksi.php";
 
 $q_tipe = sdb_query($koneksi, "SELECT * FROM data_tipe_rumah ORDER BY CAST(LEFT(tipe_rumah, 3) AS UNSIGNED) ASC, id_tipe ASC");
 $data_tipe = [];

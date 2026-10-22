@@ -4,8 +4,8 @@ if (!isset($_SESSION['status_login']) || $_SESSION['status_login'] !== true) {
     header("Location: ../login.php");
     exit();
 }
-include "../includes/cek_sesi.php";
-include "../includes/koneksi.php";
+include __DIR__ . "/../includes/cek_sesi.php";
+include __DIR__ . "/../includes/koneksi.php";
 
 function rupiah($n) {
     return 'Rp ' . number_format((int)$n, 0, ',', '.');
