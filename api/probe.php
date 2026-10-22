@@ -1,33 +1,32 @@
 <?php
-// api/probe.php — diagnostik environment lambda Vercel (SEMENTARA)
+// api/probe.php - diagnostik timing lambda Vercel (SEMENTARA)
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
-ini_set('display_startup_errors', '1');
 
-echo "PHP=" . PHP_VERSION . " cwd=" . getcwd() . "\n";
-echo "REQUEST_URI=" . ($_SERVER['REQUEST_URI'] ?? '-') . "\n";
-echo "SCRIPT_NAME=" . ($_SERVER['SCRIPT_NAME'] ?? '-') . "\n";
+$t0 = microtime(true);
+echo "boot=" . number_format((microtime(true) - $t0) * 1000, 0) . "ms\n";
+flush();
 
+$tpre = microtime(true);
 $root = dirname(__DIR__);
-foreach (['index.php', 'includes/koneksi.php', 'includes/db_adapter.php', 'config/local.php', 'vendor/autoload.php'] as $rel) {
-    echo "is_file[$rel]=" . (is_file($root . '/' . $rel) ? 'YA' : 'TIDAK') . "\n";
-}
+require_once $root . '/includes/db_adapter.php';
+echo "require_adapter=" . number_format((microtime(true) - $tpre) * 1000, 0) . "ms\n";
+flush();
 
-echo "env SUPABASE_DSN=" . (getenv('SUPABASE_DSN') ? 'ADA' : 'TIDAK') . "\n";
-
+$tcon = microtime(true);
 try {
-    require_once $root . '/includes/db_adapter.php';
-    echo "adapter dimuat\n";
+    $dsn  = SUPABASE_DSN; $user = SUPABASE_USER; $pass = SUPABASE_PASSWORD;
+    $pdo  = new PDO($dsn, $user, $pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_TIMEOUT => 20]);
+    echo "connect=" . number_format((microtime(true) - $tcon) * 1000, 0) . "ms\n";
 } catch (Throwable $e) {
-    echo "adapter GAGAL: " . get_class($e) . ": " . $e->getMessage() . "\n";
+    echo "connect GAGAL: " . $e->getMessage() . "\n";
 }
+flush();
 
-try {
-    $dsn  = SUPABASE_DSN;
-    $user = SUPABASE_USER;
-    $pass = SUPABASE_PASSWORD;
-    $pdo  = new PDO($dsn, $user, $pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_TIMEOUT => 10]);
-    echo "koneksi PG OK, server=" . $pdo->getAttribute(PDO::ATTR_SERVER_VERSION) . "\n";
-} catch (Throwable $e) {
-    echo "koneksi GAGAL: " . $e->getMessage() . "\n";
-}
+$tq = microtime(true);
+try { $pdo->query('SELECT 1')->fetchColumn(); echo "query1=" . number_format((microtime(true) - $tq) * 1000, 0) . "ms\n"; } catch (Throwable $e) { echo "query GAGAL: " . $e->getMessage() . "\n"; }
+flush();
+
+$tq2 = microtime(true);
+try { $pdo->query('SELECT COUNT(*) FROM konsumen')->fetchColumn(); echo "query2=" . number_format((microtime(true) - $tq2) * 1000, 0) . "ms total=" . number_format((microtime(true) - $t0) * 1000, 0) . "ms\n"; } catch (Throwable $e) { echo "query GAGAL: " . $e->getMessage() . "\n"; }
+flush();
