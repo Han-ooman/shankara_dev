@@ -306,6 +306,26 @@ if ($s = sdb_fetch_assoc($q_stat)) {
                         $qm = sdb_query($koneksi, "SELECT id_marketing, nama_marketing FROM data_marketing WHERE status_aktif = 'Aktif' ORDER BY nama_marketing ASC");
                         while ($row = sdb_fetch_assoc($qm)) $arr_marketing[] = $row;
 
+                        // Opsi dropdown dikirim sekali sebagai data JS — modal Edit tiap baris
+                        // tidak lagi memuat 150+ <option> sendiri (respons melebihi limit 4,5 MB Vercel)
+                        $opts_konsumen = [];
+                        foreach ($arr_konsumen as $k) {
+                            $opts_konsumen[] = [
+                                'v' => (int)$k['id_konsumen'],
+                                't' => $k['name_lengkap'] . ' - (' . $k['pekerjaan'] . ')',
+                            ];
+                        }
+                        $opts_marketing = [];
+                        foreach ($arr_marketing as $mkt_data) {
+                            $opts_marketing[] = [
+                                'v' => (int)$mkt_data['id_marketing'],
+                                't' => $mkt_data['nama_marketing'],
+                            ];
+                        }
+                        $json_flags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE;
+                        echo '<script>var SDB_OPS = {konsumen: ' . json_encode($opts_konsumen, $json_flags)
+                            . ', marketing: ' . json_encode($opts_marketing, $json_flags) . '};</script>';
+
                         if ($q_bi && sdb_num_rows($q_bi) > 0) {
                             while ($b = sdb_fetch_assoc($q_bi)) {
                                 $badge = 'bg-warning text-dark';
@@ -365,23 +385,14 @@ if ($s = sdb_fetch_assoc($q_stat)) {
                                                 <div class="modal-body">
                                                     <div class="mb-3">
                                                         <label class="form-label small fw-semibold">KONSUMEN</label>
-                                                        <select name="id_konsumen" class="form-select rounded-3" required>
+                                                        <select name="id_konsumen" class="form-select rounded-3 js-prk-konsumen" required data-cur="<?= (int)($b['id_konsumen'] ?? 0) ?>">
                                                             <option value="">-- Pilih Konsumen --</option>
-                                                            <?php foreach ($arr_konsumen as $k): ?>
-                                                                <?php $sel = ($k['id_konsumen'] == $b['id_konsumen']) ? 'selected' : ''; ?>
-                                                                <option value="<?= $k['id_konsumen'] ?>" $sel><?= htmlspecialchars($k['name_lengkap']) ?> - (<?= htmlspecialchars($k['pekerjaan']) ?>)</option>
-                                                            <?php endforeach; ?>
                                                         </select>
                                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label small fw-semibold">MARKETER / SALES</label>
-                                        <select name="id_marketing" class="form-select rounded-3">
+                                        <select name="id_marketing" class="form-select rounded-3 js-prk-marketing" data-cur="<?= (int)($b['id_marketing'] ?? 0) ?>">
                                             <option value="">-- Pilih Marketing --</option>
-                                            <?php foreach ($arr_marketing as $mkt): ?>
-                                                <?php $sel_mkt = ($b['id_marketing'] == $mkt['id_marketing']) ? 'selected' : ''; ?>
-                                                <option value="<?= $mkt['id_marketing'] ?>" $sel_mkt><?= htmlspecialchars($mkt['nama_marketing']) ?></option>
-                                            <?php endforeach; ?>
-                                            ?>
                                         </select>
                                     </div>
                                     <div class="mb-3">
@@ -519,6 +530,40 @@ if ($s = sdb_fetch_assoc($q_stat)) {
     </div>
 </div>
 
+<script>
+// Populasi dropdown modal Edit secara lazy (opsi dimuat saat modal dibuka)
+(function () {
+    var pop = function (sel, list, emptyLabel) {
+        if (!sel || !list || sel.dataset.nrPop === '1') return;
+        sel.dataset.nrPop = '1';
+        var cur = String(sel.getAttribute('data-cur') || '');
+        sel.innerHTML = '<option value="">' + emptyLabel + '</option>';
+        for (var i = 0; i < list.length; i++) {
+            var o = list[i];
+            var op = document.createElement('option');
+            op.value = o.v;
+            op.textContent = o.t;
+            if (String(o.v) === cur) op.selected = true;
+            sel.appendChild(op);
+        }
+    };
+    var wire = function (root) {
+        if (!window.SDB_OPS || !root || !root.querySelectorAll) return;
+        Array.prototype.forEach.call(root.querySelectorAll('select.js-prk-konsumen'), function (s) {
+            pop(s, SDB_OPS.konsumen, '-- Pilih Konsumen --');
+        });
+        Array.prototype.forEach.call(root.querySelectorAll('select.js-prk-marketing'), function (s) {
+            pop(s, SDB_OPS.marketing, '-- Pilih Marketing --');
+        });
+    };
+    document.addEventListener('show.bs.modal', function (ev) { wire(ev.target); });
+    document.addEventListener('DOMContentLoaded', function () {
+        Array.prototype.forEach.call(document.querySelectorAll('.modal'), function (md) {
+            md.addEventListener('show.bs.modal', function (ev) { wire(ev.target); });
+        });
+    });
+})();
+</script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     var modalBi = document.getElementById('modalBi');

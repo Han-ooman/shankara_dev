@@ -283,6 +283,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_transaksi'])) {
                                                       ORDER BY c.cluster_name, r.no_blok ASC");
                         while ($row = sdb_fetch_assoc($qr)) $arr_rumah[] = $row;
 
+                        // Opsi dropdown dikirim sekali sebagai data JS — modal Edit tiap baris
+                        // tidak lagi memuat 300+ <option> sendiri (respons melebihi limit 4,5 MB Vercel)
+                        $opts_konsumen = [];
+                        foreach ($arr_konsumen as $k) {
+                            $opts_konsumen[] = [
+                                'v' => (int)$k['id_konsumen'],
+                                't' => $k['name_lengkap'] . ' - (' . $k['pekerjaan'] . ')',
+                            ];
+                        }
+                        $opts_rumah = [];
+                        foreach ($arr_rumah as $r) {
+                            $opts_rumah[] = [
+                                'v' => (int)$r['id_rumah'],
+                                't' => $r['cluster_name'] . ' - Blok ' . $r['no_blok']
+                                    . ' (Tipe ' . $r['tipe_rumah'] . ') - Status: ' . strtoupper($r['status_unit']),
+                            ];
+                        }
+                        $json_flags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE;
+                        echo '<script>var SDB_OPS = {konsumen: ' . json_encode($opts_konsumen, $json_flags)
+                            . ', rumah: ' . json_encode($opts_rumah, $json_flags) . '};</script>';
+
                         while ($t = sdb_fetch_assoc($q_trx)) {
                             // Formatting Status Badge
                             $status = $t['status_konsumen'];
@@ -346,23 +367,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_transaksi'])) {
 
                                                         <div class="col-md-6">
                                                             <label class="form-label fw-bold text-secondary" style="font-size: 0.85rem;">PILIH KONSUMEN</label>
-                                                            <select name="id_konsumen" class="form-select border-0 shadow-sm" style="border-radius: 8px;" required>
+                                                            <select name="id_konsumen" class="form-select border-0 shadow-sm js-prk-konsumen" style="border-radius: 8px;" required data-cur="<?= (int)($t['id_konsumen'] ?? 0) ?>">
                                                                 <option value="">-- Pilih Konsumen --</option>
-                                                                <?php foreach ($arr_konsumen as $k): ?>
-                                                                    <?php $sel = ($k['id_konsumen'] == $t['id_konsumen']) ? 'selected' : ''; ?>
-                                                                    <option value="<?= $k['id_konsumen'] ?>" $sel><?= htmlspecialchars($k['name_lengkap']) ?> - (<?= htmlspecialchars($k['pekerjaan']) ?>)</option>
-                                                                <?php endforeach; ?>
                                                             </select>
                                                         </div>
 
                                                         <div class="col-md-12">
                                                             <label class="form-label fw-bold text-secondary" style="font-size: 0.85rem;">PILIH RUMAH / UNIT</label>
-                                                            <select name="id_rumah" class="form-select border-0 shadow-sm" style="border-radius: 8px;" required>
+                                                            <select name="id_rumah" class="form-select border-0 shadow-sm js-prk-rumah" style="border-radius: 8px;" required data-cur="<?= (int)($t['id_rumah'] ?? 0) ?>">
                                                                 <option value="">-- Pilih Unit Rumah --</option>
-                                                                <?php foreach ($arr_rumah as $r): ?>
-                                                                    <?php $sel = ($r['id_rumah'] == $t['id_rumah']) ? 'selected' : ''; ?>
-                                                                    <option value="<?= $r['id_rumah'] ?>" $sel><?= htmlspecialchars($r['cluster_name']) ?> - Blok <?= htmlspecialchars($r['no_blok']) ?> (Tipe <?= htmlspecialchars($r['tipe_rumah']) ?>) - Status: <?= strtoupper($r['status_unit']) ?></option>
-                                                                <?php endforeach; ?>
                                                             </select>
                                                         </div>
 
@@ -570,6 +583,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_transaksi'])) {
     </div>
 </div>
 
+<script>
+// Populasi dropdown modal Edit secara lazy (opsi dimuat saat modal dibuka)
+(function () {
+    var pop = function (sel, list, emptyLabel) {
+        if (!sel || !list || sel.dataset.nrPop === '1') return;
+        sel.dataset.nrPop = '1';
+        var cur = String(sel.getAttribute('data-cur') || '');
+        sel.innerHTML = '<option value="">' + emptyLabel + '</option>';
+        for (var i = 0; i < list.length; i++) {
+            var o = list[i];
+            var op = document.createElement('option');
+            op.value = o.v;
+            op.textContent = o.t;
+            if (String(o.v) === cur) op.selected = true;
+            sel.appendChild(op);
+        }
+    };
+    var wire = function (root) {
+        if (!window.SDB_OPS || !root || !root.querySelectorAll) return;
+        Array.prototype.forEach.call(root.querySelectorAll('select.js-prk-konsumen'), function (s) {
+            pop(s, SDB_OPS.konsumen, '-- Pilih Konsumen --');
+        });
+        Array.prototype.forEach.call(root.querySelectorAll('select.js-prk-rumah'), function (s) {
+            pop(s, SDB_OPS.rumah, '-- Pilih Unit Rumah --');
+        });
+    };
+    document.addEventListener('show.bs.modal', function (ev) { wire(ev.target); });
+    document.addEventListener('DOMContentLoaded', function () {
+        Array.prototype.forEach.call(document.querySelectorAll('.modal'), function (md) {
+            md.addEventListener('show.bs.modal', function (ev) { wire(ev.target); });
+        });
+    });
+})();
+</script>
 <script>
 function cekStatusUnit(selectElement) {
     const selectedOption = selectElement.options[selectElement.selectedIndex];
