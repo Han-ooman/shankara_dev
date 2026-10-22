@@ -1,10 +1,9 @@
-﻿<?php
+<?php
 // api/index.php — Front controller untuk Vercel + vercel-php.
+
 // Men-dispatch setiap request ke file PHP di root project.
 // File PHP root tidak bisa dijadikan serverless function langsung, jadi
 // semua path (di luar passthrough asset) diarahkan ke sini lewat vercel.json.
-
-declare(strict_types=1);
 
 $root = dirname(__DIR__);
 
