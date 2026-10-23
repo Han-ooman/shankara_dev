@@ -61,19 +61,21 @@ $skema_bayar = strtoupper(trim((string)($data['skema_bayar'] ?? '')));
 $adalah_kredit = (str_contains($skema_bayar, 'KPR') || str_contains($skema_bayar, 'KREDIT'));
 $adalah_cash   = (str_contains($skema_bayar, 'CASH') || str_contains($skema_bayar, 'TUNAI'));
 $tipe_beli     = $adalah_kredit ? 'KREDIT' : ($adalah_cash ? 'CASH' : 'CASH');
+$adalah_tempo  = (str_contains($skema_bayar, 'TEMPO') || str_contains($skema_bayar, 'BERTAHAP'));
 
 // Label skema pembayaran pada dokumen
 $label_bayar = '';
 if ($adalah_kredit) { $label_bayar = 'Kredit (KPR)'; }
-elseif ($skema_bayar === 'CASH TEMPO') { $label_bayar = 'Cash Tempo (Angsuran)'; }
-elseif ($skema_bayar !== '') { $label_bayar = 'Cash Keras (Lunas)'; }
+elseif (str_contains($skema_bayar, 'TEMPO')) { $label_bayar = 'Cash Tempo (Angsuran)'; }
+elseif (str_contains($skema_bayar, 'BERTAHAP')) { $label_bayar = 'Cash Bertahap (Angsuran)'; }
+else if ($adalah_cash) { $label_bayar = 'Cash Keras (Lunas)'; }
 
 // Kalimat dasar pembelian (menggantikan kalimat KPR statis)
 $kalimat_dasar = $adalah_kredit
     ? 'Berdasarkan perjanjian kredit pemilikan rumah (KPR)'
     . (empty($data['bank_tujuan']) ? '' : ' melalui bank ' . $data['bank_tujuan'])
     . ' dengan nomor <strong>' . htmlspecialchars($data['no_bast']) . '</strong>'
-    : 'Berdasarkan perjanjian jual beli rumah secara' . ($skema_bayar === 'CASH TEMPO' ? ' cash tempo (angsuran)' : ' cash keras (lunas)')
+    : 'Berdasarkan perjanjian jual beli rumah secara' . ($adalah_tempo ? ' cash tempo (angsuran)' : ' cash keras (lunas)')
     . ' dengan nomor <strong>' . htmlspecialchars($data['no_bast']) . '</strong>';
 ?>
 <!DOCTYPE html>
@@ -408,7 +410,7 @@ $kalimat_dasar = $adalah_kredit
             <h3>Pasal 3</h3>
             <p><strong>Status Pembayaran (Pembelian CASH)</strong></p>
             <p style="margin:0;">
-                1. Pihak Kedua menyatakan bahwa pembayaran pembelian rumah ini telah dilunasi secara<?= $skema_bayar === 'CASH TEMPO' ? ' cash tempo (angsuran) dan seluruh angsuran telah dibayar' : ' cash keras (lunas)' ?>.<br>
+                1. Pihak Kedua menyatakan bahwa pembayaran pembelian rumah ini telah dilunasi secara<?= $adalah_tempo ? ' cash tempo (angsuran) dan seluruh angsuran telah dibayar' : ' cash keras (lunas)' ?>.<br>
                 2. Pihak Pertama menyatakan telah menerima pembayaran secara penuh dan tidak ada tagihan atau kewajiban pembayaran yang tersisa.<br>
                 3. Bukti pelunasan pembayaran telah diserahkan kepada Pihak Kedua.
             </p>
