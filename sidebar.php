@@ -129,7 +129,7 @@ role_guard();
         <?php endif; ?>
 
         <!-- KELOMPOK 4: PENGATURAN -->
-        <?php if (role_menu_izin($__role, 'karyawan.php') || role_menu_izin($__role, 'gaji.php') || role_menu_izin($__role, 'pengaturan.php') || role_menu_izin($__role, 'log_aktivitas.php') || role_menu_izin($__role, 'pengingat.php')): ?>
+        <?php if (role_menu_izin($__role, 'karyawan.php') || role_menu_izin($__role, 'gaji.php') || role_menu_izin($__role, 'pengaturan.php') || role_menu_izin($__role, 'log_aktivitas.php') || role_menu_izin($__role, 'pengingat.php') || role_menu_izin($__role, 'sinkronisasi.php')): ?>
         <div class="text-uppercase px-3 mt-4 mb-2 text-muted-custom" style="font-size: 0.7rem; letter-spacing: 1px;">Pengaturan</div>
         <?php endif; ?>
         <?php if (role_menu_izin($__role, 'karyawan.php')): ?>
@@ -151,6 +151,11 @@ role_guard();
         <?php if (role_menu_izin($__role, 'pengingat.php')): ?>
         <a href="pengingat.php" class="nav-link-custom <?= $currentPage === 'pengingat.php' ? 'active' : '' ?>">
             <i class="bi bi-bell"></i> Pengingat & Notifikasi
+        </a>
+        <?php endif; ?>
+        <?php if (role_menu_izin($__role, 'sinkronisasi.php')): ?>
+        <a href="sinkronisasi.php" class="nav-link-custom <?= $currentPage === 'sinkronisasi.php' ? 'active' : '' ?>">
+            <i class="bi bi-arrow-left-right"></i> Sinkronisasi Data
         </a>
         <?php endif; ?>
 

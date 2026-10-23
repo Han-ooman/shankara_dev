@@ -40,6 +40,7 @@ if (!function_exists('role_peta_halaman')) {
             'pengaturan.php'         => ['Super Admin'],
             'pengingat.php'          => ['Super Admin', 'Admin Pemberkasan', 'Kasir Keuangan'],
             'log_aktivitas.php'      => ['Super Admin'],
+            'sinkronisasi.php'       => ['Super Admin'],
         ];
     }
 }

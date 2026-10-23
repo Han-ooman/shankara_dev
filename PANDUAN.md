@@ -28,6 +28,8 @@ shandev/
 ├── push_api.php                         # Endpoint Web Push (subscribe/test)
 ├── sw.js                                # Service Worker (push + cache)
 ├── cli_push_gen.php                     # Generate kunci VAPID (CLI only)
+├── sync.php                              # Sinkronisasi data CLI (status/push/pull/both)
+├── sinkronisasi.php                      # Halaman sinkronisasi (Super Admin)
 ├── api/                                 # REST API (endpoint /api/)
 │   ├── index.php                        # Router
 │   ├── controllers/ (11)                # Auth, Cluster, TipeRumah, Rumah, Konsumen,
@@ -39,6 +41,10 @@ shandev/
 │   ├── berkas_helper.php, helper_log.php, page_loader.php
 │   ├── proses_transaksi.php, toggle_maintenance.php, auto_update_laporan.php
 │   ├── laporan_mingguan_data.php        # Perhitungan laporan mingguan (dipakai layar + PDF)
+│   ├── db_adapter.php                   # Adapter DB: 2 driver (Supabase/pgsql + MySQL lokal)
+│   ├── sync_config.php, sync_engine.php # Konfigurasi & engine sinkronisasi 2 arah
+├── config/                              # Kredensial lokal (tidak di-commit)
+│   ├── local.php, local.example.php
 ├── print/ (10)                          # Cetak PDF
 │   ├── cetak_bast.php, cetak_keuangan.php, cetak_kwitansi.php
 │   ├── cetak_laporan_harian.php, cetak_pembatalan.php
@@ -274,6 +280,45 @@ Memantau & menyaring status KPR seluruh transaksi.
 - **Tahap KPR per modul:** BPHTB, Tapera, Trilogi, SIKUMB (Belum/Sudah)
 - **Rentang tanggal akad:** dari – sampai
 - **Badge Aktif:** filter yang dipilih tampil sebagai badge (hapus satu per satu / "Bersihkan Semua"), tombol **Reset**, penghitung jumlah baris hasil. Setelah edit status massal/tunggal, filter aktif tetap tersimpan.
+
+---
+
+### 20. Sinkronisasi Data (`sinkronisasi.php`) - **BARU**
+Menyalin data antara **dua** database:
+
+| Sisi | Database | Dipakai untuk |
+|------|----------|---------------|
+| **OFFLINE** | MySQL lokal XAMPP (`db_perumahan`) |_input harian saat jaringan down_ |
+| **ONLINE** | Supabase (PostgreSQL) | _server produksi / aplikasi mobile_ |
+
+**Cara kerja:** upsert berbasis primary key (`id` ikut tersalin), sehingga aman dijalankan berkali-kali.
+- MySQL: `INSERT ... ON DUPLICATE KEY UPDATE`
+- PostgreSQL: `INSERT ... ON CONFLICT (pk) DO UPDATE SET ... = EXCLUDED...`
+
+**Halaman `sinkronisasi.php` (Super Admin):**
+| Tombol | Arah |
+|--------|------|
+| Tarik Online → Offline | data Supabase disalin ke MySQL lokal |
+| Kirim Offline → Online | data MySQL lokal dikirim ke Supabase |
+| Sinkron Dua Arah | tarik dulu, lalu kirim |
+
+Tersedia juga **Dry run** (hitung saja), pilihan **kebijakan konflik** (overwrite / skip / newest),
+pilihan per tabel, dan **hapus baris** yang tidak ada di sisi sumber.
+
+**Command line** (`C:\xampp\php\php.exe sync.php ...`):
+```
+php sync.php status              ringkasan jumlah baris di kedua sisi
+php sync.php push                OFFLINE -> ONLINE
+php sync.php pull                ONLINE -> OFFLINE
+php sync.php both                pull lalu push
+php sync.php fix                 perbaiki AUTO_INCREMENT MySQL lokal
+```
+Opsi: `--tables=a,b` · `--policy=overwrite|skip|newest` · `--delete-missing` · `--dry-run` · `--all`
+
+**Catatan:**
+- Hanya tabel **base** yang disinkronkan; view (`data_rumah`, `data_cluster`, dst) dibaca dari tabel base sehingga ikut terupdate.
+- Tabel `users`, `user_sesi`, `push_subscriptions`, `transaksi` (legacy) tidak ikut secara default (opsional lewat `--all`).
+- Riwayat tersimpan di tabel `sync_state` (waktu sinkron terakhir) dan `sync_log` (detail per tabel).
 
 ---
 

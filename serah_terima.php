@@ -25,9 +25,12 @@ if (isset($_POST['simpan_bast'])) {
 
     $query = "INSERT INTO data_bast (id_transaksi, no_bast, tgl_serah_terima, status_retensi, catatan_komplain)
               VALUES ('$id_transaksi', '$no_bast', '$tgl_serah', '$status_r', '$catatan')";
-    sdb_query($koneksi, $query);
-    header("Location: serah_terima.php");
-    exit();
+    if (sdb_query($koneksi, $query) === false) {
+        echo "<script>alert(" . json_encode('Gagal menyimpan BAST: ' . sdb_error($koneksi)) . ");</script>";
+    } else {
+        header("Location: serah_terima.php");
+        exit();
+    }
 }
 
 // Logika Edit BAST
@@ -39,15 +42,19 @@ if (isset($_POST['edit_bast'])) {
     $status_r     = sdb_real_escape_string($koneksi, $_POST['status_retensi']);
     $catatan      = sdb_real_escape_string($koneksi, $_POST['catatan_komplain']);
 
-    sdb_query($koneksi, "UPDATE data_bast SET
+    $ok = sdb_query($koneksi, "UPDATE data_bast SET
                             id_transaksi = '$id_transaksi',
                             no_bast = '$no_bast',
                             tgl_serah_terima = '$tgl_serah',
                             status_retensi = '$status_r',
                             catatan_komplain = '$catatan'
                             WHERE id_bast = '$id_bast'");
-    header("Location: serah_terima.php");
-    exit();
+    if ($ok === false) {
+        echo "<script>alert(" . json_encode('Gagal mengubah BAST: ' . sdb_error($koneksi)) . ");</script>";
+    } else {
+        header("Location: serah_terima.php");
+        exit();
+    }
 }
 
 // Logika Hapus BAST
@@ -57,9 +64,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
         die("Token keamanan tidak valid.");
     }
     $id_hapus = intval($_GET['id']);
-    sdb_query($koneksi, "DELETE FROM data_bast WHERE id_bast = '$id_hapus'");
-    header("Location: serah_terima.php");
-    exit();
+    if (sdb_query($koneksi, "DELETE FROM data_bast WHERE id_bast = '$id_hapus'") === false) {
+        echo "<script>alert(" . json_encode('Gagal menghapus BAST: ' . sdb_error($koneksi)) . ");</script>";
+    } else {
+        header("Location: serah_terima.php");
+        exit();
+    }
 }
 ?>
 <!DOCTYPE html>

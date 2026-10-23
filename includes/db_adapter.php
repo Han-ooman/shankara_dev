@@ -182,21 +182,22 @@ function dbx_unique_indexes(PDO $pdo, string $table): array {
 
 /* Tulis-ulang statement yang menyasar view aplikasi -> tabel dasar PG.
  * Mendukung INSERT INTO <view> / UPDATE <view> / DELETE FROM <view> dan
- * pemetaan alias kolom (mis. data_bi_checking: tgl_cek -> tgl_pengajuan). */
-function dbx_rewrite_views(string $sql): string {
+ * pemetaan alias kolom (mis. data_bi_checking: tgl_cek -> tgl_pengajuan).
+ * $q = karakter quote identifier: '"' untuk PostgreSQL, '`' untuk MySQL. */
+function dbx_rewrite_views(string $sql, string $q = '"'): string {
     foreach (dbx_view_write_map() as $view => $conf) {
         $base = $conf['base'];
         $alias = $conf['alias'];
-        $hit = preg_match('/^\s*(INSERT\s+INTO|REPLACE\s+INTO|UPDATE|DELETE\s+FROM)\s+"?' . preg_quote($view, '/') . '"?\b/is', $sql);
+        $hit = preg_match('/^\s*(INSERT\s+INTO|REPLACE\s+INTO|UPDATE|DELETE\s+FROM)\s+["`]?' . preg_quote($view, '/') . '["`]?\b/is', $sql);
         if (!$hit) continue;
 
         // 1. target -> tabel dasar
-        $sql = preg_replace('/^(\s*(?:INSERT\s+INTO|REPLACE\s+INTO|UPDATE|DELETE\s+FROM)\s+)"?' . preg_quote($view, '/') . '"?\b/i',
-            '$1"' . $base . '"', $sql);
+        $sql = preg_replace('/^(\s*(?:INSERT\s+INTO|REPLACE\s+INTO|UPDATE|DELETE\s+FROM)\s+)["`]?' . preg_quote($view, '/') . '["`]?\b/i',
+            '$1' . $q . $base . $q, $sql);
 
         // 2. alias kolom di daftar kolom INSERT/REPLACE
         if ($alias) {
-            if (preg_match('/^\s*INSERT\s+INTO\s+"?' . preg_quote($base, '/') . '"?\s*\(([^)]*)\)/is', $sql, $cm, PREG_OFFSET_CAPTURE)) {
+            if (preg_match('/^\s*INSERT\s+INTO\s+["`]?' . preg_quote($base, '/') . '["`]?\s*\(([^)]*)\)/is', $sql, $cm, PREG_OFFSET_CAPTURE)) {
                 list($colsRaw, $colsOff) = $cm[1];
                 $cols = array_map(function ($c) use ($alias) {
                     $c = trim($c);
@@ -589,7 +590,11 @@ class sdb {
 
     /** Terjemahkan SQL MySQL -> PostgreSQL (hanya untuk driver pgsql). */
     private function translate(string $sql, ?PDO $pdo = null): string {
-        if ($this->driver === 'mysql') return $sql; // MySQL berjalan dengan SQL aslinya
+        if ($this->driver === 'mysql') {
+            // MySQL: view aplikasi (data_rumah, data_cluster, ...) tidak bisa
+            // ditulis langsung -> arahkan ke tabel dasar (sama seperti PG).
+            return dbx_rewrite_views($sql, '`');
+        }
         return dbx_translate($sql, $pdo);
     }
 
