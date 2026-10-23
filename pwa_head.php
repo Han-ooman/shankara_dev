@@ -11,3 +11,9 @@
 <link rel="apple-touch-icon" href="assets/images/favicon/icon-192.png">
 <link rel="stylesheet" href="assets/css/app.css">
 <script defer src="assets/js/push_client.js"></script>
+
+<!-- Vercel Web Analytics -->
+<script>
+  window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+</script>
+<script defer src="/_vercel/insights/script.js"></script>
