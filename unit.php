@@ -238,6 +238,9 @@ $filter_tipe    = isset($_GET['tipe']) ? sdb_real_escape_string($koneksi, $_GET[
                     <button type="submit" class="btn btn-filter-pill w-100 d-flex align-items-center justify-content-center gap-2">
                         <i class="bi bi-funnel-fill"></i> Filter
                     </button>
+                    <button type="button" class="btn btn-outline-secondary d-flex align-items-center justify-content-center rounded-circle" style="width: 38px; height: 38px; min-width: 38px;" id="btnExportExcelUnit" title="Export Excel">
+                        <i class="bi bi-file-earmark-excel"></i>
+                    </button>
                     <button type="button" class="btn btn-outline-secondary d-flex align-items-center justify-content-center rounded-circle" style="width: 38px; height: 38px; min-width: 38px;" id="btnExportPdfUnit" title="Export PDF">
                         <i class="bi bi-file-earmark-pdf"></i>
                     </button>
@@ -507,6 +510,19 @@ $filter_tipe    = isset($_GET['tipe']) ? sdb_real_escape_string($koneksi, $_GET[
                         window.open('print/cetak_unit.php?' + params.toString(), '_blank');
                     } else {
                         window.open('print/cetak_unit.php', '_blank');
+                    }
+                });
+            }
+
+            const btnExportXls = document.getElementById('btnExportExcelUnit');
+            if (btnExportXls) {
+                btnExportXls.addEventListener('click', function () {
+                    const form = btnExportXls.closest('form');
+                    if (form) {
+                        const params = new URLSearchParams(new FormData(form));
+                        window.location.href = 'print/export_unit.php?' + params.toString();
+                    } else {
+                        window.location.href = 'print/export_unit.php';
                     }
                 });
             }
