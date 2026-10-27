@@ -24,6 +24,8 @@ var/logs/*
 sess_*
 session_*
 *.session
+# Pengecualian: file kode handler sesi (bukan file data sesi)
+!includes/session_db.php
 
 # IDE & Editor
 .idea/
