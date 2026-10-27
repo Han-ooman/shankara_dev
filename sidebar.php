@@ -44,6 +44,11 @@ role_guard();
         <?php if (role_menu_izin($__role, 'tipe_rumah.php')): ?>
         <a href="tipe_rumah.php" class="nav-link-custom <?= $currentPage === 'tipe_rumah.php' ? 'active' : '' ?>"><i class="bi bi-houses"></i> Tipe Rumah & Paket</a>
         <?php endif; ?>
+        <?php if (role_menu_izin($__role, 'simulasi_kredit.php')): ?>
+        <a href="simulasi_kredit.php" class="nav-link-custom <?= $currentPage === 'simulasi_kredit.php' ? 'active' : '' ?>">
+            <i class="bi bi-calculator"></i> Simulasi Kredit KPR
+        </a>
+        <?php endif; ?>
         <?php if (role_menu_izin($__role, 'transaksi.php')): ?>
         <a href="transaksi.php" class="nav-link-custom <?= $currentPage === 'transaksi.php' ? 'active' : '' ?>">
             <i class="bi bi-file-earmark-text"></i> Transaksi

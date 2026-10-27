@@ -20,6 +20,7 @@ if (!function_exists('role_peta_halaman')) {
             'cluster.php'            => ['Super Admin', 'Pengawas Lapangan', 'Kasir Keuangan'],
             'unit.php'               => ['Super Admin', 'Pengawas Lapangan', 'Kasir Keuangan'],
             'tipe_rumah.php'         => ['Super Admin', 'Pengawas Lapangan', 'Admin Pemberkasan', 'Kasir Keuangan'],
+            'simulasi_kredit.php'    => ['Super Admin', 'Pengawas Lapangan', 'Admin Pemberkasan', 'Kasir Keuangan'],
             'transaksi.php'          => ['Super Admin', 'Kasir Keuangan'],
             'rencana_akad.php'       => ['Super Admin', 'Admin Pemberkasan', 'Kasir Keuangan'],
             'bi_checking.php'        => ['Super Admin', 'Admin Pemberkasan', 'Kasir Keuangan'],
