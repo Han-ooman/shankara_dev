@@ -74,3 +74,6 @@ function reset_login_fails($key) {
 function login_locked($key, $max = 5) {
     return (($_SESSION[$key] ?? 0) >= $max);
 }
+
+// Sesi PHP disimpan di DATABASE (anti-hilang di Vercel serverless /tmp).
+require_once __DIR__ . '/session_db.php';

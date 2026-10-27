@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../includes/session_db.php'; // sesi via DB (Vercel-safe)
 session_start();
 if (!isset($_SESSION['status_login']) || $_SESSION['status_login'] !== true) {
     header("Location: ../login.php");

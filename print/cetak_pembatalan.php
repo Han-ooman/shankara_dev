@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../includes/session_db.php'; // sesi via DB (Vercel-safe)
 
 session_start();
 // Jika belum login, lempar kembali ke halaman login

@@ -1,6 +1,10 @@
 <?php
 // api/index.php — Front controller untuk Vercel + vercel-php.
 
+// Sesi PHP via DB — didaftarkan SEBELUM file target jalan (beberapa halaman
+// memanggil session_start() sebelum include koneksi, mis. print/*.php).
+require_once dirname(__DIR__) . '/includes/session_db.php';
+
 // Men-dispatch setiap request ke file PHP di root project.
 // File PHP root tidak bisa dijadikan serverless function langsung, jadi
 // semua path (di luar passthrough asset) diarahkan ke sini lewat vercel.json.
