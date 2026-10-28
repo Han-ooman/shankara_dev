@@ -464,6 +464,7 @@ body {
 [data-bs-theme="dark"] .modal-content {
     background: #161f36;
 }
+[data-bs-theme="dark"] .stat-card:not(.primary) { background-color: #161f36 !important; }
 
 [data-bs-theme="dark"] body,
 [data-bs-theme="dark"] body .main-wrapper { background-color: var(--bg-main); }
@@ -636,3 +637,177 @@ body {
 [data-bs-theme="dark"] .btn-outline-custom {
     background: #161f36; border-color: #2c3850; color: var(--text-dark);
 }
+
+/* ---------- DARK MODE: selaraskan utilita Bootstrap & permukaan putih ---------- */
+[data-bs-theme="dark"] .bg-white      { background-color: #161f36 !important; color: var(--text-dark) !important; }
+[data-bs-theme="dark"] .bg-light      { background-color: #161f36 !important; color: var(--text-dark) !important; border-color: #263350; }
+[data-bs-theme="dark"] .bg-light-blue { background-color: rgba(37, 99, 235, 0.16) !important; color: #93c5fd !important; }
+
+[data-bs-theme="dark"] .filter-card { background: #161f36; border-color: #263350; }
+
+[data-bs-theme="dark"] .card,
+[data-bs-theme="dark"] .card.border-0,
+[data-bs-theme="dark"] .card.bg-white {
+    background-color: #161f36;
+    border-color: #263350;
+    color: var(--text-dark);
+}
+
+/* Tombol "Batal" / navigasi bertanda btn-light -> versi gelap */
+[data-bs-theme="dark"] .btn-light,
+[data-bs-theme="dark"] .btn.btn-light,
+[data-bs-theme="dark"] a.btn-light,
+[data-bs-theme="dark"] .btn-light.btn {
+    background-color: #223050 !important; border-color: #2c3850 !important; color: #cbd5e1 !important;
+}
+[data-bs-theme="dark"] .btn-light:hover,
+[data-bs-theme="dark"] .btn.btn-light:hover,
+[data-bs-theme="dark"] a.btn-light:hover {
+    background-color: #2b3c60 !important; border-color: #35486f !important; color: #ffffff !important;
+}
+
+/* Badge kuning solid (TERBOOKING dsb) -> translucent agar selaras gelap */
+[data-bs-theme="dark"] .badge.bg-warning,
+[data-bs-theme="dark"] .badge.bg-warning.text-dark {
+    background-color: rgba(250, 204, 21, 0.16) !important;
+    color: #fde047 !important;
+}
+[data-bs-theme="dark"] .bg-warning:not(.btn):not(.progress-bar):not(.badge) {
+    background-color: rgba(250, 204, 21, 0.16) !important;
+}
+[data-bs-theme="dark"] .btn-warning.text-dark {
+    background-color: rgba(250, 204, 21, 0.18) !important;
+    color: #fde047 !important; border-color: rgba(250, 204, 21, 0.35);
+}
+
+/* Badge biru muda solid */
+[data-bs-theme="dark"] .badge.bg-info,
+[data-bs-theme="dark"] .badge.bg-info.text-dark {
+    background-color: rgba(56, 189, 248, 0.15) !important;
+    color: #67e8f9 !important;
+}
+[data-bs-theme="dark"] .bg-info:not(.btn):not(.progress-bar):not(.badge) {
+    background-color: rgba(56, 189, 248, 0.15) !important;
+}
+
+/* ID chip bertipe badge.bg-light -> slate */
+[data-bs-theme="dark"] .badge.bg-light {
+    background-color: #223050 !important;
+    color: #cbd5e1 !important;
+    border-color: #2c3850;
+}
+
+/* Progress bar kuning/biru di halaman karyawan dsb */
+[data-bs-theme="dark"] .progress-bar.bg-warning { background-color: #b45309 !important; color: #fff; }
+[data-bs-theme="dark"] .progress-bar.bg-info    { background-color: #0284c7 !important; }
+
+/* Footer modal putih (transaksi) -> gelap */
+[data-bs-theme="dark"] .modal-footer.bg-white,
+[data-bs-theme="dark"] .modal-footer.bg-light { background-color: #161f36 !important; }
+
+/* Pastikan tabel tidak mengangkat latar putih varian table-light */
+[data-bs-theme="dark"] .table { --bs-table-bg: transparent; --bs-table-color: var(--text-dark); }
+[data-bs-theme="dark"] .table :where(td, th, tr) { background-color: transparent; }
+
+/* ---------- Kartu filter dengan inline style #ffffff (konsumen, bi_checking) ---------- */
+[data-bs-theme="dark"] .card[style*="#fff"] { background-color: #161f36 !important; }
+
+/* ---------- Ikon statistik berlatar pastel (inline) ---------- */
+[data-bs-theme="dark"] .stat-icon[style*="#dbeafe"],
+[data-bs-theme="dark"] .stat-icon[style*="#eff6ff"] {
+    background: rgba(37, 99, 235, 0.18) !important; color: #93c5fd !important;
+}
+[data-bs-theme="dark"] .stat-icon[style*="#e0e7ff"] {
+    background: rgba(79, 70, 229, 0.22) !important; color: #a5b4fc !important;
+}
+[data-bs-theme="dark"] .stat-icon[style*="#f3f4f6"] {
+    background: rgba(148, 163, 184, 0.16) !important; color: #94a3b8 !important;
+}
+[data-bs-theme="dark"] .stat-icon[style*="#fef2f2"] {
+    background: rgba(239, 68, 68, 0.18) !important; color: #fca5a5 !important;
+}
+[data-bs-theme="dark"] .stat-icon[style*="#fff7ed"] {
+    background: rgba(234, 88, 12, 0.18) !important; color: #fdba74 !important;
+}
+
+/* ---------- Badge "Perlu Tindak Lanjut" (inline merah muda) ---------- */
+[data-bs-theme="dark"] .badge[style*="background"] {
+    background: rgba(239, 68, 68, 0.18) !important; color: #fca5a5 !important;
+}
+
+/* ---------- modal-body putih inline (index modalTransaksi) ---------- */
+[data-bs-theme="dark"] .modal-body[style*="#f8f9fa"],
+[data-bs-theme="dark"] .modal-body[style*="#fff"] { background-color: #161f36 !important; }
+
+/* ---------- Alert dinamis dari JS (warna alert dari Bootstrap) ---------- */
+[data-bs-theme="dark"] [style*="#f8d7da"] { background-color: rgba(239, 68, 68, 0.16) !important; color: #fca5a5 !important; }
+[data-bs-theme="dark"] [style*="#fff3cd"] { background-color: rgba(250, 204, 21, 0.14) !important; color: #fde047 !important; }
+[data-bs-theme="dark"] [style*="#d1e7dd"] { background-color: rgba(22, 163, 74, 0.16) !important; color: #86efac !important; }
+
+/* ---------- Tabel dengan CSS sendiri .table-shankara (transaksi) ---------- */
+[data-bs-theme="dark"] .table-shankara th {
+    background-color: #1b263f; color: #aab8ce;
+    border-bottom-color: #2c3850;
+}
+[data-bs-theme="dark"] .table-shankara td { border-bottom-color: #263350; }
+
+/* ---------- Mode kartu mobile (table-card-mode) ---------- */
+[data-bs-theme="dark"] .table-responsive.table-card-mode tbody tr {
+    background: #161f36; border-color: #263350;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+}
+[data-bs-theme="dark"] .table-responsive.table-card-mode tbody tr:hover { background: #1c2942; }
+[data-bs-theme="dark"] .table-responsive.table-card-mode tbody td { border-bottom: 1px dashed #2c3850; }
+[data-bs-theme="dark"] .table-responsive.table-card-mode tbody td::before { color: var(--text-muted); }
+
+/* ---------- Badge legend cluster & pengingat ---------- */
+[data-bs-theme="dark"] .badge-soft-warning-legacy,
+[data-bs-theme="dark"] .badge[style*="#fef9c3"],
+[data-bs-theme="dark"] .rem-badge-hariini {
+    background-color: rgba(250, 204, 21, 0.16) !important; color: #fde047 !important;
+}
+[data-bs-theme="dark"] .badge[style*="#fee2e2"],
+[data-bs-theme="dark"] .rem-badge-telat {
+    background-color: rgba(239, 68, 68, 0.16) !important; color: #fca5a5 !important;
+}
+
+/* ---------- Halaman TIPE RUMAH (kartu CSS sendiri) ---------- */
+[data-bs-theme="dark"] .tipe-card {
+    background: #161f36 !important; border-color: #263350 !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+[data-bs-theme="dark"] .tipe-card:hover { border-color: #3d5280 !important; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); }
+[data-bs-theme="dark"] .skema-tenor,
+[data-bs-theme="dark"] .ang-item {
+    background: #131c31 !important; border-color: #263350 !important;
+}
+[data-bs-theme="dark"] .tipe-card .tipe-card-body .border-bottom,
+[data-bs-theme="dark"] .tipe-card-foot { border-color: #263350 !important; }
+
+/* ---------- Halaman SIMULASI KREDIT (Tailwind) ---------- */
+[data-bs-theme="dark"] .simcalc-wrap { background: #131c31; color: var(--text-dark); }
+[data-bs-theme="dark"] .bg-white\/80,
+[data-bs-theme="dark"] .bg-slate-50\/80 { background-color: #161f36 !important; }
+[data-bs-theme="dark"] .bg-slate-50   { background-color: #1b263f !important; }
+[data-bs-theme="dark"] .bg-slate-100  { background-color: #1b263f !important; }
+[data-bs-theme="dark"] .bg-slate-200  { background-color: #2c3850 !important; }
+[data-bs-theme="dark"] .bg-brand-50   { background-color: rgba(37, 99, 235, 0.16) !important; }
+[data-bs-theme="dark"] .bg-brand-600  { background-color: #2563eb !important; }
+[data-bs-theme="dark"] .bg-emerald-50,
+[data-bs-theme="dark"] .bg-emerald-50\/80 { background-color: rgba(22, 163, 74, 0.14) !important; }
+[data-bs-theme="dark"] .bg-amber-100  { background-color: rgba(250, 204, 21, 0.16) !important; }
+[data-bs-theme="dark"] .text-slate-800,
+[data-bs-theme="dark"] .text-slate-700,
+[data-bs-theme="dark"] .text-slate-900 { color: #e2e8f0 !important; }
+[data-bs-theme="dark"] .text-brand-700,
+[data-bs-theme="dark"] .text-brand-900 { color: #93c5fd !important; }
+[data-bs-theme="dark"] .text-amber-800 { color: #fde047 !important; }
+[data-bs-theme="dark"] .text-emerald-800,
+[data-bs-theme="dark"] .text-emerald-900 { color: #86efac !important; }
+[data-bs-theme="dark"] .border-slate-200,
+[data-bs-theme="dark"] .border-slate-300,
+[data-bs-theme="dark"] .border-slate-200\/80,
+[data-bs-theme="dark"] .border-slate-200\/90 { border-color: #2c3850 !important; }
+[data-bs-theme="dark"] .border-emerald-100,
+[data-bs-theme="dark"] .border-emerald-200,
+[data-bs-theme="dark"] .border-emerald-300 { border-color: rgba(22, 163, 74, 0.35) !important; }
