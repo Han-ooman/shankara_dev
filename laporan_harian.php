@@ -322,14 +322,11 @@ $filter_params = http_build_query(array_filter([
                                     <div class="d-flex gap-1">
                                         <?php if ($row['status'] !== 'Selesai'): ?>
                                         <!-- Tombol cepat: tandai SELESAI tanpa modal -->
-                                        <form method="POST" action="laporan_harian.php" class="d-inline" onsubmit="return confirm('Tandai kegiatan ini SELESAI?')">
-                                            <?= csrf_field() ?>
-                                            <input type="hidden" name="selesai_laporan" value="1">
-                                            <input type="hidden" name="id_laporan" value="<?= $row['id'] ?>">
-                                            <button type="submit" class="btn btn-sm btn-outline-success rounded-pill px-2" title="Tandai Selesai">
-                                                <i class="bi bi-check-lg"></i>
-                                            </button>
-                                        </form>
+                                        <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-2" title="Tandai Selesai"
+                                                data-bs-toggle="modal" data-bs-target="#modalSelesai"
+                                                data-id="<?= $row['id'] ?>" data-judul="<?= htmlspecialchars($row['judul_kegiatan']) ?>">
+                                            <i class="bi bi-check-lg"></i>
+                                        </button>
                                         <?php endif; ?>
                                         <button class="btn btn-sm btn-outline-primary rounded-pill px-2" data-bs-toggle="modal" data-bs-target="#modalEdit<?= $row['id'] ?>" title="Edit">
                                             <i class="bi bi-pencil"></i>
@@ -420,6 +417,33 @@ $filter_params = http_build_query(array_filter([
     </div>
 </div>
 
+<!-- MODAL KONFIRMASI: TANDAI SELESAI -->
+<div class="modal fade" id="modalSelesai" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:12px;">
+            <div class="modal-header text-white" style="background-color: var(--primary-blue);">
+                <h5 class="modal-title fw-bold"><i class="bi bi-check-circle me-2"></i>Tandai Selesai</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formSelesai" action="laporan_harian.php" method="POST">
+                <?= csrf_field() ?>
+                <input type="hidden" name="selesai_laporan" value="1">
+                <input type="hidden" name="id_laporan" id="selesaiId" value="">
+                <div class="modal-body p-4">
+                    <p class="mb-1">Tandai kegiatan ini sebagai <span class="fw-bold text-success">SELESAI</span>?</p>
+                    <p class="text-muted small mb-0" id="selesaiJudul"></p>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-green px-4 rounded-pill" style="color:#fff !important">
+                        <i class="bi bi-check-lg me-1"></i>Ya, Selesaikan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- MODAL TAMBAH -->
 <div class="modal fade" id="modalTambah" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -491,6 +515,19 @@ $filter_params = http_build_query(array_filter([
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="assets/js/app.js"></script>
+<script>
+// isi modal konfirmasi TANDAI SELESAI sesuai baris yang diklik
+document.addEventListener('DOMContentLoaded', function () {
+    var modalSelesai = document.getElementById('modalSelesai');
+    if (!modalSelesai) return;
+    modalSelesai.addEventListener('show.bs.modal', function (ev) {
+        var btn = ev.relatedTarget;
+        if (!btn) return;
+        modalSelesai.querySelector('#selesaiId').value = btn.getAttribute('data-id') || '';
+        modalSelesai.querySelector('#selesaiJudul').textContent = btn.getAttribute('data-judul') || '';
+    });
+});
+</script>
 <script>
 (function() {
     function updateStats(data) {
