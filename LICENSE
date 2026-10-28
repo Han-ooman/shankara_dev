@@ -1,0 +1,58 @@
+SHANKARA_DEV — PERUMAHAN GOLDEN SHANKARA INDONESIA
+Lisensi Proprietary (Hak Penuh Seluruhnya)
+Copyright (c) 2026 Han-ooman. Seluruh Hak Dilindungi.
+
+═══════════════════════════════════════════════════════════════════
+PERINGATAN PENTING — BACA SEBELUM MENGAKSES KODE SUMBER INI
+═══════════════════════════════════════════════════════════════════
+
+Kode sumber (source code), aset, desain, logika bisnis, dan seluruh
+dokumen dalam repositori ini DILINDUNGI oleh hukum hak cipta
+(Copyright Law) dan ketentuan internasional terkait.
+
+Pemilik hak cipta TIDAK memberikan izin penggunaan, penyalinan,
+modifikasi, distribusi, sublicensi, maupun penjualan kode sumber
+ini kepada siapa pun, DALAM BENTUK APA PUN, tanpa izin tertulis
+terlebih dahulu dari pemilik.
+
+YANG DIIZINKAN (SECARA TERBATAS):
+  1. Melihat (view) kode sumber di repositori publik ini untuk
+     tujuan tinjauan (review) atau pembelajaran non-komersial.
+  2. Kontribusi kode melalui Pull Request yang diterima pemilik,
+     dengan kesepakatan bahwa seluruh kontribusi menjadi hak milik
+     penuh pemilik repositori.
+
+YANG DILARANG TANPA IZIN TERTULIS:
+  1. Menyalin (copy) sebagian atau seluruh kode/dokumen untuk
+     proyek apa pun, komersial maupun non-komersial.
+  2. Membuat karya turunan (derivative work) atas dasar kode ini.
+  3. Mendistribusikan ulang, mempublikasikan (misalnya fork di
+     luar GitHub untuk dipakai deployment sendiri), atau
+     mengunggah ulang ke server/layanan lain.
+  4. Menghilangkan atau mengubah tanda kepemilikan (copyright,
+     catatan kepemilikan) di dalam kode.
+  5. Menggunakan kode ini secara langsung maupun tidak langsung
+     untuk mengembangkan produk/jasa yang serupa atau kompetitif.
+
+DATA BISNIS:
+  Kode ini dirancang berjalan bersama data bisnis nyata (transaksi,
+  konsumen, unit perumahan). Skema & struktur database merupakan
+  rahasia dagang pemilik. Dilarang menyalin struktur database
+  tersebut untuk keperluan lain.
+
+PERMOHONAN IZIN:
+  Untuk izin khusus (misalnya kustomisasi internal, integrasi, atau
+  pengembangan bersama), hubungi pemilik repositori sesuai kontak
+  di profil GitHub atau melalui tombol "Issues" repositori ini.
+  Penggunaan apa pun di luar batas yang diizinkan di atas tanpa
+  izin tertulis merupakan pelanggaran hak cipta.
+
+DISCLAIMER:
+  Kode ini disediakan "SEBAGAIMANA ADANYA" (AS IS) TANPA JAMINAN
+  APA PUN, baik tersurat maupun tersirat. Pemilik tidak bertanggung
+  jawab atas kerusakan, kehilangan data, atau akibat lain yang
+  muncul dari penggunaan kode ini tanpa izin.
+
+═══════════════════════════════════════════════════════════════════
+SPDX-License-Identifier: LicenseRef-Proprietary-All-Rights-Reserved
+═══════════════════════════════════════════════════════════════════
