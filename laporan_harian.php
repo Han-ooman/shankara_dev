@@ -1,12 +1,14 @@
 <?php
 
+// Koneksi dulu: meregistrasi handler sesi DB (penting agar sesi konsisten lintas instance)
+include "includes/koneksi.php";
+
 session_start();
 if (!isset($_SESSION['status_login']) || $_SESSION['status_login'] !== true) {
     header("Location: login.php");
     exit();
 }
 include "includes/cek_sesi.php";
-include "includes/koneksi.php";
 
 // Proteksi CSRF global untuk semua aksi POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrf_verify()) {
@@ -60,6 +62,21 @@ if (isset($_POST['edit_laporan'])) {
 
     sdb_query($koneksi, "UPDATE data_laporan_harian SET tanggal='$tanggal', kategori='$kategori', nama_lengkap='$nama', judul_kegiatan='$judul', detail_kegiatan='$detail', jam_mulai=$jam_mulai, jam_selesai=$jam_selesai, status='$status', catatan='$catatan' WHERE id=$id");
     header("Location: laporan_harian.php");
+    exit();
+}
+
+// Tandai Selesai langsung (tanpa modal edit)
+if (isset($_POST['selesai_laporan'])) {
+    $id = intval($_POST['id_laporan']);
+    // Waktu selesai diisi JAM SEKARANG bila masih kosong, agar kolom Jam tetap logis
+    sdb_query($koneksi, "UPDATE data_laporan_harian
+                         SET status = 'Selesai',
+                             jam_selesai = COALESCE(jam_selesai, now()::time),
+                             updated_at = NOW()
+                         WHERE id = $id");
+    // Kembali ke halaman dengan filter yang sama bila ada
+    $__qs = http_build_query($_GET);
+    header("Location: laporan_harian.php" . ($__qs ? "?$__qs" : ""));
     exit();
 }
 
@@ -303,6 +320,17 @@ $filter_params = http_build_query(array_filter([
                                 <td><span class="text-muted small text-truncate" style="max-width:150px; display:block;"><?= htmlspecialchars($row['catatan'] ?? '') ?></span></td>
                                 <td>
                                     <div class="d-flex gap-1">
+                                        <?php if ($row['status'] !== 'Selesai'): ?>
+                                        <!-- Tombol cepat: tandai SELESAI tanpa modal -->
+                                        <form method="POST" action="laporan_harian.php" class="d-inline" onsubmit="return confirm('Tandai kegiatan ini SELESAI?')">
+                                            <?= csrf_field() ?>
+                                            <input type="hidden" name="selesai_laporan" value="1">
+                                            <input type="hidden" name="id_laporan" value="<?= $row['id'] ?>">
+                                            <button type="submit" class="btn btn-sm btn-outline-success rounded-pill px-2" title="Tandai Selesai">
+                                                <i class="bi bi-check-lg"></i>
+                                            </button>
+                                        </form>
+                                        <?php endif; ?>
                                         <button class="btn btn-sm btn-outline-primary rounded-pill px-2" data-bs-toggle="modal" data-bs-target="#modalEdit<?= $row['id'] ?>" title="Edit">
                                             <i class="bi bi-pencil"></i>
                                         </button>
