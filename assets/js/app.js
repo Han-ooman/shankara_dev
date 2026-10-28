@@ -125,3 +125,34 @@
         });
     }
 })();
+
+/* ===== TEMA GELAP / TERANG ===== */
+(function () {
+    'use strict';
+    var KEY = 'sd-theme';
+
+    function applyLabel() {
+        var dark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+        document.querySelectorAll('#themeToggleBtn .theme-toggle-label').forEach(function (el) {
+            el.textContent = dark ? 'Tema Terang' : 'Tema Gelap';
+        });
+        var btn = document.getElementById('themeToggleBtn');
+        if (btn) btn.setAttribute('data-theme-label', dark ? 'Tema Terang' : 'Tema Gelap');
+    }
+
+    function setTheme(t) {
+        if (t === 'dark') document.documentElement.setAttribute('data-bs-theme', 'dark');
+        else document.documentElement.removeAttribute('data-bs-theme');
+        try { localStorage.setItem(KEY, t); } catch (e) {}
+        applyLabel();
+    }
+
+    var btn = document.getElementById('themeToggleBtn');
+    if (btn) {
+        applyLabel();
+        btn.addEventListener('click', function () {
+            var dark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+            setTheme(dark ? 'light' : 'dark');
+        });
+    }
+})();

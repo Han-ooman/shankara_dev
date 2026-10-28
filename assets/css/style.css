@@ -435,3 +435,204 @@ body {
     body { background: #fff; }
     .content-card { box-shadow: none; border: 1px solid #ddd; }
 }
+
+/* =============================================
+   TEMA GELAP (DARK MODE)
+   Aktif via <html data-bs-theme="dark"> — juga ikut
+   mem-dark-kan komponen bawaan Bootstrap 5.3
+   (tabel, modal, dropdown, form, dll.)
+   ============================================= */
+[data-bs-theme="dark"] {
+    --bg-main: #0f172a;
+    --sidebar-bg: #131c31;
+    --light-blue: rgba(37, 99, 235, 0.16);
+    --text-dark: #e2e8f0;
+    --text-muted: #94a3b8;
+    --card-radius: 18px;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 18px rgba(0, 0, 0, 0.30);
+    --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.35), 0 10px 28px rgba(0, 0, 0, 0.32);
+    --shadow-lg: 0 12px 36px rgba(0, 0, 0, 0.45), 0 4px 10px rgba(0, 0, 0, 0.35);
+    --shadow-hover: 0 14px 34px rgba(37, 99, 235, 0.25), 0 4px 12px rgba(0, 0, 0, 0.35);
+    color-scheme: dark;
+}
+
+/* Permukaan */
+[data-bs-theme="dark"] .content-card,
+[data-bs-theme="dark"] .stat-card,
+[data-bs-theme="dark"] .search-input,
+[data-bs-theme="dark"] .search-input-pill,
+[data-bs-theme="dark"] .modal-content {
+    background: #161f36;
+}
+
+[data-bs-theme="dark"] body,
+[data-bs-theme="dark"] body .main-wrapper { background-color: var(--bg-main); }
+
+[data-bs-theme="dark"] .text-dark { color: var(--text-dark) !important; }
+[data-bs-theme="dark"] h1, [data-bs-theme="dark"] h2, [data-bs-theme="dark"] h3,
+[data-bs-theme="dark"] h4, [data-bs-theme="dark"] h5, [data-bs-theme="dark"] h6,
+[data-bs-theme="dark"] .fw-bold, [data-bs-theme="dark"] strong {
+    color: inherit;
+}
+
+[data-bs-theme="dark"] .text-muted { color: var(--text-muted) !important; }
+
+[data-bs-theme="dark"] .stat-value { color: var(--text-dark); }
+[data-bs-theme="dark"] .text-muted-custom { color: rgba(226, 232, 240, 0.62) !important; }
+[data-bs-theme="dark"] .stat-card .fw-bold.text-dark { color: var(--text-dark) !important; }
+
+/* Sidebar */
+[data-bs-theme="dark"] .sidebar {
+    background: var(--sidebar-bg);
+    border-right-color: rgba(148, 163, 184, 0.14);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.45);
+}
+[data-bs-theme="dark"] .sidebar .text-muted-custom { color: #7d8ca6 !important; }
+[data-bs-theme="dark"] .nav-link-custom { color: #b6c2d8 !important; }
+[data-bs-theme="dark"] .nav-link-custom:hover {
+    background-color: var(--light-blue);
+    color: #93c5fd !important;
+}
+[data-bs-theme="dark"] .nav-link-custom.active {
+    background: var(--primary-blue);
+    color: #ffffff !important;
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.35);
+}
+[data-bs-theme="dark"] .brand-logo { color: #f1f5f9; }
+
+/* Tabel */
+[data-bs-theme="dark"] .table thead th {
+    background-color: #1b263f;
+    color: #aab8ce;
+    border-bottom-color: #2c3850;
+}
+[data-bs-theme="dark"] .filters-row th {
+    background-color: #1b263f;
+    border-bottom-color: #2c3850;
+}
+[data-bs-theme="dark"] .table td { border-color: #263350; }
+[data-bs-theme="dark"] .table tbody tr:hover { background-color: #1c2942; }
+
+/* Form */
+[data-bs-theme="dark"] .form-control,
+[data-bs-theme="dark"] .form-select {
+    background-color: #121a2e;
+    border-color: #2c3850;
+    color: #e2e8f0;
+}
+[data-bs-theme="dark"] .form-control::placeholder,
+[data-bs-theme="dark"] .filters-row .form-control::placeholder { color: #64748b; }
+[data-bs-theme="dark"] .form-control:focus,
+[data-bs-theme="dark"] .form-select:focus {
+    background-color: #121a2e;
+    color: #f1f5f9;
+    border-color: var(--primary-blue);
+}
+[data-bs-theme="dark"] .form-label { color: var(--text-dark); }
+[data-bs-theme="dark"] .form-check-label { color: var(--text-dark); }
+
+/* Mempermudah komponen Bootstrap lain di mode gelap */
+[data-bs-theme="dark"] .modal-header,
+[data-bs-theme="dark"] .modal-footer { border-color: #263350; }
+[data-bs-theme="dark"] .table-light > thead th,
+[data-bs-theme="dark"] .table-light { background-color: transparent; }
+[data-bs-theme="dark"] .page-link {
+    background-color: transparent;
+    color: var(--text-muted);
+}
+[data-bs-theme="dark"] .page-link:hover { background: var(--light-blue); color: #93c5fd; }
+[data-bs-theme="dark"] .page-item.active .page-link { background: var(--primary-blue); color: #fff; }
+[data-bs-theme="dark"] .checklist-group-title { border-bottom-color: rgba(37, 99, 235, 0.25); }
+[data-bs-theme="dark"] .filter-chip { border-color: rgba(37, 99, 235, 0.45) !important; }
+[data-bs-theme="dark"] .btn-close { filter: invert(1) grayscale(100%) brightness(200%); }
+[data-bs-theme="dark"] .btn-outline-primary { color: #93c5fd; border-color: #2f4d8f; }
+[data-bs-theme="dark"] .btn-outline-primary:hover { background-color: var(--primary-blue); border-color: var(--primary-blue); }
+[data-bs-theme="dark"] .btn-outline-secondary {
+    color: var(--text-muted);
+    border-color: #2c3850;
+}
+[data-bs-theme="dark"] .btn-outline-secondary:hover { color: #f1f5f9; background: #1b263f; }
+[data-bs-theme="dark"] .btn-outline-danger { color: #fca5a5; border-color: #7f1d1d; }
+[data-bs-theme="dark"] .btn-outline-success { color: #86efac; border-color: #14532d; }
+[data-bs-theme="dark"] .btn-outline-success:hover {
+    background-color: #16a34a; border-color: #16a34a; color: #fff;
+}
+[data-bs-theme="dark"] .search-icon,
+[data-bs-theme="dark"] .search-icon-pill { color: var(--text-muted); }
+
+/* Ikon statistik (varian Bootstrap) */
+[data-bs-theme="dark"] .text-primary { color: #60a5fa !important; }
+[data-bs-theme="dark"] .text-success { color: #4ade80 !important; }
+[data-bs-theme="dark"] .text-warning { color: #facc15 !important; }
+[data-bs-theme="dark"] .text-danger { color: #f87171 !important; }
+[data-bs-theme="dark"] .text-info { color: #38bdf8 !important; }
+
+/* Badge / chip warna berlatar terang -> versi translucent agar selaras */
+[data-bs-theme="dark"] .badge.bg-white,
+[data-bs-theme="dark"] .bg-white.badge {
+    background-color: #223050 !important; color: #e2e8f0 !important;
+}
+[data-bs-theme="dark"] .badge-soft-success,
+[data-bs-theme="dark"] .badge-status-selesai,
+[data-bs-theme="dark"] .badge-status-proses,
+[data-bs-theme="dark"] .badge-kategori-keuangan,
+[data-bs-theme="dark"] .badge-kategori-admin {
+    background-color: rgba(37, 99, 235, 0.22) !important; color: #93c5fd !important;
+}
+[data-bs-theme="dark"] .badge-soft-warning,
+[data-bs-theme="dark"] .badge-status-belum,
+[data-bs-theme="dark"] .badge-kategori-lapangan {
+    background-color: rgba(250, 204, 21, 0.14) !important; color: #fde047 !important;
+}
+[data-bs-theme="dark"] .badge-status-terhambat {
+    background-color: rgba(239, 68, 68, 0.16) !important; color: #fca5a5 !important;
+}
+[data-bs-theme="dark"] .badge-soft-secondary,
+[data-bs-theme="dark"] .badge-kategori-operasional {
+    background-color: rgba(148, 163, 184, 0.16) !important; color: #cbd5e1 !important;
+}
+[data-bs-theme="dark"] .badge-kategori-marketing { background-color: rgba(236, 72, 153, 0.16) !important; color: #f9a8d4 !important; }
+[data-bs-theme="dark"] .badge-kategori-konten   { background-color: rgba(34, 211, 238, 0.14) !important; color: #67e8f9 !important; }
+[data-bs-theme="dark"] .bg-purple { background-color: rgba(139, 92, 246, 0.18) !important; color: #c4b5fd !important; }
+[data-bs-theme="dark"] .bg-pink   { background-color: rgba(236, 72, 153, 0.16) !important; color: #f9a8d4 !important; }
+
+/* Sidebar footer kartu gradien tetap, sedikit lebih gelap & halus */
+[data-bs-theme="dark"] .sidebar-footer {
+    background: linear-gradient(135deg, #142747, #1d4ed8) !important;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+/* Toggle tema (tombol bulat di dalam menu sidebar) */
+.theme-toggle {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px; border-radius: 12px;
+    background: transparent; border: 1px dashed rgba(148, 163, 184, 0.35);
+    width: 100%; text-align: left;
+    font-weight: 600; font-size: 0.88rem; color: #5b6b83 !important;
+    transition: all var(--transition-fast);
+}
+.nav-link-custom.theme-toggle { margin-bottom: 10px; }
+[data-bs-theme="dark"] .theme-toggle { color: #b6c2d8 !important; border-color: rgba(148, 163, 184, 0.3); }
+.theme-toggle:hover { background-color: var(--light-blue); }
+[data-bs-theme="dark"] .theme-toggle:hover { background-color: rgba(37, 99, 235, 0.2); }
+.theme-toggle i.bi-sun { display: none; color: #facc15; }
+.theme-toggle i.bi-moon { color: var(--primary-blue); }
+[data-bs-theme="dark"] .theme-toggle i.bi-sun { display: inline-block; }
+[data-bs-theme="dark"] .theme-toggle i.bi-moon { display: none; }
+
+/* Detail kecil di mode gelap */
+[data-bs-theme="dark"] ::-webkit-scrollbar-thumb { background: #334155; }
+[data-bs-theme="dark"] ::selection { background: rgba(37, 99, 235, 0.45); color: #eff6ff; }
+[data-bs-theme="dark"] .modal-content { color: var(--text-dark); }
+[data-bs-theme="dark"] .app-overlay { background: rgba(2, 6, 23, 0.65); }
+
+/* Jam dashboard (landing) */
+[data-bs-theme="dark"] .dash-clock {
+    background: linear-gradient(135deg, rgba(22, 42, 82, 0.9), rgba(15, 23, 42, 0.9));
+    border-color: #2c3850;
+}
+[data-bs-theme="dark"] .dash-clock .dc-time { color: #93c5fd; }
+[data-bs-theme="dark"] .dash-clock .dc-date { color: #60a5fa; }
+[data-bs-theme="dark"] .btn-outline-custom {
+    background: #161f36; border-color: #2c3850; color: var(--text-dark);
+}

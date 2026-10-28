@@ -4,6 +4,16 @@ $currentPage = basename($_SERVER['SCRIPT_FILENAME'] ?? '');
 $__role = $_SESSION['role'] ?? '';
 role_guard();
 ?>
+<!-- TEMA: terapkan pilihan tema SEBELUM konten dirender (anti kilat putih) -->
+<script>
+(function () {
+  try {
+    var t = localStorage.getItem('sd-theme');
+    if (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) t = 'dark';
+    if (t === 'dark') document.documentElement.setAttribute('data-bs-theme', 'dark');
+  } catch (e) {}
+})();
+</script>
 <!-- SIDEBAR LEFT -->
 <aside class="sidebar">
     <div class="sidebar-header">
@@ -166,6 +176,10 @@ role_guard();
 
         <!-- KELOMPOK 5: AKUN -->
         <div class="text-uppercase px-3 mt-4 mb-2 text-muted-custom" style="font-size: 0.7rem; letter-spacing: 1px;">Akun</div>
+        <button type="button" class="theme-toggle nav-link-custom" id="themeToggleBtn" data-theme-label="Tema Gelap">
+            <i class="bi bi-moon"></i><i class="bi bi-sun"></i>
+            <span class="theme-toggle-label">Tema Gelap</span>
+        </button>
         <a href="login.php" class="nav-link-custom text-danger" data-bs-toggle="modal" data-bs-target="#modalLogout">
             <i class="bi bi-box-arrow-right"></i> Keluar / Logout
         </a>
