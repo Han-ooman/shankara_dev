@@ -1,61 +1,25 @@
 <?php
-// includes/db_adapter.php — Adapter kompatibilitas sdb (API mysqli-ish)
-// Mendukung DUA driver dengan API yang sama:
-//   - 'pgsql' : Supabase (PostgreSQL)  -> koneksi ONLINE
-//   - 'mysql' : MySQL lokal (XAMPP)    -> koneksi OFFLINE
-// Menyediakan API mysqli-ish (sdb_connect, sdb_query, $koneksi->prepare, dll)
-// agar 60+ file PHP aplikasi tidak perlu diubah besar-besaran.
+// includes/db_adapter.php — Adapter kompatibilitas mysqli -> Supabase PostgreSQL (PDO pgsql)
+// Menyediakan API mysqli-ish (mysqli_connect, mysqli_query, $koneksi->prepare, dll)
+// di atas Supabase agar 60+ file PHP aplikasi tidak perlu diubah besar-besaran.
 // Catatan penting: ekstensi mysqli HARUS dinonaktifkan di php.ini agar definisi
 // fungsi/class di sini tidak fatal error karena redeclare.
 
 if (defined('DB_ADAPTER_VERSION')) return;
-define('DB_ADAPTER_VERSION', '2.0-dual');
+define('DB_ADAPTER_VERSION', '1.0-supabase');
 
 if (!defined('MYSQLI_ASSOC')) { define('MYSQLI_ASSOC', 1); define('MYSQLI_NUM', 2); define('MYSQLI_BOTH', 3); }
 
-/* =========================================================================
- *  KONFIGURASI DUAL DATABASE
- *  - ONLINE  : Supabase (PostgreSQL) -> SUPABASE_DSN / SUPABASE_USER / SUPABASE_PASSWORD
- *  - OFFLINE : MySQL lokal (XAMPP)   -> MYSQL_HOST / MYSQL_PORT / MYSQL_DATABASE /
- *                                          MYSQL_USER / MYSQL_PASSWORD
- *  Sumber kredensial (urutan prioritas):
- *  1. config/local.php (lokal, sudah di-gitignore)
- *  2. Environment variables (dipakai di Vercel)
- *  Contoh tersedia di config/local.example.php.
- * ========================================================================= */
+// Kredensial Supabase dibaca dari config/local.php (tidak ikut di-commit).
+// Contoh tersedia di config/local.example.php.
 $__local_config = dirname(__DIR__) . '/config/local.php';
-$__has_local_config = is_file($__local_config);
-if ($__has_local_config) {
+if (!defined('SUPABASE_DSN') && is_file($__local_config)) {
     require_once $__local_config;
 }
-if (!defined('SUPABASE_DSN') && getenv('SUPABASE_DSN')) {
-    define('SUPABASE_DSN', getenv('SUPABASE_DSN'));
-    define('SUPABASE_USER', getenv('SUPABASE_USER'));
-    define('SUPABASE_PASSWORD', getenv('SUPABASE_PASSWORD'));
-}
 if (!defined('SUPABASE_DSN') || !defined('SUPABASE_USER') || !defined('SUPABASE_PASSWORD')) {
-    throw new RuntimeException('Kredensial database online (Supabase) belum diatur. Salin config/local.example.php menjadi config/local.php lalu isi kredensialnya.');
+    throw new RuntimeException('Kredensial database belum diatur. Salin config/local.example.php menjadi config/local.php lalu isi kredensialnya.');
 }
-
-// ---- Kredensial MySQL lokal (offline) ----
-if (!defined('MYSQL_HOST'))     define('MYSQL_HOST',      getenv('MYSQL_HOST') ?: '127.0.0.1');
-if (!defined('MYSQL_PORT'))     define('MYSQL_PORT',      (int)(getenv('MYSQL_PORT') ?: 3306));
-if (!defined('MYSQL_DATABASE')) define('MYSQL_DATABASE',  getenv('MYSQL_DATABASE') ?: 'db_perumahan');
-if (!defined('MYSQL_USER'))     define('MYSQL_USER',      getenv('MYSQL_USER') ?: 'root');
-if (!defined('MYSQL_PASSWORD')) define('MYSQL_PASSWORD',  (string)(getenv('MYSQL_PASSWORD') ?: ''));
-if (!defined('MYSQL_CHARSET'))  define('MYSQL_CHARSET',   getenv('MYSQL_CHARSET') ?: 'utf8mb4');
-
-// ---- Mode aktif: 'offline' (MySQL lokal, default) atau 'online' (Supabase) ----
-if (!defined('DB_MODE')) {
-    $__mode = strtolower(trim((string)(getenv('DB_MODE') ?: '')));
-    if ($__mode === '') {
-        // Tanpa config lokal (mis. deployment Vercel) & kredensial Supabase dari
-        // env -> pakai koneksi ONLINE. Selebihnya -> MySQL lokal (OFFLINE).
-        $__mode = (!$__has_local_config && getenv('SUPABASE_DSN')) ? 'online' : 'offline';
-    }
-    define('DB_MODE', in_array($__mode, ['online', 'offline'], true) ? $__mode : 'offline');
-}
-unset($__local_config, $__has_local_config, $__mode);
+unset($__local_config);
 
 /* =========================================================================
  *  UTILITAS PARSER
@@ -182,22 +146,21 @@ function dbx_unique_indexes(PDO $pdo, string $table): array {
 
 /* Tulis-ulang statement yang menyasar view aplikasi -> tabel dasar PG.
  * Mendukung INSERT INTO <view> / UPDATE <view> / DELETE FROM <view> dan
- * pemetaan alias kolom (mis. data_bi_checking: tgl_cek -> tgl_pengajuan).
- * $q = karakter quote identifier: '"' untuk PostgreSQL, '`' untuk MySQL. */
-function dbx_rewrite_views(string $sql, string $q = '"'): string {
+ * pemetaan alias kolom (mis. data_bi_checking: tgl_cek -> tgl_pengajuan). */
+function dbx_rewrite_views(string $sql): string {
     foreach (dbx_view_write_map() as $view => $conf) {
         $base = $conf['base'];
         $alias = $conf['alias'];
-        $hit = preg_match('/^\s*(INSERT\s+INTO|REPLACE\s+INTO|UPDATE|DELETE\s+FROM)\s+["`]?' . preg_quote($view, '/') . '["`]?\b/is', $sql);
+        $hit = preg_match('/^\s*(INSERT\s+INTO|REPLACE\s+INTO|UPDATE|DELETE\s+FROM)\s+"?' . preg_quote($view, '/') . '"?\b/is', $sql);
         if (!$hit) continue;
 
         // 1. target -> tabel dasar
-        $sql = preg_replace('/^(\s*(?:INSERT\s+INTO|REPLACE\s+INTO|UPDATE|DELETE\s+FROM)\s+)["`]?' . preg_quote($view, '/') . '["`]?\b/i',
-            '$1' . $q . $base . $q, $sql);
+        $sql = preg_replace('/^(\s*(?:INSERT\s+INTO|REPLACE\s+INTO|UPDATE|DELETE\s+FROM)\s+)"?' . preg_quote($view, '/') . '"?\b/i',
+            '$1"' . $base . '"', $sql);
 
         // 2. alias kolom di daftar kolom INSERT/REPLACE
         if ($alias) {
-            if (preg_match('/^\s*INSERT\s+INTO\s+["`]?' . preg_quote($base, '/') . '["`]?\s*\(([^)]*)\)/is', $sql, $cm, PREG_OFFSET_CAPTURE)) {
+            if (preg_match('/^\s*INSERT\s+INTO\s+"?' . preg_quote($base, '/') . '"?\s*\(([^)]*)\)/is', $sql, $cm, PREG_OFFSET_CAPTURE)) {
                 list($colsRaw, $colsOff) = $cm[1];
                 $cols = array_map(function ($c) use ($alias) {
                     $c = trim($c);
@@ -463,9 +426,9 @@ function dbx_pg_describe_table(string $t): ?string {
 }
 
 /* =========================================================================
- *  CLASS sdb (compat) — connect adalah Supabase, bukan MySQL lama
+ *  CLASS mysqli (compat) — connect adalah Supabase, bukan MySQL lama
  * ========================================================================= */
-class sdb {
+class mysqli {
     public $connect_error  = '';
     public $connect_errno  = 0;
     public $error          = '';
@@ -475,155 +438,60 @@ class sdb {
     public $server_info    = 'PostgreSQL 17 (Supabase)';
     public $client_version = 180002;
     public $info           = '';
-    /** @var string 'pgsql' (Supabase/online) atau 'mysql' (lokal/offline) */
-    public string $driver  = 'pgsql';
-    public string $dsn     = '';
-    public string $dbUser  = '';
-    public string $dbPass  = '';
-    public string $dbName  = '';
+    private ?PDO $pdo      = null;
     private bool $inTx     = false;
 
     public function __construct($host = null, $user = null, $pass = null, $db = null,
-                                $port = null, $socket = null, ?string $driver = null) {
-        // Driver bisa dideteksi otomatis:
-        //   - $host berisi DSN ('pgsql:...' / 'mysql:...') -> driver dari DSN
-        //   - $host berupa hostname             -> MySQL (gaya mysqli: host,user,pass,db)
-        //   - $host kosong                      -> default pgsql (Supabase)
-        // Koneksi tetap LAZY (dibuat saat query/prepare/ping pertama) supaya
-        // halaman yang tidak menyentuh DB tidak Connections ke server.
-        $this->setupDriver($host, $user, $pass, $db, $port, $driver);
-    }
-
-    private function setupDriver($host, $user, $pass, $db, $port, ?string $driver): void {
-        $host = ($host === null) ? '' : (string)$host;
-        $user = ($user === null) ? '' : (string)$user;
-        $pass = ($pass === null) ? '' : (string)$pass;
-        $db   = ($db === null) ? '' : (string)$db;
-
-        if ($driver === null || $driver === '') {
-            if (stripos($host, 'pgsql:') === 0 || stripos($host, 'postgres') === 0) $driver = 'pgsql';
-            elseif (stripos($host, 'mysql:') === 0)                              $driver = 'mysql';
-            elseif ($host !== '')                                                $driver = 'mysql';
-            else                                                                $driver = 'pgsql';
-        }
-        $this->driver = (strtolower($driver) === 'mysql') ? 'mysql' : 'pgsql';
-
-        if ($this->driver === 'mysql') {
-            if (stripos($host, 'mysql:') === 0) {
-                $this->dsn = $host;
-            } else {
-                $h = ($host !== '' && $host !== 'localhost') ? $host : '127.0.0.1';
-                $this->dsn = 'mysql:host=' . $h . ';port=' . ($port ? (int)$port : MYSQL_PORT);
-                if ($db !== '') $this->dsn .= ';dbname=' . $db;
-                $this->dsn .= ';charset=' . (defined('MYSQL_CHARSET') ? MYSQL_CHARSET : 'utf8mb4');
-            }
-            $this->dbUser = ($user !== '') ? $user : MYSQL_USER;
-            $this->dbPass = $pass;
-            $this->dbName = ($db !== '') ? $db : MYSQL_DATABASE;
-            $this->server_info = 'MySQL (lokal/offline)';
-            return;
-        }
-
-        // --- pgsql / Supabase (online) ---
-        if (stripos($host, 'pgsql:') === 0 || stripos($host, 'postgres') === 0) {
-            $this->dsn = $host;
-        } else {
-            $h = ($host !== '') ? $host : 'localhost';
-            $this->dsn = 'pgsql:host=' . $h . ';port=' . ($port ? (int)$port : 5432);
-            if ($db !== '') $this->dsn .= ';dbname=' . $db;
-        }
-        $this->dbUser = ($user !== '') ? $user : SUPABASE_USER;
-        $this->dbPass = ($pass !== '') ? $pass : SUPABASE_PASSWORD;
-        $this->dbName = ($db !== '') ? $db : 'postgres';
-        $this->server_info = 'PostgreSQL 17 (Supabase/online)';
-    }
-
-    /** 'mysql' = lokal/offline, 'pgsql' = Supabase/online */
-    public function getDriver(): string { return $this->driver; }
-    public function isOnline(): bool  { return $this->driver === 'pgsql'; }
-
-    private ?PDO $pdo = null;
-    private bool $pdoTried = false;
-
-    private function ensurePDO(): ?PDO {
-        if ($this->pdoTried) return $this->pdo;
-        $this->pdoTried = true;
+                                $port = null, $socket = null) {
+        // Semua parameter lama MySQL diabaikan; koneksi tetap ke Supabase
         try {
-            $opts = [
+            $this->pdo = new PDO(SUPABASE_DSN, SUPABASE_USER, SUPABASE_PASSWORD, [
                 PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            ];
-            if ($this->driver === 'mysql') {
-                $opts[PDO::ATTR_EMULATE_PREPARES] = true; // placeholder ?, LIMIT ? dst.
-                $opts[PDO::ATTR_TIMEOUT] = 10;
-            } else {
-                $opts[PDO::ATTR_TIMEOUT] = 20;
-            }
-            $this->pdo = new PDO($this->dsn, $this->dbUser, $this->dbPass, $opts);
-            if ($this->driver === 'mysql') {
-                try { $this->pdo->exec("SET time_zone = '+07:00'"); } catch (Throwable $e) {}
-                try { $this->server_info = 'MySQL ' . $this->pdo->getAttribute(PDO::ATTR_SERVER_VERSION) . ' (lokal/offline)'; }
-                catch (Throwable $e) {}
-            } else {
-                try { $this->pdo->exec("SET timezone = 'Asia/Jakarta'"); } catch (Throwable $e) {}
-                global $dbxLastPDO;
-                $dbxLastPDO = $this->pdo;
-            }
+                PDO::ATTR_TIMEOUT            => 20,
+            ]);
+            try { $this->pdo->exec("SET timezone = 'Asia/Jakarta'"); } catch (Throwable $e) {}
+            global $dbxLastPDO;
+            $dbxLastPDO = $this->pdo;
         } catch (Throwable $e) {
             $this->connect_error = $e->getMessage();
             $this->connect_errno = 2002;
             $this->error         = $e->getMessage();
             $this->errno         = 2002;
-            error_log('db_adapter: koneksi ' . $this->driver . ' gagal: ' . $e->getMessage());
+            error_log('db_adapter: koneksi Supabase gagal: ' . $e->getMessage());
         }
-        return $this->pdo;
     }
 
-    public function getPDO(): ?PDO { return $this->ensurePDO(); }
+    public function getPDO(): ?PDO { return $this->pdo; }
     public function inTransaction(): bool { return $this->inTx; }
 
     private function markError(Throwable $e): void {
         $this->error = $e->getMessage();
         $this->errno = 1000 + ((int)$e->getCode() & 0xFFFF);
-        error_log('db_adapter: ' . $this->getDriver() . ': ' . $e->getMessage());
-    }
-
-    /** Terjemahkan SQL MySQL -> PostgreSQL (hanya untuk driver pgsql). */
-    private function translate(string $sql, ?PDO $pdo = null): string {
-        if ($this->driver === 'mysql') {
-            // MySQL: view aplikasi (data_rumah, data_cluster, ...) tidak bisa
-            // ditulis langsung -> arahkan ke tabel dasar (sama seperti PG).
-            return dbx_rewrite_views($sql, '`');
-        }
-        return dbx_translate($sql, $pdo);
+        error_log('db_adapter: ' . $e->getMessage());
     }
 
     public function query($sql, $resultmode = 0) {
-        $pdo = $this->ensurePDO();
-        if ($pdo === null) return false;
+        if ($this->pdo === null) return false;
         $raw = (string)$sql;
         try {
-            $t = $this->translate($raw, $pdo);
+            $t = dbx_translate($raw, $this->pdo);
             $isSelect = preg_match('/^(SELECT|WITH|SHOW)\b/im', $t) || preg_match('/\bRETURNING\b/i', $t);
             if ($isSelect) {
-                $stmt = $pdo->prepare($t);
-                // '?'-placeholder tak boleh tanpa bind; $koneksi->query sangat jarang pakai ?
+                $stmt = $this->pdo->prepare($t);
+                // '?'-placeholder tak boleh tanpa bind; MySQL $koneksi->query sangat jarang pakai ?
                 if (preg_match_all('/\?/', $t) > 0) {
                     $this->error = 'Placeholder ? pada ->query() atau ->prepare() tidak didukung tanpa bind param.';
                     return false;
                 }
                 $stmt->execute();
-                return new sdb_result($stmt);
+                return new mysqli_result($stmt);
             }
             // UPDATE / INSERT / DELETE / DDL
-            $st = $pdo->exec($t);
+            $st = $this->pdo->exec($t);
             $this->affected_rows = $st;
             if (preg_match('/^\s*INSERT\b/i', $t)) {
-                try {
-                    $this->insert_id = ($this->driver === 'mysql')
-                        ? (int)$pdo->lastInsertId()
-                        : (int)$pdo->query('SELECT lastval()')->fetchColumn();
-                }
+                try { $this->insert_id = (int)$this->pdo->query('SELECT lastval()')->fetchColumn(); }
                 catch (Throwable $e) { /* INSERT tanpa sequence: dia biarkan */ }
             }
             return true;
@@ -634,64 +502,42 @@ class sdb {
     }
 
     public function prepare($sql) {
-        $pdo = $this->ensurePDO();
-        if ($pdo === null) return false;
+        if ($this->pdo === null) return false;
         try {
-            $t = $this->translate((string)$sql, $pdo);
-            return new sdb_stmt($this, $t);
+            $t = dbx_translate((string)$sql, $this->pdo);
+            return new mysqli_stmt($this, $t);
         } catch (Throwable $e) {
             $this->markError($e);
             return false;
         }
     }
 
-    // Escape string sesuai driver:
-    // - mysql : backslash + quote (gaya mysqli_real_escape_string)
-    // - pgsql : ' -> '' (gaya PostgreSQL)
+    // Escape gaya PostgreSQL: string literal didirikan standar MySQL dgn ' -> ''.
+    // Backslash dan NUL dibersihkan dulu untuk aman (MySQL-escape tidak dipakai).
     public function real_escape_string($s) {
         $s = (string)$s;
-        if ($this->driver === 'mysql') {
-            $pdo = $this->ensurePDO();
-            if ($pdo !== null) {
-                try {
-                    $q = $pdo->quote($s);
-                    if (is_string($q) && strlen($q) >= 2) return substr($q, 1, -1);
-                } catch (Throwable $e) { /* fallback manual di bawah */ }
-            }
-            return str_replace(["\\", "'", "\0"], ["\\\\", "\\'", "\\0"], $s);
-        }
         $s = str_replace(["\\", "\0"], ["\\\\", '\0'], $s);
         return str_replace("'", "''", $s);
     }
     public function escape_string($s) { return $this->real_escape_string($s); }
 
-    public function set_charset($cs) {
-        if ($this->driver === 'mysql') {
-            $pdo = $this->ensurePDO();
-            if ($pdo === null) return false;
-            $cs = preg_replace('/[^a-z0-9_]/i', '', (string)$cs);
-            try { $pdo->exec("SET NAMES '{$cs}'"); return true; }
-            catch (Throwable $e) { $this->markError($e); return false; }
-        }
-        return true;
-    }
+    public function set_charset($cs) { return true; }
     public function character_set_name() { return 'utf8mb4'; }
 
     public function begin_transaction($flags = 0, $name = null) {
-        $pdo = $this->ensurePDO();
-        if ($pdo === null) return false;
+        if ($this->pdo === null) return false;
         if ($this->inTx) return true;
-        try { $pdo->beginTransaction(); $this->inTx = true; return true; }
+        try { $this->pdo->beginTransaction(); $this->inTx = true; return true; }
         catch (Throwable $e) { $this->markError($e); return false; }
     }
     public function commit($flags = 0, $name = null) {
         if (!$this->inTx) return true;
-        try { $this->ensurePDO()?->commit(); $this->inTx = false; return true; }
+        try { $this->pdo->commit(); $this->inTx = false; return true; }
         catch (Throwable $e) { $this->markError($e); return false; }
     }
     public function rollback($flags = 0, $name = null) {
         if (!$this->inTx) return true;
-        try { $this->ensurePDO()?->rollBack(); $this->inTx = false; return true; }
+        try { $this->pdo->rollBack(); $this->inTx = false; return true; }
         catch (Throwable $e) { $this->markError($e); return false; }
     }
     public function autocommit($mode) {
@@ -702,27 +548,18 @@ class sdb {
     public function store_result() { return true; }
     public function next_result() { return false; }
     public function more_results() { return false; }
-    public function select_db($db) {
-        if ($this->driver === 'mysql') {
-            $pdo = $this->ensurePDO();
-            if ($pdo === null) return false;
-            $safe = str_replace('`', '``', (string)$db);
-            try { $pdo->exec("USE `{$safe}`"); return true; }
-            catch (Throwable $e) { $this->markError($e); return false; }
-        }
-        return strtolower((string)$db) === 'postgres';
-    }
-    public function ping() { if (!$this->pdoTried) $this->ensurePDO(); return $this->pdo !== null; }
+    public function select_db($db) { return strtolower($db) === 'postgres'; }
+    public function ping() { return $this->pdo !== null; }
     public function ssl_set() { return true; }
-    public function stmt_init() { return new sdb_stmt($this, ''); }
-    public function close() { $this->pdo = null; $this->pdoTried = true; return true; }
+    public function stmt_init() { return new mysqli_stmt($this, ''); }
+    public function close() { $this->pdo = null; return true; }
     public function __destruct() { $this->pdo = null; }
 }
 
 /* =========================================================================
- *  CLASS sdb_result (compat)
+ *  CLASS mysqli_result (compat)
  * ========================================================================= */
-class sdb_result implements IteratorAggregate {
+class mysqli_result implements IteratorAggregate {
     public int $num_rows      = 0;
     public int $field_count   = 0;
     public int $current_field = 0;
@@ -811,9 +648,9 @@ class sdb_result implements IteratorAggregate {
 }
 
 /* =========================================================================
- *  CLASS sdb_stmt (compat)
+ *  CLASS mysqli_stmt (compat)
  * ========================================================================= */
-class sdb_stmt {
+class mysqli_stmt {
     public string $error         = '';
     public int    $errno         = 0;
     public int    $affected_rows = 0;
@@ -821,15 +658,15 @@ class sdb_stmt {
     public int    $num_rows      = 0;
     public int    $param_count   = 0;
     public int    $field_count   = 0;
-    private sdb $owner;
+    private mysqli $owner;
     private string $sql;
     /** @var array<int,mixed> nilai param (menyimpan referensi) */
     private array $params        = [];
     private array $types         = [];
-    private ?sdb_result $res  = null;
+    private ?mysqli_result $res  = null;
     private bool $executed       = false;
 
-    public function __construct(sdb $owner, string $sql) {
+    public function __construct(mysqli $owner, string $sql) {
         $this->owner = $owner;
         $this->sql = $sql;
         $this->param_count = preg_match_all('/\?/', $sql);
@@ -870,18 +707,15 @@ class sdb_stmt {
             $st->execute();
             $this->executed = true;
             if (preg_match('/^(SELECT|WITH|SHOW)\b/i', ltrim($sql)) || preg_match('/\bRETURNING\b/i', $sql)) {
-                $this->res = new sdb_result($st);
+                $this->res = new mysqli_result($st);
                 $this->num_rows = $this->res->num_rows;
                 $this->affected_rows = $this->res->num_rows;
             } else {
                 $this->affected_rows = $st->rowCount();
                 if (preg_match('/^\s*INSERT\b/i', $sql)) {
                     try {
-                        if ($this->owner->getDriver() === 'mysql') {
-                            $this->insert_id = (int)$pdo->lastInsertId();
-                        } else {
-                            $this->insert_id = (int)$pdo->query('SELECT lastval()')->fetchColumn();
-                        }
+                        $v = $pdo->query('SELECT lastval()')->fetchColumn();
+                        $this->insert_id = (int)$v;
                     } catch (Throwable $e) { /* INSERT tanpa nextval: lastval tak tersedia */ }
                 }
                 $this->owner->affected_rows = $this->affected_rows;
@@ -897,7 +731,7 @@ class sdb_stmt {
 
     public function get_result() {
         if (!$this->executed) return false;
-        if ($this->res === null) return new sdb_result([], ['']);
+        if ($this->res === null) return new mysqli_result([], ['']);
         return $this->res;
     }
     public function store_result(): bool {
@@ -912,73 +746,49 @@ class sdb_stmt {
 }
 
 /* =========================================================================
- *  FUNGSI PROSEDURAL sdb_* (compat)
+ *  FUNGSI PROSEDURAL mysqli_* (compat)
  * ========================================================================= */
-function sdb_connect($host = null, $user = null, $pass = null, $db = null, $port = null) {
-    return new sdb($host, $user, $pass, $db, $port);
+function mysqli_connect($host = null, $user = null, $pass = null, $db = null, $port = null) {
+    return new mysqli($host, $user, $pass, $db, $port);
 }
-/** Koneksi ONLINE ke Supabase (PostgreSQL). */
-function sdb_connect_pgsql($dsn = null, $user = null, $pass = null, $db = 'postgres', $port = 5432) {
-    return new sdb(
-        ($dsn !== null && $dsn !== '') ? $dsn : SUPABASE_DSN,
-        ($user !== null && $user !== '') ? $user : SUPABASE_USER,
-        ($pass !== null) ? $pass : SUPABASE_PASSWORD,
-        ($db !== null && $db !== '') ? $db : 'postgres',
-        $port, null, 'pgsql'
-    );
-}
-/** Koneksi OFFLINE ke MySQL lokal (XAMPP). */
-function sdb_connect_mysql($host = null, $user = null, $pass = null, $db = null, $port = null) {
-    return new sdb(
-        ($host !== null && $host !== '') ? $host : MYSQL_HOST,
-        ($user !== null && $user !== '') ? $user : MYSQL_USER,
-        ($pass !== null) ? $pass : MYSQL_PASSWORD,
-        ($db !== null && $db !== '') ? $db : MYSQL_DATABASE,
-        ($port !== null && $port !== '') ? $port : MYSQL_PORT, null, 'mysql'
-    );
-}
-/** Koneksi sesuai mode aktif (DB_MODE): 'online' -> Supabase, 'offline' -> MySQL. */
-function sdb_connect_active() {
-    return (DB_MODE === 'online') ? sdb_connect_pgsql() : sdb_connect_mysql();
-}
-function sdb_connect_error() { return ''; }
-function sdb_select_db($c, string $db): bool { return $c->select_db($db); }
-function sdb_query($c, string $sql, int $mode = 0) { return $c->query($sql, $mode); }
-function sdb_real_escape_string($c, string $s) { return $c->real_escape_string($s); }
-function sdb_escape_string($c, string $s) { return $c->real_escape_string($s); }
-function sdb_set_charset($c, string $cs): bool { return $c->set_charset($cs); }
-function sdb_error($c): string { return $c->error; }
-function sdb_errno($c): int { return $c->errno; }
-function sdb_fetch_assoc($r) { return ($r instanceof sdb_result || $r instanceof turso_result) ? $r->fetch_assoc() : null; }
-function sdb_fetch_row($r)   { return ($r instanceof sdb_result || $r instanceof turso_result) ? $r->fetch_row() : null; }
-function sdb_fetch_object($r, $class = null, array $ca = []) { return ($r instanceof sdb_result || $r instanceof turso_result) ? $r->fetch_object($class, $ca) : null; }
-function sdb_fetch_array($r, $m = MYSQLI_BOTH) { return ($r instanceof sdb_result || $r instanceof turso_result) ? $r->fetch_array($m) : null; }
-function sdb_fetch_all($r, $m = MYSQLI_ASSOC) { return ($r instanceof sdb_result || $r instanceof turso_result) ? $r->fetch_all($m) : []; }
-function sdb_num_rows($r): int { return ($r instanceof sdb_result || $r instanceof turso_result) ? $r->num_rows : 0; }
-function sdb_num_fields($r): int { return ($r instanceof sdb_result || $r instanceof turso_result) ? $r->field_count : 0; }
-function sdb_fetch_fields($r): array { return ($r instanceof sdb_result || $r instanceof turso_result) ? $r->fields : []; }
-function sdb_fetch_field($r) { return ($r instanceof sdb_result) ? $r->fetch_field() : false; }
-function sdb_fetch_field_direct($r, $i) { return ($r instanceof sdb_result) ? $r->fetch_field_direct($i) : false; }
-function sdb_field_seek($r, $i) { return ($r instanceof sdb_result) ? $r->field_seek($i) : false; }
-function sdb_data_seek($r, $i) { return ($r instanceof sdb_result) ? $r->data_seek($i) : false; }
-function sdb_free_result($r) { if ($r instanceof sdb_result) $r->free(); }
-function sdb_insert_id(sdb $c): int { return $c->insert_id; }
-function sdb_affected_rows(sdb $c): int { return $c->affected_rows; }
-function sdb_prepare(sdb $c, string $sql) { return $c->prepare($sql); }
-function sdb_stmt_bind_param(sdb_stmt $st, string $types, &...$args): bool { return $st->bind_param($types, ...$args); }
-function sdb_stmt_execute(sdb_stmt $st): bool { return $st->execute(); }
-function sdb_stmt_get_result(sdb_stmt $st) { return $st->get_result(); }
-function sdb_stmt_fetch(sdb_stmt $st) { return $st->fetch(); }
-function sdb_stmt_close(sdb_stmt $st): bool { return $st->close(); }
-function sdb_stmt_free_result(sdb_stmt $st): void { $st->free_result(); }
-function sdb_stmt_num_rows(sdb_stmt $st): int { return $st->num_rows; }
-function sdb_stmt_errno(sdb_stmt $st): int { return $st->errno; }
-function sdb_stmt_error(sdb_stmt $st): string { return $st->error; }
-function sdb_stmt_insert_id(sdb_stmt $st): int { return $st->insert_id; }
-function sdb_stmt_affected_rows(sdb_stmt $st): int { return $st->affected_rows; }
-function sdb_begin_transaction(sdb $c): bool { return $c->begin_transaction(); }
-function sdb_commit(sdb $c): bool { return $c->commit(); }
-function sdb_rollback(sdb $c): bool { return $c->rollback(); }
-function sdb_autocommit(sdb $c, bool $m): bool { return $c->autocommit($m); }
-function sdb_close(sdb $c): bool { return $c->close(); }
-function sdb_ping(sdb $c): bool { return $c->ping(); }
+function mysqli_connect_error() { return ''; }
+function mysqli_select_db(mysqli $c, string $db): bool { return $c->select_db($db); }
+function mysqli_query(mysqli $c, string $sql, int $mode = 0) { return $c->query($sql, $mode); }
+function mysqli_real_escape_string(mysqli $c, string $s) { return $c->real_escape_string($s); }
+function mysqli_escape_string(mysqli $c, string $s) { return $c->real_escape_string($s); }
+function mysqli_set_charset(mysqli $c, string $cs): bool { return $c->set_charset($cs); }
+function mysqli_error(mysqli $c): string { return $c->error; }
+function mysqli_errno(mysqli $c): int { return $c->errno; }
+function mysqli_fetch_assoc($r) { return ($r instanceof mysqli_result) ? $r->fetch_assoc() : null; }
+function mysqli_fetch_row($r)   { return ($r instanceof mysqli_result) ? $r->fetch_row() : null; }
+function mysqli_fetch_object($r, $class = null, array $ca = []) { return ($r instanceof mysqli_result) ? $r->fetch_object($class, $ca) : null; }
+function mysqli_fetch_array($r, $m = MYSQLI_BOTH) { return ($r instanceof mysqli_result) ? $r->fetch_array($m) : null; }
+function mysqli_fetch_all($r, $m = MYSQLI_ASSOC) { return ($r instanceof mysqli_result) ? $r->fetch_all($m) : []; }
+function mysqli_num_rows($r): int { return ($r instanceof mysqli_result) ? $r->num_rows : 0; }
+function mysqli_num_fields($r): int { return ($r instanceof mysqli_result) ? $r->field_count : 0; }
+function mysqli_fetch_fields($r): array { return ($r instanceof mysqli_result) ? $r->fields : []; }
+function mysqli_fetch_field($r) { return ($r instanceof mysqli_result) ? $r->fetch_field() : false; }
+function mysqli_fetch_field_direct($r, $i) { return ($r instanceof mysqli_result) ? $r->fetch_field_direct($i) : false; }
+function mysqli_field_seek($r, $i) { return ($r instanceof mysqli_result) ? $r->field_seek($i) : false; }
+function mysqli_data_seek($r, $i) { return ($r instanceof mysqli_result) ? $r->data_seek($i) : false; }
+function mysqli_free_result($r) { if ($r instanceof mysqli_result) $r->free(); }
+function mysqli_insert_id(mysqli $c): int { return $c->insert_id; }
+function mysqli_affected_rows(mysqli $c): int { return $c->affected_rows; }
+function mysqli_prepare(mysqli $c, string $sql) { return $c->prepare($sql); }
+function mysqli_stmt_bind_param(mysqli_stmt $st, string $types, &...$args): bool { return $st->bind_param($types, ...$args); }
+function mysqli_stmt_execute(mysqli_stmt $st): bool { return $st->execute(); }
+function mysqli_stmt_get_result(mysqli_stmt $st) { return $st->get_result(); }
+function mysqli_stmt_fetch(mysqli_stmt $st) { return $st->fetch(); }
+function mysqli_stmt_close(mysqli_stmt $st): bool { return $st->close(); }
+function mysqli_stmt_free_result(mysqli_stmt $st): void { $st->free_result(); }
+function mysqli_stmt_num_rows(mysqli_stmt $st): int { return $st->num_rows; }
+function mysqli_stmt_errno(mysqli_stmt $st): int { return $st->errno; }
+function mysqli_stmt_error(mysqli_stmt $st): string { return $st->error; }
+function mysqli_stmt_insert_id(mysqli_stmt $st): int { return $st->insert_id; }
+function mysqli_stmt_affected_rows(mysqli_stmt $st): int { return $st->affected_rows; }
+function mysqli_begin_transaction(mysqli $c): bool { return $c->begin_transaction(); }
+function mysqli_commit(mysqli $c): bool { return $c->commit(); }
+function mysqli_rollback(mysqli $c): bool { return $c->rollback(); }
+function mysqli_autocommit(mysqli $c, bool $m): bool { return $c->autocommit($m); }
+function mysqli_close(mysqli $c): bool { return $c->close(); }
+function mysqli_ping(mysqli $c): bool { return $c->ping(); }

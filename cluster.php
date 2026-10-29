@@ -266,7 +266,7 @@ if (!empty($selected_cluster_id)) {
 			</div>
         </div>
 
-        <!-- TABEL DATA CLUSTER (Sesuai Struktur Database Turso / libSQL Anda) -->
+        <!-- TABEL DATA CLUSTER (Sesuai Struktur Database Supabase / PostgreSQL Anda) -->
         <div class="content-card">
             <h5 class="fw-bold mb-3">Daftar Cluster Perumahan</h5>
             <div class="table-responsive">
