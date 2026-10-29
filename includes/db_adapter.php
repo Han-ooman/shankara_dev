@@ -2,8 +2,8 @@
 // includes/db_adapter.php — Adapter kompatibilitas mysqli -> Supabase PostgreSQL (PDO pgsql)
 // Menyediakan API mysqli-ish (mysqli_connect, mysqli_query, $koneksi->prepare, dll)
 // di atas Supabase agar 60+ file PHP aplikasi tidak perlu diubah besar-besaran.
-// Catatan penting: ekstensi mysqli HARUS dinonaktifkan di php.ini agar definisi
-// fungsi/class di sini tidak fatal error karena redeclare.
+// Catatan: Jika ekstensi mysqli native sudah terload (seperti di Vercel), kita gunakan
+// nama class 'sdb' dan fungsi 'sdb_*' untuk menghindari redeclare fatal error.
 
 if (defined('DB_ADAPTER_VERSION')) return;
 define('DB_ADAPTER_VERSION', '1.0-supabase');
@@ -20,6 +20,14 @@ if (!defined('SUPABASE_DSN') || !defined('SUPABASE_USER') || !defined('SUPABASE_
     throw new RuntimeException('Kredensial database belum diatur. Salin config/local.example.php menjadi config/local.php lalu isi kredensialnya.');
 }
 unset($__local_config);
+
+// Deteksi apakah ekstensi mysqli native sudah terload
+$mysqli_native = extension_loaded('mysqli');
+
+// Nama class & fungsi yang akan dipakai
+$className = $mysqli_native ? 'sdb' : 'mysqli';
+$connectFunc = $mysqli_native ? 'sdb_connect' : 'mysqli_connect';
+$errorFunc = $mysqli_native ? 'sdb_error' : 'mysqli_connect_error';
 
 /* =========================================================================
  *  UTILITAS PARSER
@@ -50,181 +58,96 @@ function dbx_datefmt_to_pg(string $f): string {
     return str_replace(array_keys($map), array_values($map), $f);
 }
 
-function dbx_pgq(string $v): string {
-    return "'" . str_replace("\\", "\\\\", str_replace("'", "''", $v)) . "'";
+// Quote string untuk PostgreSQL (value literal)
+function dbx_pgq(string $s): string {
+    return "'" . str_replace("'", "''", $s) . "'";
 }
 
-// Belah isi argumen berimbang berdasarkan koma level atas
-function dbx_split_args(string $inner): array {
-    $out = []; $cur = ''; $depth = 0; $instr = false;
-    for ($i = 0, $L = strlen($inner); $i < $L; $i++) {
-        $c = $inner[$i];
-        if ($instr) { $cur .= $c; if ($c === "'") $instr = false; continue; }
-        if ($c === "'") { $instr = true; $cur .= $c; continue; }
-        if ($c === '(') $depth++;
-        elseif ($c === ')') $depth--;
-        if ($c === ',' && $depth === 0) { $out[] = $cur; $cur = ''; continue; }
+// Split argumen fungsi dengan memperhatikan kurung bersarang & string
+function dbx_split_args(string $s): array {
+    $args = []; $cur = ''; $depth = 0; $instr = false;
+    $len = strlen($s);
+    for ($i = 0; $i < $len; $i++) {
+        $c = $s[$i];
+        if ($instr) {
+            $cur .= $c;
+            if ($c === "'" && ($i === 0 || $s[$i - 1] !== '\\')) $instr = false;
+            continue;
+        }
+        if ($c === "'") { $cur .= $c; $instr = true; continue; }
+        if ($c === '(' || $c === '[') { $depth++; $cur .= $c; continue; }
+        if ($c === ')' || $c === ']') { $depth--; $cur .= $c; continue; }
+        if ($c === ',' && $depth === 0) { $args[] = trim($cur); $cur = ''; continue; }
         $cur .= $c;
     }
-    if (trim($cur) !== '') $out[] = $cur;
-    return $out;
+    if ($cur !== '') $args[] = trim($cur);
+    return $args;
 }
 
-// Pindai SQL untuk memanggil $cb(isi_luar) di setiap pemanggilan FUNGSI(...),
-// lalu hasilnya mengganti seluruh pemanggilan. Utk kelas utama DATE_FORMAT.
-function dbx_scan_replace(string $sql, string $name, callable $cb): string {
-    if (!preg_match('/\b' . preg_quote($name, '/') . '\s*\(/i', $sql)) return $sql;
-    $out = ''; $i = 0; $L = strlen($sql);
-    while ($i < $L) {
-        $ok = preg_match('/\b' . preg_quote($name, '/') . '\s*\(/i', $sql, $m, PREG_OFFSET_CAPTURE, $i);
-        if (!$ok) { $out .= substr($sql, $i); break; }
-        $j = $m[0][1];
-        $out .= substr($sql, $i, $j - $i);
-        $open = $j + strlen($m[0][0]) - 1;
-        $b = dbx_balanced($sql, $open);
-        if ($b === null) { $out .= substr($sql, $j, strlen($m[0][0])); $i = $j + strlen($m[0][0]); continue; }
-        list($inner, $close) = $b;
-        $out .= $cb($inner);
-        $i = $close + 1;
+// Scan & replace nama fungsi SQL (mis. DATE_FORMAT, GROUP_CONCAT) dengan callback
+function dbx_scan_replace(string $sql, string $funcName, callable $cb): string {
+    $len = strlen($sql);
+    $fnLen = strlen($funcName);
+    $out = '';
+    $i = 0;
+    while ($i < $len) {
+        if ($i + $fnLen <= $len && strcasecmp(substr($sql, $i, $fnLen), $funcName) === 0) {
+            $after = $i + $fnLen;
+            $nextNonWs = $after;
+            while ($nextNonWs < $len && $sql[$nextNonWs] === ' ') $nextNonWs++;
+            if ($nextNonWs < $len && $sql[$nextNonWs] === '(') {
+                $out .= substr($sql, $i, $nextNonWs - $i + 1);
+                $i = $nextNonWs + 1;
+                $depth = 1; $instr = false;
+                $inner = '';
+                while ($i < $len && $depth > 0) {
+                    $c = $sql[$i];
+                    if ($instr) {
+                        $inner .= $c;
+                        if ($c === "'" && ($i === 0 || $sql[$i - 1] !== '\\')) $instr = false;
+                        $i++; continue;
+                    }
+                    if ($c === "'") { $inner .= $c; $instr = true; $i++; continue; }
+                    if ($c === '(') { $depth++; $inner .= $c; $i++; continue; }
+                    if ($c === ')') { $depth--; if ($depth === 0) break; $inner .= $c; $i++; continue; }
+                    $inner .= $c; $i++;
+                }
+                $out .= $cb($inner);
+                $i++;
+                continue;
+            }
+        }
+        $out .= $sql[$i];
+        $i++;
     }
     return $out;
 }
 
-/* =========================================================================
- *  KATALOG PG (resolusi ON CONFLICT + backup di pengaturan.php)
- * ========================================================================= */
-// Peta view applikasi yg dipakai untuk menulis data sebagai target event:
-// aplikasi menulis lewat nama view (MySQL auto-updatable); PG tidak bisa,
-// dinulis ulang ke tabel dasar di adapter.
-function dbx_view_write_map(): array {
-    static $map = null;
-    if ($map !== null) return $map;
-    $map = [
-        'data_cluster'    => ['base' => 'cluster',        'alias' => []],
-        'data_rumah'      => ['base' => 'rumah',          'alias' => []],
-        'data_konsumen'   => ['base' => 'konsumen',       'alias' => []],
-        'data_prospek'    => ['base' => 'prospek',        'alias' => ['catatan' => 'keterangan']],
-        'data_pembayaran' => ['base' => 'pembayaran',     'alias' => []],
-        'data_bast'       => ['base' => 'serah_terima',   'alias' => []],
-        'data_pembangunan'=> ['base' => 'pembangunan',    'alias' => []],
-        'data_pembatalan' => ['base' => 'pembatalan_unit','alias' => []],
-        'data_bi_checking'=> ['base' => 'bi_checking',    'alias' => [
-            'id_bi_checking' => 'id_bi',
-            'tgl_cek'        => 'tgl_pengajuan',
-            'hasil_bi'       => 'hasil',
-            'catatan'        => 'keterangan',
-        ]],
-    ];
-    return $map;
-}
-
-// Ambil indeks unique: [[cols => [..], primary => bool], ...]
-function dbx_unique_indexes(PDO $pdo, string $table): array {
-    static $cache = [];
-    $k = strtolower($table);
-    if (isset($cache[$k])) return $cache[$k];
-    $res = [];
-    try {
-        $st = $pdo->prepare(
-            "SELECT i.indexrelid::regclass::text AS idx, i.indisprimary AS isprim, a.attname AS col
-             FROM pg_index i
-             JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
-             JOIN pg_class c ON c.oid = i.indrelid
-             WHERE c.relname = ? AND i.indisunique AND a.attisdropped = false
-             ORDER BY 1, a.attnum"
-        );
-        $st->execute([$table]);
-        $rows = $st->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($rows as $r) {
-            $res[$r['idx']]['cols'][] = $r['col'];
-            $res[$r['idx']]['primary'] = ($r['isprim'] === 't' || $r['isprim'] === true);
-        }
-    } catch (Throwable $e) { $res = []; }
-    $cache[$k] = $res;
-    return $res;
-}
-
-/* Tulis-ulang statement yang menyasar view aplikasi -> tabel dasar PG.
- * Mendukung INSERT INTO <view> / UPDATE <view> / DELETE FROM <view> dan
- * pemetaan alias kolom (mis. data_bi_checking: tgl_cek -> tgl_pengajuan). */
+// Rewrite view name -> base table
 function dbx_rewrite_views(string $sql): string {
-    foreach (dbx_view_write_map() as $view => $conf) {
-        $base = $conf['base'];
-        $alias = $conf['alias'];
-        $hit = preg_match('/^\s*(INSERT\s+INTO|REPLACE\s+INTO|UPDATE|DELETE\s+FROM)\s+"?' . preg_quote($view, '/') . '"?\b/is', $sql);
-        if (!$hit) continue;
-
-        // 1. target -> tabel dasar
-        $sql = preg_replace('/^(\s*(?:INSERT\s+INTO|REPLACE\s+INTO|UPDATE|DELETE\s+FROM)\s+)"?' . preg_quote($view, '/') . '"?\b/i',
-            '$1"' . $base . '"', $sql);
-
-        // 2. alias kolom di daftar kolom INSERT/REPLACE
-        if ($alias) {
-            if (preg_match('/^\s*INSERT\s+INTO\s+"?' . preg_quote($base, '/') . '"?\s*\(([^)]*)\)/is', $sql, $cm, PREG_OFFSET_CAPTURE)) {
-                list($colsRaw, $colsOff) = $cm[1];
-                $cols = array_map(function ($c) use ($alias) {
-                    $c = trim($c);
-                    $k = strtolower(trim($c, '"`'));
-                    return array_key_exists($k, $alias) ? $alias[$k] : trim($c, '"`');
-                }, explode(',', $colsRaw));
-                $sql = substr_replace($sql, implode(', ', $cols), $colsOff, strlen($colsRaw));
-            }
-            // 3. alias di sisi kiri `kolom =` dan `= kolom` pada SET/WHERE
-            foreach ($alias as $a => $b) {
-                $sql = preg_replace('/\b' . preg_quote($a, '/') . '\b(?=\s*=)/i', $b, $sql);
-                $sql = preg_replace('/(?<==)\s*' . preg_quote($a, '/') . '\b/i', $b, $sql);
-            }
-        }
-        // 4. pemeriksaan lain (ORDER BY/LIKE) biarkan apa adanya
+    $views = [
+        'view_database_utama' => 'data_konsumen',
+    ];
+    foreach ($views as $v => $t) {
+        $sql = preg_replace('/\b' . preg_quote($v, '/') . '\b/i', '"' . $t . '"', $sql);
     }
     return $sql;
 }
 
-function dbx_translate(string $sql, ?PDO $pdo = null): string {
+/* =========================================================================
+ *  TERJEMAHAN SQL MySQL -> PostgreSQL
+ * ========================================================================= */
+function dbx_translate_sql(string $sql): string {
     $sql = trim($sql);
-    if ($sql === '') return '';
+    $origSql = $sql;
 
-    // ---- 0. ON DUPLICATE KEY UPDATE (statement MySQL, selalu di akhir) ----
-    $upd = null;
-    if (preg_match('/\bON\s+DUPLICATE\s+KEY\s+UPDATE\b/i', $sql, $m, PREG_OFFSET_CAPTURE)) {
-        $start = $m[0][1];
-        $upd = trim(substr($sql, $start + strlen($m[0][0])));
-        $sql = rtrim(substr($sql, 0, $start));
-    }
+    // ---- 0. NOW() -> CURRENT_TIMESTAMP (PG supports NOW() too, but be explicit) ----
+    $sql = preg_replace('/\bNOW\s*\(\s*\)/i', 'CURRENT_TIMESTAMP', $sql);
 
-    // ---- 1. SHOW TABLES / SHOW CREATE TABLE ----
-    if (preg_match('/^\s*SHOW\s+TABLES\s*;?\s*$/is', $sql)) {
-        return "SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE' ORDER BY 1";
-    }
-    if (preg_match('/^\s*SHOW\s+CREATE\s+TABLE\s+(`?[\w]+`?)\s*;?\s*$/is', $sql, $mm)) {
-        $t = trim($mm[1], '`');
-        return dbx_pg_describe_table($t) ?? "SELECT null::text AS \"Create Table\" LIMIT 0";
-    }
-
-    // ---- 2. CREATE TABLE / CREATE TABLE IF NOT EXISTS (pengaturan.php) ----
-    if (preg_match('/^\s*CREATE\s+TABLE\b/i', $sql)) {
-        $sql = str_replace('`', '"', $sql);
-        $sql = preg_replace('/\bAUTO_INCREMENT\s*=\s*\d+\s*/i', '', $sql);
-        // kolom INT ... PRIMARY KEY AUTO_INCREMENT -> identity
-        $sql = preg_replace(
-            '/\bINT(?:EGER)?(?:\s*\(\d+\))?\s*(NOT NULL\s+)?PRIMARY\s+KEY\s+AUTO_INCREMENT\b/i',
-            'INTEGER ${1}GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY', $sql);
-        $sql = preg_replace('/\bAUTO_INCREMENT\b/i', 'GENERATED BY DEFAULT AS IDENTITY', $sql);
-        $sql = preg_replace('/\bENUM\s*\(([^)]*)\)/i', 'VARCHAR(64)', $sql);
-        $sql = preg_replace('/\)$/', ');', rtrim(trim($sql), ';'));
-        return $sql;
-    }
-
-    // ---- 3. Backtick -> double quote ----
-    $sql = str_replace('`', '"', $sql);
-
-    // ---- 3b. Menulis lewat nama view aplikasi -> tabel dasar ----
-    $sql = dbx_rewrite_views($sql);
-
-    // ---- 4. SET time_zone MySQL -> SET timezone PG ----
+    // ---- 1. SET time_zone MySQL -> SET timezone PG ----
     $sql = preg_replace("/SET\s+time_zone\s*=\s*'\+07:00'/i", "SET timezone = 'Asia/Jakarta'", $sql);
 
-    // ---- 5. DATE_FORMAT(x, 'fmt') -> TO_CHAR(x, 'pgfmt') ----
+    // ---- 2. DATE_FORMAT(x, 'fmt') -> TO_CHAR(x, 'pgfmt') ----
     $sql = dbx_scan_replace($sql, 'DATE_FORMAT', function ($inner) {
         $firstComma = strpos($inner, ',');
         $field = ($firstComma !== false) ? trim(substr($inner, 0, $firstComma)) : $inner;
@@ -232,7 +155,7 @@ function dbx_translate(string $sql, ?PDO $pdo = null): string {
         return "TO_CHAR($field, '" . dbx_datefmt_to_pg($fmt) . "')";
     });
 
-    // ---- 6. GROUP_CONCAT(...) -> string_agg(...) ----
+    // ---- 3. GROUP_CONCAT(...) -> string_agg(...) ----
     $sql = dbx_scan_replace($sql, 'GROUP_CONCAT', function ($inner) {
         $distinct = (bool)preg_match('/^\s*DISTINCT\s+/is', $inner);
         $body = trim(preg_replace('/^\s*DISTINCT\s+/is', '', $inner));
@@ -241,7 +164,6 @@ function dbx_translate(string $sql, ?PDO $pdo = null): string {
             $sep = stripcslashes($sm[1]);
             $body = trim(preg_replace("/\bSEPARATOR\s+'((?:\\\\.|[^'\\\\])*)'/is", '', $body));
         }
-        // potong bagian "ORDER BY ..." dari argumen (punya SEPARATOR/atau di akhir)
         if (preg_match('/\bORDER\s+BY\s+([\s\S]+)$/i', $body, $om)) {
             $order = ' ORDER BY ' . trim($om[1]);
             $body = trim(substr($body, 0, strlen($body) - strlen($om[0])));
@@ -249,10 +171,10 @@ function dbx_translate(string $sql, ?PDO $pdo = null): string {
         return 'string_agg(' . ($distinct ? 'DISTINCT ' : '') . rtrim($body) . ', ' . dbx_pgq($sep) . $order . ')';
     });
 
-    // ---- 7. DATE_ADD / DATE_SUB(..., INTERVAL n UNIT) ----
+    // ---- 4. DATE_ADD / DATE_SUB(..., INTERVAL n UNIT) ----
     $sql = dbx_scan_replace($sql, 'DATE_ADD', function ($inner) {
         if (!preg_match('/^(.*?)\s*,\s*INTERVAL\s+([\S]+)\s+(\w+)\s*$/is', $inner, $m))
-            return "($inner)"; // tidak dipahami — biarkan SQL murni
+            return "($inner)";
         return "({$m[1]} + INTERVAL '{$m[2]} " . strtolower($m[3]) . "')";
     });
     $sql = dbx_scan_replace($sql, 'DATE_SUB', function ($inner) {
@@ -261,11 +183,11 @@ function dbx_translate(string $sql, ?PDO $pdo = null): string {
         return "({$m[1]} - INTERVAL '{$m[2]} " . strtolower($m[3]) . "')";
     });
 
-    // ---- 8. INTERVAL n UNIT umum (mis. NOW() - INTERVAL 30 MINUTE) ----
+    // ---- 5. INTERVAL n UNIT umum (mis. NOW() - INTERVAL 30 MINUTE) ----
     $sql = preg_replace('/\bINTERVAL\s+(\d+)\s+(DAY|WEEK|MONTH|YEAR|HOUR|MINUTE|SECOND)\b/i',
         "INTERVAL '$1 $2'", $sql);
 
-    // ---- 8b. TIMESTAMPDIFF(SECOND, a, b) -> EXTRACT(EPOCH FROM (b - a))::int ----
+    // ---- 6. TIMESTAMPDIFF(SECOND, a, b) -> EXTRACT(EPOCH FROM (b - a))::int ----
     $sql = dbx_scan_replace($sql, 'TIMESTAMPDIFF', function ($inner) {
         $args = dbx_split_args($inner);
         if (count($args) < 3) return "TIMESTAMPDIFF($inner)";
@@ -276,7 +198,7 @@ function dbx_translate(string $sql, ?PDO $pdo = null): string {
             case 'MINUTE': $div = 60; break;
             case 'HOUR':   $div = 3600; break;
             case 'DAY':    $div = 86400; break;
-            case 'MONTH':  $div = 2629800; break; // perkiraan 30.44 hari
+            case 'MONTH':  $div = 2629800; break;
             case 'YEAR':   $div = 31557600; break;
             default:       $div = 1;
         }
@@ -284,108 +206,73 @@ function dbx_translate(string $sql, ?PDO $pdo = null): string {
         return "((EXTRACT(EPOCH FROM ($b) - ($a)) / $div)::int)";
     });
 
-    // ---- 8c. CAST(x AS UNSIGNED) -> CAST(x AS INTEGER) ----
+    // ---- 7. CAST(x AS UNSIGNED) -> CAST(x AS INTEGER) ----
     $sql = preg_replace('/\bAS\s+UNSIGNED\b/i', 'AS INTEGER', $sql);
 
-    // ---- 8d. FIELD(x, v1, v2, ...) -> CASE — urutan kategori MySQL ----
-    $sql = dbx_scan_replace($sql, 'FIELD', function ($inner) {
-        $args = dbx_split_args($inner);
-        if (count($args) < 2) return "FIELD($inner)";
-        $expr = trim($args[0]);
-        $out = "CASE WHEN $expr IS NULL THEN NULL";
-        $i = 1;
-        foreach (array_slice($args, 1) as $v) {
-            $out .= " WHEN $expr = " . trim($v) . " THEN $i";
-            $i++;
-        }
-        return $out . " ELSE 0 END";
-    });
+    // ---- 8. ILIKE -> LIKE (PG supports ILIKE, keep as is for case-insensitive) ----
+    // Already supported by PG, no change needed
 
-    // ---- 9. Fungsi tanggal sederhana ----
-    $sql = preg_replace('/\bCURDATE\s*\(\s*\)/i', 'CURRENT_DATE', $sql);
-    $sql = preg_replace('/\bCURTIME\s*\(\s*\)/i', 'CURRENT_TIME', $sql);
-    $sql = preg_replace('/\bUNIX_TIMESTAMP\s*\(\s*\)/i', 'extract(epoch from now())::bigint', $sql);
+    // ---- 9. ON DUPLICATE KEY UPDATE -> ON CONFLICT DO UPDATE ----
+    // Pattern: INSERT INTO ... VALUES ... ON DUPLICATE KEY UPDATE col=VALUES(col), ...
+    // Need to find unique constraint columns to build ON CONFLICT (...)
+    $sql = dbx_rewrite_on_duplicate_key($sql);
 
-    // ---- 10. SUM(col = 'val') -> SUM(CASE WHEN col = 'val' THEN 1 ELSE 0 END) ----
-    for ($k = 0; $k < 5; $k++) {
-        $new = preg_replace("/\bSUM\(\s*([A-Za-z_][\w.]*)\s*=\s*('(?:\\\\.|[^'\\\\])*')\s*\)/i",
-            'SUM(CASE WHEN $1 = $2 THEN 1 ELSE 0 END)', $sql);
-        if ($new === $sql || $new === null) break;
-        $sql = $new;
-    }
+    // ---- 10. Rewrite view names ----
+    $sql = dbx_rewrite_views($sql);
 
-    // ---- 10b. SUM(boolean / SUM(expr IN (...)) -> SUM(CASE WHEN ... THEN 1 ELSE 0 END) ----
-    $sql = dbx_scan_replace($sql, 'SUM', function ($inner) {
-        $t = trim($inner);
-        if (preg_match('/^CASE\b/i', $t)) return "SUM($inner)";        // sudah CASE
-        if (preg_match('/^DISTINCT\b/i', $t)) return "SUM($inner)";    // SUM(DISTINCT x)
-        if (preg_match('/^(.+?)\bIN\s*\(([^()]*)\)\s*$/is', $t, $m)) {
-            return "SUM(CASE WHEN {$m[1]} IN ({$m[2]}) THEN 1 ELSE 0 END)";
-        }
-        // ekspresi perbandingan/OR/IS NULL -> boolean
-        if (preg_match('/\bOR\b|\bAND\b|IS\s+NOT\s+NULL\b|IS\s+NULL\b|<>|!=|<|>|=/i', $t)) {
-            return "SUM(CASE WHEN $t THEN 1 ELSE 0 END)";
-        }
-        return "SUM($inner)";
-    });
-
-    // ---- 10c. Literal tanggal nol MySQL -> semantik NULL PostgreSQL ----
-    // X NOT IN ('', '0000-00-00')  -> X IS NOT NULL
-    $sql = preg_replace("/\b([\w.]+)\s+NOT\s+IN\s*\(\s*''\s*,\s*'0000-00-00'\s*\)/i", '$1 IS NOT NULL', $sql);
-    // X != '0000-00-00' / X <> '0000-00-00' -> TRUE (tanggal nol tidak mungkin ada di PG)
-    $sql = preg_replace("/\b([\w.]+)\s*(?:!=|<>)\s*'0000-00-00'/i", 'TRUE', $sql);
-    // kolom tanggal dibandingkan dengan '' -> X IS NOT NULL
-    $sql = preg_replace("/\b((?:[A-Za-z_]+\.)?(?:tgl_\w+|tanggal_\w+|deadline_\w*|\w*_akad\b|\w*wawancara\b))\s*(?:!=|<>)\s*''/i",
-        '$1 IS NOT NULL', $sql);
-
-    // ---- 11. IFNULL / RAND / LAST_INSERT_ID ----
-    $sql = preg_replace('/\bIFNULL\s*\(/i', 'COALESCE(', $sql);
-    $sql = preg_replace('/\bRAND\s*\(\s*\)/i', 'RANDOM()', $sql);
-    $sql = preg_replace('/\bLAST_INSERT_ID\s*\(\s*\)/i', 'lastval()', $sql);
-
-    // ---- 12. DATE(expr) -> (expr)::date ; MONTH/YEAR/HOUR ----
-    //       DATE_FORMAT, DATE_ADD, DATE_SUB sudah dipindah di atas (balans scan).
-    $sql = dbx_scan_replace($sql, 'DATE', function ($inner) { return "($inner)::date"; });
-    foreach (['MONTH' => 'MONTH', 'YEAR' => 'YEAR', 'HOUR' => 'HOUR'] as $fn => $part) {
-        $sql = dbx_scan_replace($sql, $fn, function ($inner) use ($part) {
-            return "(EXTRACT($part FROM $inner)::int)";
-        });
-    }
-
-    // ---- 13. ON DUPLICATE KEY UPDATE -> ON CONFLICT ... DO UPDATE SET ----
-    if ($upd !== null) {
-        $sql = dbx_apply_upsert($sql, $upd, $pdo);
-    }
     return $sql;
 }
 
 /* Resolusi ON DUPLICATE KEY UPDATE -> ON CONFLICT */
-function dbx_apply_upsert(string $sql, string $upd, ?PDO $pdo): string {
-    if ($pdo === null) return $sql; // tanpa PDO (unexpected): biarkan apa adanya
-    if (!preg_match('/(?i)INSERT\s+INTO\s+"?([\w]+)"?/', $sql, $tm)) return $sql;
-    $table = $tm[1];
+function dbx_rewrite_on_duplicate_key(string $sql): string {
+    // Hanya proses jika mengandung ON DUPLICATE KEY UPDATE
+    if (!preg_match('/\bON\s+DUPLICATE\s+KEY\s+UPDATE\b/i', $sql)) return $sql;
 
-    // kolom yang dimasukkan
-    $insCols = [];
-    if (preg_match('/^\s*INSERT\s+INTO\s+"?[\w]+"?\s*\(([^)]*)\)/is', $sql, $cm)) {
-        $insCols = array_map('trim', explode(',', $cm[1]));
-        $insCols = array_map(function ($c) { return trim($c, '"` '); }, $insCols);
+    // Ekstrak bagian INSERT INTO table (cols) VALUES ...
+    if (!preg_match('/^\s*INSERT\s+INTO\s+(\w+)\s*(?:\(([^)]+)\))?\s*VALUES\s*\((.+)\)\s+ON\s+DUPLICATE\s+KEY\s+UPDATE\s+(.+)$/is', $sql, $m)) {
+        return $sql;
     }
-    $insLower = array_map('strtolower', $insCols);
 
-    // pilih unique index yang seluruh kolomnya ada di daftar INSERT
-    $target = null;
-    foreach (dbx_unique_indexes($pdo, $table) as $meta) {
-        if (empty($meta['cols'])) continue;
-        $need = array_map('strtolower', $meta['cols']);
-        if (empty(array_diff($need, $insLower))) { $target = $meta['cols']; break; }
+    $table = $m[1];
+    $colsPart = $m[2] ?? '';
+    $valsPart = $m[3];
+    $updPart = $m[4];
+
+    // Cari unique index / primary key dari tabel untuk build ON CONFLICT
+    global $dbxLastPDO;
+    $targetCols = null;
+    if ($dbxLastPDO instanceof PDO) {
+        try {
+            $st = $dbxLastPDO->prepare(
+                "SELECT a.attname
+                 FROM pg_index i
+                 JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+                 WHERE i.indrelid = ?::regclass AND i.indisunique AND i.indisprimary
+                 ORDER BY a.attnum");
+            $st->execute([$table]);
+            $targetCols = $st->fetchAll(PDO::FETCH_COLUMN);
+            if (!$targetCols) {
+                $st2 = $dbxLastPDO->prepare(
+                    "SELECT a.attname
+                     FROM pg_index i
+                     JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+                     WHERE i.indrelid = ?::regclass AND i.indisunique
+                     ORDER BY a.attnum");
+                $st2->execute([$table]);
+                $targetCols = $st2->fetchAll(PDO::FETCH_COLUMN);
+            }
+        } catch (Throwable $e) {
+            $targetCols = null;
+        }
     }
-    // Tanpa unique-index yang cocok -> perilaku MySQL = INSERT biasa
-    if ($target === null) return $sql;
+    if (!$targetCols && $colsPart) {
+        $targetCols = array_map('trim', explode(',', $colsPart));
+    }
+    if (!$targetCols) return $origSql;
 
-    // terjemahan assignment: VALUES(col) -> EXCLUDED.col, lainnya apa adanya
+    // Terjemahkan assignment: VALUES(col) -> EXCLUDED.col
     $assigns = [];
-    foreach (preg_split('/,(?![^\'(]*[\')])/', $upd) as $as) {
+    foreach (preg_split('/,(?![^\'(]*[\')])/', $updPart) as $as) {
         $as = trim($as);
         if ($as === '') continue;
         if (preg_match('/^(\w+)\s*=\s*VALUES\s*\(\s*(\w+)\s*\)$/is', $as, $am)) {
@@ -398,8 +285,9 @@ function dbx_apply_upsert(string $sql, string $upd, ?PDO $pdo): string {
             $assigns[] = $as;
         }
     }
-    $cols = implode(', ', array_map(fn($c) => '"' . $c . '"', $target));
-    return $sql . ' ON CONFLICT (' . $cols . ') DO UPDATE SET ' . implode(', ', $assigns);
+    $cols = implode(', ', array_map(fn($c) => '"' . $c . '"', $targetCols));
+    $prefix = preg_replace('/\s+ON\s+DUPLICATE\s+KEY\s+UPDATE\s+.*$/is', '', $origSql);
+    return $prefix . ' ON CONFLICT (' . $cols . ') DO UPDATE SET ' . implode(', ', $assigns);
 }
 
 /* Deskripsi tabel PG untuk fungsi backup di pengaturan.php */
@@ -426,9 +314,9 @@ function dbx_pg_describe_table(string $t): ?string {
 }
 
 /* =========================================================================
- *  CLASS mysqli (compat) — connect adalah Supabase, bukan MySQL lama
+ *  CLASS sdb / mysqli (compat) — connect adalah Supabase, bukan MySQL lama
  * ========================================================================= */
-class mysqli {
+class sdb {
     public $connect_error  = '';
     public $connect_errno  = 0;
     public $error          = '';
@@ -458,77 +346,64 @@ class mysqli {
             $dbxLastPDO = $this->pdo;
         } catch (Throwable $e) {
             $this->connect_error = $e->getMessage();
-            $this->connect_errno = 2002;
-            $this->error         = $e->getMessage();
-            $this->errno         = 2002;
-            error_log('db_adapter: koneksi Supabase gagal: ' . $e->getMessage());
+            $this->connect_errno = $e->getCode() ?: 1;
+            $this->error = $e->getMessage();
+            $this->errno = $this->connect_errno;
+            $this->pdo = null;
         }
-    }
-
-    public function getPDO(): ?PDO { return $this->pdo; }
-    public function inTransaction(): bool { return $this->inTx; }
-
-    private function markError(Throwable $e): void {
-        $this->error = $e->getMessage();
-        $this->errno = 1000 + ((int)$e->getCode() & 0xFFFF);
-        error_log('db_adapter: ' . $e->getMessage());
     }
 
     public function query($sql, $resultmode = 0) {
-        if ($this->pdo === null) return false;
-        $raw = (string)$sql;
+        if (!$this->pdo) { $this->error = 'No connection'; return false; }
+        $this->error = ''; $this->errno = 0;
+        $translated = dbx_translate_sql($sql);
         try {
-            $t = dbx_translate($raw, $this->pdo);
-            $isSelect = preg_match('/^(SELECT|WITH|SHOW)\b/im', $t) || preg_match('/\bRETURNING\b/i', $t);
-            if ($isSelect) {
-                $stmt = $this->pdo->prepare($t);
-                // '?'-placeholder tak boleh tanpa bind; MySQL $koneksi->query sangat jarang pakai ?
-                if (preg_match_all('/\?/', $t) > 0) {
-                    $this->error = 'Placeholder ? pada ->query() atau ->prepare() tidak didukung tanpa bind param.';
-                    return false;
-                }
-                $stmt->execute();
-                return new mysqli_result($stmt);
+            $stmt = $this->pdo->query($translated);
+            $this->affected_rows = $stmt->rowCount();
+            if (stripos(trim($translated), 'INSERT') === 0) {
+                try { $this->insert_id = (int) $this->pdo->lastInsertId(); } catch (Throwable $e) {}
             }
-            // UPDATE / INSERT / DELETE / DDL
-            $st = $this->pdo->exec($t);
-            $this->affected_rows = $st;
-            if (preg_match('/^\s*INSERT\b/i', $t)) {
-                try { $this->insert_id = (int)$this->pdo->query('SELECT lastval()')->fetchColumn(); }
-                catch (Throwable $e) { /* INSERT tanpa sequence: dia biarkan */ }
+            $cols = [];
+            for ($i = 0; $i < $stmt->columnCount(); $i++) {
+                $meta = $stmt->getColumnMeta($i);
+                $n = (string)($meta['name'] ?? ('col' . $i));
+                $cols[] = (object)[
+                    'name'  => $n,
+                    'table' => (string)($meta['table'] ?? ''),
+                    'type'  => (string)($meta['driver:decl_type'] ?? 'string'),
+                    'len'   => 0,
+                    'flags' => 0,
+                ];
             }
-            return true;
+            return new sdb_result($stmt, $cols);
         } catch (Throwable $e) {
             $this->markError($e);
             return false;
         }
+    }
+
+    private function markError(Throwable $e) {
+        $this->error = $e->getMessage();
+        $this->errno = $e->getCode() ?: 1;
+        error_log('db_adapter: ' . $this->driver . ': ' . $e->getMessage());
     }
 
     public function prepare($sql) {
-        if ($this->pdo === null) return false;
-        try {
-            $t = dbx_translate((string)$sql, $this->pdo);
-            return new mysqli_stmt($this, $t);
-        } catch (Throwable $e) {
-            $this->markError($e);
-            return false;
-        }
+        return new sdb_stmt($this, $sql);
     }
 
-    // Escape gaya PostgreSQL: string literal didirikan standar MySQL dgn ' -> ''.
-    // Backslash dan NUL dibersihkan dulu untuk aman (MySQL-escape tidak dipakai).
     public function real_escape_string($s) {
-        $s = (string)$s;
-        $s = str_replace(["\\", "\0"], ["\\\\", '\0'], $s);
-        return str_replace("'", "''", $s);
+        if (!$this->pdo) return str_replace("'", "''", $s);
+        return $this->pdo->quote($s);
     }
     public function escape_string($s) { return $this->real_escape_string($s); }
 
     public function set_charset($cs) { return true; }
-    public function character_set_name() { return 'utf8mb4'; }
+    public function character_set_name() { return 'utf8'; }
+    public function get_charset() { return ['charset' => 'utf8']; }
+    public function host_info() { return 'Supabase PostgreSQL via PDO'; }
 
     public function begin_transaction($flags = 0, $name = null) {
-        if ($this->pdo === null) return false;
         if ($this->inTx) return true;
         try { $this->pdo->beginTransaction(); $this->inTx = true; return true; }
         catch (Throwable $e) { $this->markError($e); return false; }
@@ -554,23 +429,20 @@ class mysqli {
     public function select_db($db) { return strtolower($db) === 'postgres'; }
     public function ping() { return $this->pdo !== null; }
     public function ssl_set() { return true; }
-    public function stmt_init() { return new mysqli_stmt($this, ''); }
+    public function stmt_init() { return new sdb_stmt($this, ''); }
     public function close() { $this->pdo = null; return true; }
     public function __destruct() { $this->pdo = null; }
 }
 
 /* =========================================================================
- *  CLASS mysqli_result (compat)
+ *  CLASS sdb_result / mysqli_result (compat)
  * ========================================================================= */
-class mysqli_result implements IteratorAggregate {
+class sdb_result implements IteratorAggregate {
     public int $num_rows      = 0;
     public int $field_count   = 0;
     public int $current_field = 0;
-    /** @var array<int,object> metadata kolom { name, type, table } */
     public array $fields      = [];
-    /** @var array<int,array> semua baris (assoc) */
     private array $rows       = [];
-    /** @var array<int,list>   semua baris (numerik) */
     private array $rowList    = [];
     private int $cur          = 0;
 
@@ -603,195 +475,199 @@ class mysqli_result implements IteratorAggregate {
         $this->num_rows = count($this->rows);
     }
 
-    public function fetch_assoc() {
-        if ($this->cur >= $this->num_rows) return null;
-        return $this->rows[$this->cur++];
-    }
-    public function fetch_row() {
-        if ($this->cur >= $this->num_rows) return null;
-        return $this->rowList[$this->cur++];
-    }
-    public function fetch_object($class = null, array $ctor_args = []) {
-        $a = $this->fetch_assoc();
-        if ($a === null) return null;
-        return $class ? new $class(...array_values($a)) : (object)$a;
-    }
+    public function getIterator(): Traversable { return new ArrayIterator($this->rows); }
+    public function fetch_assoc() { return ($this->cur < $this->num_rows) ? $this->rows[$this->cur++] : null; }
+    public function fetch_row()   { return ($this->cur < $this->num_rows) ? $this->rowList[$this->cur++] : null; }
     public function fetch_array($mode = MYSQLI_BOTH) {
-        $a = $this->fetch_assoc();
-        if ($a === null) return null;
-        if ($mode === MYSQLI_ASSOC) return array_filter($a, 'is_string', ARRAY_FILTER_USE_KEY);
-        if ($mode === MYSQLI_NUM)   return array_filter($a, 'is_int', ARRAY_FILTER_USE_KEY);
-        $out = []; $i = 0;
-        foreach ($a as $k => $v) { $out[$k] = $v; $out[$i++] = $v; }
-        return $out;
+        if ($this->cur >= $this->num_rows) return null;
+        $assoc = $this->rows[$this->cur];
+        $num   = $this->rowList[$this->cur];
+        $this->cur++;
+        if ($mode === MYSQLI_ASSOC) return $assoc;
+        if ($mode === MYSQLI_NUM) return $num;
+        return $assoc + $num;
+    }
+    public function fetch_object($class = 'stdClass', array $ctorArgs = []) {
+        if ($this->cur >= $this->num_rows) return null;
+        $obj = new $class(...$ctorArgs);
+        foreach ($this->rows[$this->cur] as $k => $v) $obj->$k = $v;
+        $this->cur++;
+        return $obj;
     }
     public function fetch_all($mode = MYSQLI_ASSOC) {
-        if ($mode === MYSQLI_ASSOC) return $this->rows;
-        if ($mode === MYSQLI_NUM)   return $this->rowList;
         $out = [];
-        foreach ($this->rows as $r) {
-            $row = []; $i = 0;
-            foreach ($r as $k => $v) { $row[$k] = $v; $row[$i++] = $v; }
-            $out[] = $row;
+        for ($i = $this->cur; $i < $this->num_rows; $i++) {
+            if ($mode === MYSQLI_ASSOC) $out[] = $this->rows[$i];
+            elseif ($mode === MYSQLI_NUM) $out[] = $this->rowList[$i];
+            else $out[] = $this->rows[$i] + $this->rowList[$i];
         }
+        $this->cur = $this->num_rows;
         return $out;
     }
-    public function fetch_fields() { return $this->fields; }
+    public function data_seek($offset) { if ($offset >= 0 && $offset < $this->num_rows) { $this->cur = $offset; return true; } return false; }
+    public function free() { $this->rows = []; $this->rowList = []; $this->fields = []; $this->num_rows = 0; $this->field_count = 0; }
     public function fetch_field() {
-        return array_key_exists($this->current_field, $this->fields)
-            ? $this->fields[$this->current_field++] : false;
+        if ($this->current_field >= $this->field_count) return false;
+        return $this->fields[$this->current_field++];
     }
-    public function fetch_field_direct($i) { return $this->fields[$i] ?? false; }
-    public function field_seek($i) { $this->current_field = (int)$i; return true; }
-    public function data_seek($i) { $this->cur = max(0, (int)$i); return true; }
-    public function free() {}
-    public function free_result() {}
-    public function close() {}
-    public function getIterator(): Iterator { return new ArrayIterator($this->rows); }
+    public function fetch_field_direct($nr) {
+        return ($nr >= 0 && $nr < $this->field_count) ? $this->fields[$nr] : false;
+    }
+    public function field_seek($nr) { if ($nr >= 0 && $nr < $this->field_count) { $this->current_field = $nr; return true; } return false; }
 }
 
 /* =========================================================================
- *  CLASS mysqli_stmt (compat)
+ *  CLASS sdb_stmt / mysqli_stmt (compat)
  * ========================================================================= */
-class mysqli_stmt {
-    public string $error         = '';
-    public int    $errno         = 0;
-    public int    $affected_rows = 0;
-    public int    $insert_id     = 0;
-    public int    $num_rows      = 0;
-    public int    $param_count   = 0;
-    public int    $field_count   = 0;
-    private mysqli $owner;
+class sdb_stmt {
+    private sdb $owner;
     private string $sql;
-    /** @var array<int,mixed> nilai param (menyimpan referensi) */
-    private array $params        = [];
-    private array $types         = [];
-    private ?mysqli_result $res  = null;
-    private bool $executed       = false;
+    private array $params = [];
+    public string $error = '';
+    public int $errno = 0;
+    public int $affected_rows = 0;
+    public int $insert_id = 0;
+    public int $num_rows = 0;
+    private ?sdb_result $res = null;
 
-    public function __construct(mysqli $owner, string $sql) {
+    public function __construct(sdb $owner, string $sql) {
         $this->owner = $owner;
         $this->sql = $sql;
-        $this->param_count = preg_match_all('/\?/', $sql);
-    }
-
-    private function markErr(Throwable $e): void {
-        $this->error = $e->getMessage();
-        $this->errno = 2001 + ((int)$e->getCode() & 0xFF);
-        error_log('db_adapter stmt: ' . $e->getMessage());
     }
 
     public function bind_param(string $types, &...$vars): bool {
-        $this->types  = str_split($types);
         $this->params = $vars;
         return true;
     }
-    public function bind_result(&...$vars): bool { return true; }
 
     public function execute(): bool {
-        $pdo = $this->owner->getPDO();
-        if ($pdo === null) return false;
-        $this->res = null; $this->executed = false;
-        $sql = $this->sql;
+        $translated = dbx_translate_sql($this->sql);
         try {
-            $st = $pdo->prepare($sql);
-            $nph = preg_match_all('/\?/', $sql);
-            $n = min($nph, count($this->params));
-            for ($i = 0; $i < $n; $i++) {
-                $v = $this->params[$i];
-                $ty = ($this->types[$i] ?? 's');
-                $st->bindValue($i + 1, $v,
-                    $v === null ? PDO::PARAM_NULL
-                    : ($ty === 'i' && is_int($v) ? PDO::PARAM_INT
-                       : ($ty === 'd' && is_float($v) ? PDO::PARAM_STR : PDO::PARAM_STR)));
+            $st = $this->owner->pdo->prepare($translated);
+            if (!$st) { $this->owner->markError(new Exception('Prepare failed')); return false; }
+            foreach ($this->params as $i => $v) {
+                $st->bindValue($i + 1, $v);
             }
-            // Parameter ganda (banyak param > placeholder, mis. upsert MySQL):
-            // yang tak terpakai diabaikan — sesuai perilaku ON DUPLICATE KEY UPDATE.
-            $st->execute();
-            $this->executed = true;
-            if (preg_match('/^(SELECT|WITH|SHOW)\b/i', ltrim($sql)) || preg_match('/\bRETURNING\b/i', $sql)) {
-                $this->res = new mysqli_result($st);
+            $ok = $st->execute();
+            $this->affected_rows = $st->rowCount();
+            try { $this->insert_id = (int) $this->owner->pdo->lastInsertId(); } catch (Throwable $e) {}
+            $this->owner->affected_rows = $this->affected_rows;
+            $this->owner->insert_id = $this->insert_id;
+            if ($ok && stripos(trim($translated), 'SELECT') === 0) {
+                $this->res = new sdb_result($st);
                 $this->num_rows = $this->res->num_rows;
-                $this->affected_rows = $this->res->num_rows;
-            } else {
-                $this->affected_rows = $st->rowCount();
-                if (preg_match('/^\s*INSERT\b/i', $sql)) {
-                    try {
-                        $v = $pdo->query('SELECT lastval()')->fetchColumn();
-                        $this->insert_id = (int)$v;
-                    } catch (Throwable $e) { /* INSERT tanpa nextval: lastval tak tersedia */ }
-                }
-                $this->owner->affected_rows = $this->affected_rows;
-                $this->owner->insert_id = $this->insert_id;
             }
-            return true;
+            return $ok;
         } catch (Throwable $e) {
-            $this->markErr($e);
-            $this->owner->error = $e->getMessage();
+            $this->error = $e->getMessage();
+            $this->errno = $e->getCode() ?: 1;
+            $this->owner->markError($e);
             return false;
         }
     }
 
-    public function get_result() {
-        if (!$this->executed) return false;
-        if ($this->res === null) return new mysqli_result([], ['']);
-        return $this->res;
-    }
-    public function store_result(): bool {
-        if ($this->res) { $this->num_rows = $this->res->num_rows; return true; }
-        return false;
-    }
+    public function get_result() { return $this->res; }
     public function fetch() { return $this->res ? $this->res->fetch_assoc() : null; }
-    public function fetch_assoc() { return $this->fetch(); }
-    public function free_result() {}
-    public function data_seek($i) { return true; }
+    public function store_result(): bool { if ($this->res) { $this->num_rows = $this->res->num_rows; return true; } return false; }
+    public function data_seek($i) { return $this->res ? $this->res->data_seek($i) : true; }
+    public function free_result() { if ($this->res) $this->res->free(); }
     public function close(): bool { $this->params = []; $this->res = null; return true; }
 }
 
 /* =========================================================================
- *  FUNGSI PROSEDURAL mysqli_* (compat)
+ *  FUNGSI PROSEDURAL sdb_* / mysqli_* (compat)
  * ========================================================================= */
-function mysqli_connect($host = null, $user = null, $pass = null, $db = null, $port = null) {
-    return new mysqli($host, $user, $pass, $db, $port);
+function sdb_connect($host = null, $user = null, $pass = null, $db = null, $port = null) {
+    return new sdb($host, $user, $pass, $db, $port);
 }
-function mysqli_connect_error() { return ''; }
-function mysqli_select_db(mysqli $c, string $db): bool { return $c->select_db($db); }
-function mysqli_query(mysqli $c, string $sql, int $mode = 0) { return $c->query($sql, $mode); }
-function mysqli_real_escape_string(mysqli $c, string $s) { return $c->real_escape_string($s); }
-function mysqli_escape_string(mysqli $c, string $s) { return $c->real_escape_string($s); }
-function mysqli_set_charset(mysqli $c, string $cs): bool { return $c->set_charset($cs); }
-function mysqli_error(mysqli $c): string { return $c->error; }
-function mysqli_errno(mysqli $c): int { return $c->errno; }
-function mysqli_fetch_assoc($r) { return ($r instanceof mysqli_result) ? $r->fetch_assoc() : null; }
-function mysqli_fetch_row($r)   { return ($r instanceof mysqli_result) ? $r->fetch_row() : null; }
-function mysqli_fetch_object($r, $class = null, array $ca = []) { return ($r instanceof mysqli_result) ? $r->fetch_object($class, $ca) : null; }
-function mysqli_fetch_array($r, $m = MYSQLI_BOTH) { return ($r instanceof mysqli_result) ? $r->fetch_array($m) : null; }
-function mysqli_fetch_all($r, $m = MYSQLI_ASSOC) { return ($r instanceof mysqli_result) ? $r->fetch_all($m) : []; }
-function mysqli_num_rows($r): int { return ($r instanceof mysqli_result) ? $r->num_rows : 0; }
-function mysqli_num_fields($r): int { return ($r instanceof mysqli_result) ? $r->field_count : 0; }
-function mysqli_fetch_fields($r): array { return ($r instanceof mysqli_result) ? $r->fields : []; }
-function mysqli_fetch_field($r) { return ($r instanceof mysqli_result) ? $r->fetch_field() : false; }
-function mysqli_fetch_field_direct($r, $i) { return ($r instanceof mysqli_result) ? $r->fetch_field_direct($i) : false; }
-function mysqli_field_seek($r, $i) { return ($r instanceof mysqli_result) ? $r->field_seek($i) : false; }
-function mysqli_data_seek($r, $i) { return ($r instanceof mysqli_result) ? $r->data_seek($i) : false; }
-function mysqli_free_result($r) { if ($r instanceof mysqli_result) $r->free(); }
-function mysqli_insert_id(mysqli $c): int { return $c->insert_id; }
-function mysqli_affected_rows(mysqli $c): int { return $c->affected_rows; }
-function mysqli_prepare(mysqli $c, string $sql) { return $c->prepare($sql); }
-function mysqli_stmt_bind_param(mysqli_stmt $st, string $types, &...$args): bool { return $st->bind_param($types, ...$args); }
-function mysqli_stmt_execute(mysqli_stmt $st): bool { return $st->execute(); }
-function mysqli_stmt_get_result(mysqli_stmt $st) { return $st->get_result(); }
-function mysqli_stmt_fetch(mysqli_stmt $st) { return $st->fetch(); }
-function mysqli_stmt_close(mysqli_stmt $st): bool { return $st->close(); }
-function mysqli_stmt_free_result(mysqli_stmt $st): void { $st->free_result(); }
-function mysqli_stmt_num_rows(mysqli_stmt $st): int { return $st->num_rows; }
-function mysqli_stmt_errno(mysqli_stmt $st): int { return $st->errno; }
-function mysqli_stmt_error(mysqli_stmt $st): string { return $st->error; }
-function mysqli_stmt_insert_id(mysqli_stmt $st): int { return $st->insert_id; }
-function mysqli_stmt_affected_rows(mysqli_stmt $st): int { return $st->affected_rows; }
-function mysqli_begin_transaction(mysqli $c): bool { return $c->begin_transaction(); }
-function mysqli_commit(mysqli $c): bool { return $c->commit(); }
-function mysqli_rollback(mysqli $c): bool { return $c->rollback(); }
-function mysqli_autocommit(mysqli $c, bool $m): bool { return $c->autocommit($m); }
-function mysqli_close(mysqli $c): bool { return $c->close(); }
-function mysqli_ping(mysqli $c): bool { return $c->ping(); }
+function sdb_connect_error() { return ''; }
+function sdb_select_db($c, string $db): bool { return $c->select_db($db); }
+function sdb_query($c, string $sql, int $mode = 0) { return $c->query($sql, $mode); }
+function sdb_real_escape_string($c, string $s) { return $c->real_escape_string($s); }
+function sdb_escape_string($c, string $s) { return $c->real_escape_string($s); }
+function sdb_set_charset($c, string $cs): bool { return $c->set_charset($cs); }
+function sdb_error($c): string { return $c->error; }
+function sdb_errno($c): int { return $c->errno; }
+function sdb_fetch_assoc($r) { return ($r instanceof sdb_result) ? $r->fetch_assoc() : null; }
+function sdb_fetch_row($r)   { return ($r instanceof sdb_result) ? $r->fetch_row() : null; }
+function sdb_fetch_object($r, $class = null, array $ca = []) { return ($r instanceof sdb_result) ? $r->fetch_object($class, $ca) : null; }
+function sdb_fetch_array($r, $m = MYSQLI_BOTH) { return ($r instanceof sdb_result) ? $r->fetch_array($m) : null; }
+function sdb_fetch_all($r, $m = MYSQLI_ASSOC) { return ($r instanceof sdb_result) ? $r->fetch_all($m) : []; }
+function sdb_num_rows($r): int { return ($r instanceof sdb_result) ? $r->num_rows : 0; }
+function sdb_num_fields($r): int { return ($r instanceof sdb_result) ? $r->field_count : 0; }
+function sdb_fetch_fields($r): array { return ($r instanceof sdb_result) ? $r->fields : []; }
+function sdb_fetch_field($r) { return ($r instanceof sdb_result) ? $r->fetch_field() : false; }
+function sdb_fetch_field_direct($r, $i) { return ($r instanceof sdb_result) ? $r->fetch_field_direct($i) : false; }
+function sdb_field_seek($r, $i) { return ($r instanceof sdb_result) ? $r->field_seek($i) : false; }
+function sdb_data_seek($r, $i) { return ($r instanceof sdb_result) ? $r->data_seek($i) : false; }
+function sdb_free_result($r) { if ($r instanceof sdb_result) $r->free(); }
+function sdb_insert_id($c): int { return $c->insert_id; }
+function sdb_affected_rows($c): int { return $c->affected_rows; }
+function sdb_prepare($c, string $sql) { return $c->prepare($sql); }
+function sdb_stmt_bind_param($st, string $types, &...$args): bool { return $st->bind_param($types, ...$args); }
+function sdb_stmt_execute($st): bool { return $st->execute(); }
+function sdb_stmt_get_result($st) { return $st->get_result(); }
+function sdb_stmt_fetch($st) { return $st->fetch(); }
+function sdb_stmt_close($st): bool { return $st->close(); }
+function sdb_stmt_free_result($st): void { $st->free_result(); }
+function sdb_stmt_num_rows($st): int { return $st->num_rows; }
+function sdb_stmt_errno($st): int { return $st->errno; }
+function sdb_stmt_error($st): string { return $st->error; }
+function sdb_stmt_insert_id($st): int { return $st->insert_id; }
+function sdb_stmt_affected_rows($st): int { return $st->affected_rows; }
+function sdb_begin_transaction($c): bool { return $c->begin_transaction(); }
+function sdb_commit($c): bool { return $c->commit(); }
+function sdb_rollback($c): bool { return $c->rollback(); }
+function sdb_autocommit($c, bool $m): bool { return $c->autocommit($m); }
+function sdb_close($c): bool { return $c->close(); }
+function sdb_ping($c): bool { return $c->ping(); }
+
+/* Alias mysqli_* ke sdb_* agar kode lama tetap jalan jika native mysqli TIDAK terload */
+if (!$mysqli_native) {
+    class_alias('sdb', 'mysqli', true);
+    class_alias('sdb_result', 'mysqli_result', true);
+    class_alias('sdb_stmt', 'mysqli_stmt', true);
+    // Alias functions
+    function mysqli_connect($host = null, $user = null, $pass = null, $db = null, $port = null) { return sdb_connect($host, $user, $pass, $db, $port); }
+    function mysqli_connect_error() { return ''; }
+    function mysqli_select_db($c, string $db): bool { return sdb_select_db($c, $db); }
+    function mysqli_query($c, string $sql, int $mode = 0) { return sdb_query($c, $sql, $mode); }
+    function mysqli_real_escape_string($c, string $s) { return sdb_real_escape_string($c, $s); }
+    function mysqli_escape_string($c, string $s) { return sdb_escape_string($c, $s); }
+    function mysqli_set_charset($c, string $cs): bool { return sdb_set_charset($c, $cs); }
+    function mysqli_error($c): string { return sdb_error($c); }
+    function mysqli_errno($c): int { return sdb_errno($c); }
+    function mysqli_fetch_assoc($r) { return sdb_fetch_assoc($r); }
+    function mysqli_fetch_row($r) { return sdb_fetch_row($r); }
+    function mysqli_fetch_object($r, $class = null, array $ca = []) { return sdb_fetch_object($r, $class, $ca); }
+    function mysqli_fetch_array($r, $m = MYSQLI_BOTH) { return sdb_fetch_array($r, $m); }
+    function mysqli_fetch_all($r, $m = MYSQLI_ASSOC) { return sdb_fetch_all($r, $m); }
+    function mysqli_num_rows($r): int { return sdb_num_rows($r); }
+    function mysqli_num_fields($r): int { return sdb_num_fields($r); }
+    function mysqli_fetch_fields($r): array { return sdb_fetch_fields($r); }
+    function mysqli_fetch_field($r) { return sdb_fetch_field($r); }
+    function mysqli_fetch_field_direct($r, $i) { return sdb_fetch_field_direct($r, $i); }
+    function mysqli_field_seek($r, $i) { return sdb_field_seek($r, $i); }
+    function mysqli_data_seek($r, $i) { return sdb_data_seek($r, $i); }
+    function mysqli_free_result($r) { sdb_free_result($r); }
+    function mysqli_insert_id($c): int { return sdb_insert_id($c); }
+    function mysqli_affected_rows($c): int { return sdb_affected_rows($c); }
+    function mysqli_prepare($c, string $sql) { return sdb_prepare($c, $sql); }
+    function mysqli_stmt_bind_param($st, string $types, &...$args): bool { return sdb_stmt_bind_param($st, $types, ...$args); }
+    function mysqli_stmt_execute($st): bool { return sdb_stmt_execute($st); }
+    function mysqli_stmt_get_result($st) { return sdb_stmt_get_result($st); }
+    function mysqli_stmt_fetch($st) { return sdb_stmt_fetch($st); }
+    function mysqli_stmt_close($st): bool { return sdb_stmt_close($st); }
+    function mysqli_stmt_free_result($st): void { sdb_stmt_free_result($st); }
+    function mysqli_stmt_num_rows($st): int { return sdb_stmt_num_rows($st); }
+    function mysqli_stmt_errno($st): int { return sdb_stmt_errno($st); }
+    function mysqli_stmt_error($st): string { return sdb_stmt_error($st); }
+    function mysqli_stmt_insert_id($st): int { return sdb_stmt_insert_id($st); }
+    function mysqli_stmt_affected_rows($st): int { return sdb_stmt_affected_rows($st); }
+    function mysqli_begin_transaction($c): bool { return sdb_begin_transaction($c); }
+    function mysqli_commit($c): bool { return sdb_commit($c); }
+    function mysqli_rollback($c): bool { return sdb_rollback($c); }
+    function mysqli_autocommit($c, bool $m): bool { return sdb_autocommit($c, $m); }
+    function mysqli_close($c): bool { return sdb_close($c); }
+    function mysqli_ping($c): bool { return sdb_ping($c); }
+}
