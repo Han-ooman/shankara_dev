@@ -23,6 +23,7 @@ if (str_contains($path, '..') || str_contains($path, "\0")) {
 
 // Cek apakah ini permintaan file statis (assets, manifest.json, sw.js, format_bast)
 $filePath = $root . $path;
+error_log("DEBUG static: path=$path, root=$root, filePath=$filePath, exists=" . (is_file($filePath) ? 'yes' : 'no'));
 if ($path !== '/' && is_file($filePath)) {
     $ext = pathinfo($filePath, PATHINFO_EXTENSION);
     $mimeTypes = [
