@@ -3,7 +3,7 @@
     { "src": "api/index.php", "use": "vercel-php@0.7.2" }
   ],
   "routes": [
-    { "src": "/assets/(.*)", "dest": "/assets/$1" },
+    { "src": "/assets/(.*)", "dest": "/assets/$1", "headers": { "Cache-Control": "public, max-age=31536000, immutable" } },
     { "src": "/format_bast/(.*)", "dest": "/format_bast/$1" },
     { "src": "/manifest.json", "dest": "/manifest.json" },
     { "src": "/sw.js", "dest": "/sw.js" },
