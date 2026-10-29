@@ -26,6 +26,7 @@ $filePath = $root . $path;
 error_log("DEBUG static: path=$path, root=$root, filePath=$filePath, exists=" . (is_file($filePath) ? 'yes' : 'no'));
 if ($path !== '/' && is_file($filePath)) {
     $ext = pathinfo($filePath, PATHINFO_EXTENSION);
+    error_log("DEBUG static: ext=$ext");
     $mimeTypes = [
         'css' => 'text/css',
         'js' => 'application/javascript',
@@ -40,10 +41,14 @@ if ($path !== '/' && is_file($filePath)) {
         'ttf' => 'font/ttf',
     ];
     if (isset($mimeTypes[$ext])) {
+        error_log("DEBUG static: serving file with mime=" . $mimeTypes[$ext]);
         header('Content-Type: ' . $mimeTypes[$ext]);
         header('Cache-Control: public, max-age=31536000');
         readfile($filePath);
+        error_log("DEBUG static: file served");
         exit();
+    } else {
+        error_log("DEBUG static: unknown ext=$ext");
     }
 }
 
