@@ -27,7 +27,7 @@ if ($_self !== 'maintenance.php' && $_self !== 'toggle_maintenance.php') {
 // Koneksi via adapter mysqli-compat -> Supabase PostgreSQL (PDO pgsql)
 require_once __DIR__ . '/db_adapter.php';
 
-// Auto-construct Supabase DSN if not provided as full URI
+// Auto-construct Supabase DSN using DIRECT connection (port 5432) - works on Vercel
 // Supabase Project: iwxbdnzglypdjimeuzht
 if (!defined('SUPABASE_DSN') || str_starts_with(SUPABASE_DSN, 'pgsql:') === false) {
     // Get credentials from env or constants
@@ -37,15 +37,8 @@ if (!defined('SUPABASE_DSN') || str_starts_with(SUPABASE_DSN, 'pgsql:') === fals
     $user = getenv('SUPABASE_USER') ?: (defined('SUPABASE_USER') ? SUPABASE_USER : 'postgres');
     $pass = getenv('SUPABASE_PASSWORD') ?: (defined('SUPABASE_PASSWORD') ? SUPABASE_PASSWORD : '');
     
-    // Use pooler for serverless (Vercel) - port 6543
-    // Use direct for local - port 5432
-    $isVercel = getenv('VERCEL') !== false || getenv('VERCEL_ENV') !== false;
-    if ($isVercel) {
-        // Use pooler
-        $host = 'aws-0-ap-southeast-1.pooler.supabase.com';
-        $port = '6543';
-    }
-    
+    // Always use direct connection for simplicity & reliability on Vercel
+    // sslmode=require is mandatory for Supabase
     define('SUPABASE_DSN', "pgsql:host={$host};port={$port};dbname={$db};sslmode=require");
     define('SUPABASE_USER', $user);
     define('SUPABASE_PASSWORD', $pass);
@@ -54,14 +47,12 @@ if (!defined('SUPABASE_DSN') || str_starts_with(SUPABASE_DSN, 'pgsql:') === fals
 $koneksi = sdb_connect(SUPABASE_DSN, SUPABASE_USER, SUPABASE_PASSWORD, 'postgres');
 
 if (!($koneksi instanceof sdb) || $koneksi->connect_errno) {
-    // Jangan bocorkan detail koneksi ke pengguna; catat ke log server.
+    // Tampilkan error detail untuk debugging (mask password in DSN)
+    $dsnForDisplay = preg_replace('/password=[^;]+/', 'password=***', SUPABASE_DSN ?? '');
     $errMsg = $koneksi->connect_error ?? 'Unknown connection error';
-    error_log("Koneksi DB gagal: " . $errMsg);
-    // Debug: show error in development
-    if (getenv('APP_DEBUG') === 'true') {
-        http_response_code(500);
-        die("DB Connection Failed: " . htmlspecialchars($errMsg));
-    }
+    error_log("Koneksi DB gagal: DSN={$dsnForDisplay} Error={$errMsg}");
+    
+    // Force show error for debugging deployment
     http_response_code(500);
-    die("Terjadi kesalahan internal. Silakan hubungi administrator.");
+    die("DB Connection Failed: " . htmlspecialchars($errMsg) . "<br>DSN: " . htmlspecialchars($dsnForDisplay));
 }
