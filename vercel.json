@@ -1,6 +1,12 @@
 {
   "builds": [
-    { "src": "api/index.php", "use": "vercel-php@0.7.2" }
+    {
+      "src": "api/index.php",
+      "use": "vercel-php@0.7.2",
+      "config": {
+        "includePaths": ["assets/**", "format_bast/**", "manifest.json", "sw.js"]
+      }
+    }
   ],
   "routes": [
     { "src": "/assets/(.*)", "dest": "/api/index.php" },

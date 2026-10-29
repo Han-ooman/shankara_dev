@@ -11,14 +11,9 @@ require_once dirname(__DIR__) . '/includes/session_db.php';
 
 $root = dirname(__DIR__);
 
-// DEBUG: Log the actual request
-error_log("DEBUG: REQUEST_URI=" . ($_SERVER['REQUEST_URI'] ?? 'NOT_SET') . ", SCRIPT_NAME=" . ($_SERVER['SCRIPT_NAME'] ?? 'NOT_SET') . ", PHP_SELF=" . ($_SERVER['PHP_SELF'] ?? 'NOT_SET'));
-
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/';
 $path = urldecode($path);
 $path = str_replace('\\', '/', $path);
-
-error_log("DEBUG: Parsed path=$path");
 
 // Blokir traversal
 if (str_contains($path, '..') || str_contains($path, "\0")) {
