@@ -27,11 +27,41 @@ if ($_self !== 'maintenance.php' && $_self !== 'toggle_maintenance.php') {
 // Koneksi via adapter mysqli-compat -> Supabase PostgreSQL (PDO pgsql)
 require_once __DIR__ . '/db_adapter.php';
 
+// Auto-construct Supabase DSN if not provided as full URI
+// Supabase Project: iwxbdnzglypdjimeuzht
+if (!defined('SUPABASE_DSN') || str_starts_with(SUPABASE_DSN, 'pgsql:') === false) {
+    // Get credentials from env or constants
+    $host = getenv('SUPABASE_HOST') ?: (defined('SUPABASE_HOST') ? SUPABASE_HOST : 'db.iwxbdnzglypdjimeuzht.supabase.co');
+    $port = getenv('SUPABASE_PORT') ?: (defined('SUPABASE_PORT') ? SUPABASE_PORT : '5432');
+    $db   = getenv('SUPABASE_DB') ?: (defined('SUPABASE_DB') ? SUPABASE_DB : 'postgres');
+    $user = getenv('SUPABASE_USER') ?: (defined('SUPABASE_USER') ? SUPABASE_USER : 'postgres');
+    $pass = getenv('SUPABASE_PASSWORD') ?: (defined('SUPABASE_PASSWORD') ? SUPABASE_PASSWORD : '');
+    
+    // Use pooler for serverless (Vercel) - port 6543
+    // Use direct for local - port 5432
+    $isVercel = getenv('VERCEL') !== false || getenv('VERCEL_ENV') !== false;
+    if ($isVercel) {
+        // Use pooler
+        $host = 'aws-0-ap-southeast-1.pooler.supabase.com';
+        $port = '6543';
+    }
+    
+    define('SUPABASE_DSN', "pgsql:host={$host};port={$port};dbname={$db};sslmode=require");
+    define('SUPABASE_USER', $user);
+    define('SUPABASE_PASSWORD', $pass);
+}
+
 $koneksi = sdb_connect(SUPABASE_DSN, SUPABASE_USER, SUPABASE_PASSWORD, 'postgres');
 
 if (!($koneksi instanceof sdb) || $koneksi->connect_errno) {
     // Jangan bocorkan detail koneksi ke pengguna; catat ke log server.
-    error_log("Koneksi DB gagal: " . $koneksi->connect_error);
+    $errMsg = $koneksi->connect_error ?? 'Unknown connection error';
+    error_log("Koneksi DB gagal: " . $errMsg);
+    // Debug: show error in development
+    if (getenv('APP_DEBUG') === 'true') {
+        http_response_code(500);
+        die("DB Connection Failed: " . htmlspecialchars($errMsg));
+    }
     http_response_code(500);
     die("Terjadi kesalahan internal. Silakan hubungi administrator.");
 }
