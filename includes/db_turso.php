@@ -34,6 +34,22 @@ class TursoDB {
         // ::type cast -> CAST(x AS type)
         $sql = preg_replace('/(\w+)\s*::\s*(\w+)/', 'CAST($1 AS $2)', $sql);
         
+        // MySQL ON DUPLICATE KEY UPDATE -> SQLite ON CONFLICT
+        // INSERT INTO table (col1, col2) VALUES (?, ?) ON DUPLICATE KEY UPDATE col1 = VALUES(col1), col2 = VALUES(col2)
+        // becomes:
+        // INSERT INTO table (col1, col2) VALUES (?, ?) ON CONFLICT (col1) DO UPDATE SET col1 = excluded.col1, col2 = excluded.col2
+        // Note: SQLite doesn't support VALUES() function, use excluded.column instead
+        $sql = preg_replace_callback(
+            '/\bON\s+DUPLICATE\s+KEY\s+UPDATE\s+(.+)$/i',
+            function ($m) {
+                $updates = $m[1];
+                // Replace VALUES(col) with excluded.col
+                $updates = preg_replace('/VALUES\s*\(\s*(\w+)\s*\)/i', 'excluded.$1', $updates);
+                return 'ON CONFLICT DO UPDATE SET ' . $updates;
+            },
+            $sql
+        );
+        
         // DATE_TRUNC('unit', col) -> strftime('%Y-%m-%d %H:%M:%S', col) dsb
         // SQLite tidak punya DATE_TRUNC, gunakan strftime
         // Tetapi cukup kompleks, biarkan dulu
