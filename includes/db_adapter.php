@@ -438,8 +438,11 @@ class mysqli {
     public $server_info    = 'PostgreSQL 17 (Supabase)';
     public $client_version = 180002;
     public $info           = '';
+    public $driver         = 'pgsql';
     private ?PDO $pdo      = null;
     private bool $inTx     = false;
+
+    public function getDriver(): string { return $this->driver; }
 
     public function __construct($host = null, $user = null, $pass = null, $db = null,
                                 $port = null, $socket = null) {

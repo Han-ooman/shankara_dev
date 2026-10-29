@@ -82,8 +82,14 @@ if (!class_exists('SdbDbSessionHandler')) {
                     "INSERT INTO php_sessions (session_id, session_data, updated_at) VALUES ('$id_e', '$data_e', CURRENT_TIMESTAMP)
                      ON CONFLICT (session_id) DO UPDATE SET session_data = '$data_e', updated_at = CURRENT_TIMESTAMP"
                 );
+            } elseif ($driver === 'pgsql') {
+                // PostgreSQL (Supabase)
+                return (bool) $db->query(
+                    "INSERT INTO php_sessions (session_id, session_data, updated_at) VALUES ('$id_e', '$data_e', NOW())
+                     ON CONFLICT (session_id) DO UPDATE SET session_data = EXCLUDED.session_data, updated_at = NOW()"
+                );
             }
-            // Postgres / other
+            // fallback
             return (bool) $db->query(
                 "INSERT INTO php_sessions (session_id, session_data, updated_at) VALUES ('$id_e', '$data_e', NOW())
                  ON CONFLICT (session_id) DO UPDATE SET session_data = EXCLUDED.session_data, updated_at = NOW()"
@@ -110,6 +116,8 @@ if (!class_exists('SdbDbSessionHandler')) {
                 $db->query("DELETE FROM php_sessions WHERE updated_at < (NOW() - INTERVAL $max SECOND)");
             } elseif ($driver === 'turso') {
                 $db->query("DELETE FROM php_sessions WHERE updated_at < datetime('now', '-{$max} seconds')");
+            } elseif ($driver === 'pgsql') {
+                $db->query("DELETE FROM php_sessions WHERE updated_at < NOW() - INTERVAL '$max seconds'");
             } else {
                 $db->query("DELETE FROM php_sessions WHERE updated_at < NOW() - INTERVAL '$max seconds'");
             }
