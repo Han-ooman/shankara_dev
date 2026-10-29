@@ -1,15 +1,12 @@
 {
-  "functions": {
-    "api/*.php": {
-      "runtime": "vercel-php@0.7.2"
-    }
-  },
+  "builds": [
+    { "src": "api/index.php", "use": "vercel-php@0.7.2" }
+  ],
   "routes": [
     { "src": "/assets/(.*)", "dest": "/assets/$1" },
     { "src": "/format_bast/(.*)", "dest": "/format_bast/$1" },
     { "src": "/manifest.json", "dest": "/manifest.json" },
     { "src": "/sw.js", "dest": "/sw.js" },
     { "src": "/(.*)", "dest": "/api/index.php" }
-  ],
-  "buildCommand": "composer install --no-dev --optimize-autoloader"
+  ]
 }
