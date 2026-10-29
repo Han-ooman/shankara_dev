@@ -942,21 +942,21 @@ function sdb_connect_active() {
     return (DB_MODE === 'online') ? sdb_connect_pgsql() : sdb_connect_mysql();
 }
 function sdb_connect_error() { return ''; }
-function sdb_select_db(sdb $c, string $db): bool { return $c->select_db($db); }
-function sdb_query(sdb $c, string $sql, int $mode = 0) { return $c->query($sql, $mode); }
-function sdb_real_escape_string(sdb $c, string $s) { return $c->real_escape_string($s); }
-function sdb_escape_string(sdb $c, string $s) { return $c->real_escape_string($s); }
-function sdb_set_charset(sdb $c, string $cs): bool { return $c->set_charset($cs); }
-function sdb_error(sdb $c): string { return $c->error; }
-function sdb_errno(sdb $c): int { return $c->errno; }
-function sdb_fetch_assoc($r) { return ($r instanceof sdb_result) ? $r->fetch_assoc() : null; }
-function sdb_fetch_row($r)   { return ($r instanceof sdb_result) ? $r->fetch_row() : null; }
-function sdb_fetch_object($r, $class = null, array $ca = []) { return ($r instanceof sdb_result) ? $r->fetch_object($class, $ca) : null; }
-function sdb_fetch_array($r, $m = MYSQLI_BOTH) { return ($r instanceof sdb_result) ? $r->fetch_array($m) : null; }
-function sdb_fetch_all($r, $m = MYSQLI_ASSOC) { return ($r instanceof sdb_result) ? $r->fetch_all($m) : []; }
-function sdb_num_rows($r): int { return ($r instanceof sdb_result) ? $r->num_rows : 0; }
-function sdb_num_fields($r): int { return ($r instanceof sdb_result) ? $r->field_count : 0; }
-function sdb_fetch_fields($r): array { return ($r instanceof sdb_result) ? $r->fields : []; }
+function sdb_select_db($c, string $db): bool { return $c->select_db($db); }
+function sdb_query($c, string $sql, int $mode = 0) { return $c->query($sql, $mode); }
+function sdb_real_escape_string($c, string $s) { return $c->real_escape_string($s); }
+function sdb_escape_string($c, string $s) { return $c->real_escape_string($s); }
+function sdb_set_charset($c, string $cs): bool { return $c->set_charset($cs); }
+function sdb_error($c): string { return $c->error; }
+function sdb_errno($c): int { return $c->errno; }
+function sdb_fetch_assoc($r) { return ($r instanceof sdb_result || $r instanceof turso_result) ? $r->fetch_assoc() : null; }
+function sdb_fetch_row($r)   { return ($r instanceof sdb_result || $r instanceof turso_result) ? $r->fetch_row() : null; }
+function sdb_fetch_object($r, $class = null, array $ca = []) { return ($r instanceof sdb_result || $r instanceof turso_result) ? $r->fetch_object($class, $ca) : null; }
+function sdb_fetch_array($r, $m = MYSQLI_BOTH) { return ($r instanceof sdb_result || $r instanceof turso_result) ? $r->fetch_array($m) : null; }
+function sdb_fetch_all($r, $m = MYSQLI_ASSOC) { return ($r instanceof sdb_result || $r instanceof turso_result) ? $r->fetch_all($m) : []; }
+function sdb_num_rows($r): int { return ($r instanceof sdb_result || $r instanceof turso_result) ? $r->num_rows : 0; }
+function sdb_num_fields($r): int { return ($r instanceof sdb_result || $r instanceof turso_result) ? $r->field_count : 0; }
+function sdb_fetch_fields($r): array { return ($r instanceof sdb_result || $r instanceof turso_result) ? $r->fields : []; }
 function sdb_fetch_field($r) { return ($r instanceof sdb_result) ? $r->fetch_field() : false; }
 function sdb_fetch_field_direct($r, $i) { return ($r instanceof sdb_result) ? $r->fetch_field_direct($i) : false; }
 function sdb_field_seek($r, $i) { return ($r instanceof sdb_result) ? $r->field_seek($i) : false; }
