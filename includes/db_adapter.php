@@ -10,14 +10,27 @@ define('DB_ADAPTER_VERSION', '1.0-supabase');
 
 if (!defined('MYSQLI_ASSOC')) { define('MYSQLI_ASSOC', 1); define('MYSQLI_NUM', 2); define('MYSQLI_BOTH', 3); }
 
-// Kredensial Supabase dibaca dari config/local.php (tidak ikut di-commit).
-// Contoh tersedia di config/local.example.php.
+// Kredensial Supabase dibaca dari: (1) ENV vars Vercel, (2) config/local.php (local dev)
+if (!defined('SUPABASE_DSN')) {
+    $env_dsn = getenv('SUPABASE_DSN') ?: ($_ENV['SUPABASE_DSN'] ?? null);
+    if ($env_dsn) define('SUPABASE_DSN', $env_dsn);
+}
+if (!defined('SUPABASE_USER')) {
+    $env_user = getenv('SUPABASE_USER') ?: ($_ENV['SUPABASE_USER'] ?? null);
+    if ($env_user) define('SUPABASE_USER', $env_user);
+}
+if (!defined('SUPABASE_PASSWORD')) {
+    $env_pass = getenv('SUPABASE_PASSWORD') ?: ($_ENV['SUPABASE_PASSWORD'] ?? null);
+    if ($env_pass) define('SUPABASE_PASSWORD', $env_pass);
+}
+
+// Fallback ke config/local.php untuk development lokal
 $__local_config = dirname(__DIR__) . '/config/local.php';
 if (!defined('SUPABASE_DSN') && is_file($__local_config)) {
     require_once $__local_config;
 }
 if (!defined('SUPABASE_DSN') || !defined('SUPABASE_USER') || !defined('SUPABASE_PASSWORD')) {
-    throw new RuntimeException('Kredensial database belum diatur. Salin config/local.example.php menjadi config/local.php lalu isi kredensialnya.');
+    throw new RuntimeException('Kredensial database belum diatur. Set env vars SUPABASE_DSN, SUPABASE_USER, SUPABASE_PASSWORD di Vercel, atau salin config/local.example.php menjadi config/local.php lalu isi kredensialnya.');
 }
 unset($__local_config);
 
