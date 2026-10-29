@@ -1,10 +1,6 @@
 {
   "builds": [
-    { "src": "api/index.php", "use": "vercel-php@0.7.2" },
-    { "src": "assets/**", "use": "@vercel/static" },
-    { "src": "format_bast/**", "use": "@vercel/static" },
-    { "src": "manifest.json", "use": "@vercel/static" },
-    { "src": "sw.js", "use": "@vercel/static" }
+    { "src": "api/index.php", "use": "vercel-php@0.7.2" }
   ],
   "routes": [
     { "src": "/assets/(.*)", "dest": "/assets/$1" },

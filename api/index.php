@@ -21,6 +21,31 @@ if (str_contains($path, '..') || str_contains($path, "\0")) {
     exit('Bad request');
 }
 
+// Cek apakah ini permintaan file statis (assets, manifest.json, sw.js, format_bast)
+$filePath = $root . $path;
+if ($path !== '/' && is_file($filePath)) {
+    $ext = pathinfo($filePath, PATHINFO_EXTENSION);
+    $mimeTypes = [
+        'css' => 'text/css',
+        'js' => 'application/javascript',
+        'png' => 'image/png',
+        'jpg' => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        'json' => 'application/json',
+        'svg' => 'image/svg+xml',
+        'ico' => 'image/x-icon',
+        'woff' => 'font/woff',
+        'woff2' => 'font/woff2',
+        'ttf' => 'font/ttf',
+    ];
+    if (isset($mimeTypes[$ext])) {
+        header('Content-Type: ' . $mimeTypes[$ext]);
+        header('Cache-Control: public, max-age=31536000');
+        readfile($filePath);
+        exit();
+    }
+}
+
 // Halaman beranda (juga saat user memanggil front controller langsung)
 if ($path === '/' || $path === '/index.php' || $path === '/api/index.php') {
     $target = $root . '/index.php';
