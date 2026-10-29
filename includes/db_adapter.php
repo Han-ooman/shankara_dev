@@ -395,7 +395,7 @@ class sdb {
         }
     }
 
-    protected function markError(Throwable $e) {
+    public function markError(Throwable $e) {
         $this->error = $e->getMessage();
         $this->errno = $e->getCode() ?: 1;
         error_log('db_adapter: ' . $this->driver . ': ' . $e->getMessage());
