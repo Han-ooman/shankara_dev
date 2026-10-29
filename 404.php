@@ -206,7 +206,7 @@ document.addEventListener('DOMContentLoaded', function () {
     </div>
 
     <div class="mt-4">
-        <span class="text-white-50" style="font-size: 0.72rem;">Shankara Dev &bull; Sistem Terintegrasi MySQL &bull; Shankara Residence</span>
+        <span class="text-white-50" style="font-size: 0.72rem;">Shankara Dev &bull; Sistem Terintegrasi Turso &bull; Shankara Residence</span>
     </div>
 </div>
 

@@ -1,13 +1,13 @@
 <?php
+// includes/koneksi.php — Koneksi Utama Aplikasi (Migrasi ke Turso / libSQL)
 date_default_timezone_set('Asia/Jakarta');
 require_once __DIR__ . '/security.php';
 
-// Cek mode maintenance — skip jika halaman maintenance atau toggle
+// Cek mode maintenance
 $_self = basename($_SERVER['SCRIPT_FILENAME'] ?? '');
 if ($_self !== 'maintenance.php' && $_self !== 'toggle_maintenance.php') {
     $mfile = __DIR__ . '/.maintenance';
     if (file_exists($mfile)) {
-        // Request API (mobile): jawab JSON 503, jangan halaman HTML maintenance
         $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
         if (strpos($scriptName, '/api/') !== false) {
             http_response_code(503);
@@ -24,26 +24,28 @@ if ($_self !== 'maintenance.php' && $_self !== 'toggle_maintenance.php') {
     }
 }
 
-// Koneksi via adapter sdb -> mendukung 2 driver (Supabase/pgsql & MySQL lokal).
-// Aplikasi ini punya dua koneksi: online (Supabase) dan offline (MySQL lokal).
-require_once __DIR__ . '/db_adapter.php';
+require_once __DIR__ . '/db_turso.php';
 
-// ===== DUA KONEKSI DATABASE =====
-// 1) ONLINE  : Supabase (PostgreSQL)  -> $koneksi_online
-// 2) OFFLINE : MySQL lokal (XAMPP)    -> $koneksi_offline
-// Koneksi aktif mengikuti konstanta DB_MODE ('offline' default / 'online').
-$koneksi_online  = sdb_connect_pgsql();   // Supabase  (online)
-$koneksi_offline = sdb_connect_mysql();   // MySQL lokal (offline)
+// Konfigurasi Turso yang diberikan user
+$turso_url   = 'libsql://shankara-dev-han-ooman.aws-ap-southeast-1.turso.io';
+$turso_token = 'eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJleHAiOjE4MjQ3Nzg1ODIsImlhdCI6MTc5MzI0MjU4MiwiaWQiOiIwMWExODU5MS1iZDAxLTc5ZDUtYTBjMi1jZTA1OWQxYzcxMmMiLCJraWQiOiJHNnh6ZWtvaE53TFZscnAyaHV1N2tRMzI2aTFWQzk0R0o5VzFBRG1OTUljIiwicmlkIjoiOWE0YzkzYmMtNWY2Ni00NDc2LWExM2UtNTg0MGZlOWY5MWUxIn0.-e1UP-h8AKtFZ_oqs4STped3R7sD21_-XHizagugb1IwXBaJyliISr38-G0X6MAKsP0rzJ8bRKLMT8Z0Ks3XCw';
 
-$koneksi = (DB_MODE === 'online') ? $koneksi_online : $koneksi_offline;
+// Jika ada local.php, izinkan override
+$__local_config = dirname(__DIR__) . '/config/local.php';
+if (is_file($__local_config)) {
+    require_once $__local_config;
+    if (defined('TURSO_URL')) $turso_url = TURSO_URL;
+    if (defined('TURSO_TOKEN')) $turso_token = TURSO_TOKEN;
+}
 
-// Alias yang lebih eksplisit (bisa dipakai halaman/future sync).
-$koneksi_lokal    = $koneksi_offline;
-$koneksi_supabase = $koneksi_online;
+$koneksi = new TursoDB($turso_url, $turso_token);
+$koneksi_online = $koneksi;
+$koneksi_offline = $koneksi;
+$koneksi_lokal = $koneksi;
+$koneksi_supabase = $koneksi;
 
-if (!($koneksi instanceof sdb) || !$koneksi->ping() || $koneksi->connect_errno) {
-    // Jangan bocorkan detail koneksi ke pengguna; catat ke log server.
-    error_log("Koneksi DB gagal: " . $koneksi->connect_error);
+if (!($koneksi instanceof TursoDB)) {
+    error_log("Koneksi Turso gagal.");
     http_response_code(500);
-    die("Terjadi kesalahan internal. Silakan hubungi administrator.");
+    die("Terjadi kesalahan internal koneksi database.");
 }

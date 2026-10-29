@@ -596,7 +596,7 @@ document.addEventListener('DOMContentLoaded', function () {
     </form>
 
     <div class="text-center mt-4">
-        <span class="text-muted" style="font-size: 0.75rem; color: rgba(255,255,255,0.7) !important;">Sistem Terintegrasi MySQL &bull; Shankara Residence</span>
+        <span class="text-muted" style="font-size: 0.75rem; color: rgba(255,255,255,0.7) !important;">Sistem Terintegrasi Turso • Shankara Residence</span>
     </div>
 </div>
 

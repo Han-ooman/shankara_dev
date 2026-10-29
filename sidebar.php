@@ -189,7 +189,7 @@ role_guard();
     <div class="sidebar-footer p-3 text-white rounded-4 mt-3" style="background: linear-gradient(135deg, #1e3a8a, #2563eb);">
         <i class="bi bi-shield-check fs-3 mb-2 d-block"></i>
         <h6 class="fw-bold mb-1" style="font-size: 0.9rem;">Sistem Database</h6>
-        <p class="mb-0" style="font-size: 0.75rem; opacity: 0.8;">Data terintegrasi penuh ke MySQL.</p>
+        <p class="mb-0" style="font-size: 0.75rem; opacity: 0.8;">Data terintegrasi penuh ke Turso.</p>
     </div>
 </aside>
 <!-- MODAL KONFIRMASI LOGOUT -->

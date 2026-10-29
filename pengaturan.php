@@ -596,7 +596,7 @@ if (isset($_POST['restore_database'])) {
                         <div class="p-4 border rounded-4 text-center bg-light">
                             <i class="bi bi-download text-success fs-1 mb-2 d-block"></i>
                             <h6 class="fw-bold">Download Backup Database (.SQL)</h6>
-                            <p class="text-muted small mb-3">Unduh seluruh tabel dan isi database MySQL dalam 1 klik.</p>
+                            <p class="text-muted small mb-3">Unduh seluruh tabel dan isi database Turso dalam 1 klik.</p>
                             <form action="pengaturan.php" method="POST">
                                 <?= csrf_field() ?>
                                 <button type="submit" name="download_backup" class="btn text-white rounded-pill px-4" style="background-color: var(--primary-blue);">
