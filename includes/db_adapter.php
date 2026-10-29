@@ -407,7 +407,8 @@ class sdb {
 
     public function real_escape_string($s) {
         if (!$this->pdo) return str_replace("'", "''", $s);
-        return $this->pdo->quote($s);
+        // PDO::quote() menambahkan tanda petik, kita hanya perlu escape single quote
+        return str_replace("'", "''", $s);
     }
     public function escape_string($s) { return $this->real_escape_string($s); }
 
