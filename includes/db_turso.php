@@ -12,6 +12,8 @@ class TursoDB {
     public string $server_info = 'Turso (libSQL SQLite)';
     public string $driver = 'turso';
 
+    public function getDriver(): string { return $this->driver; }
+
     public function __construct(string $url, string $token) {
         $host = parse_url($url, PHP_URL_HOST);
         // Jika libsql:// ubah ke https://

@@ -70,12 +70,20 @@ if (!class_exists('SdbDbSessionHandler')) {
             if (!$db) return false;
             $id_e   = $db->real_escape_string($session_id);
             $data_e = $db->real_escape_string($session_data);
-            if ($db->getDriver() === 'mysql') {
+            $driver = $db->getDriver();
+            if ($driver === 'mysql') {
                 return (bool) $db->query(
                     "INSERT INTO php_sessions (session_id, session_data, updated_at) VALUES ('$id_e', '$data_e', NOW())
                      ON DUPLICATE KEY UPDATE session_data = VALUES(session_data), updated_at = NOW()"
                 );
+            } elseif ($driver === 'turso') {
+                // SQLite: NOW() -> CURRENT_TIMESTAMP, EXCLUDED not supported, use column directly
+                return (bool) $db->query(
+                    "INSERT INTO php_sessions (session_id, session_data, updated_at) VALUES ('$id_e', '$data_e', CURRENT_TIMESTAMP)
+                     ON CONFLICT (session_id) DO UPDATE SET session_data = '$data_e', updated_at = CURRENT_TIMESTAMP"
+                );
             }
+            // Postgres / other
             return (bool) $db->query(
                 "INSERT INTO php_sessions (session_id, session_data, updated_at) VALUES ('$id_e', '$data_e', NOW())
                  ON CONFLICT (session_id) DO UPDATE SET session_data = EXCLUDED.session_data, updated_at = NOW()"
@@ -97,8 +105,11 @@ if (!class_exists('SdbDbSessionHandler')) {
             $db = $this->conn();
             if (!$db) return 0;
             $max = max(60, (int) $max_lifetime);
-            if ($db->getDriver() === 'mysql') {
+            $driver = $db->getDriver();
+            if ($driver === 'mysql') {
                 $db->query("DELETE FROM php_sessions WHERE updated_at < (NOW() - INTERVAL $max SECOND)");
+            } elseif ($driver === 'turso') {
+                $db->query("DELETE FROM php_sessions WHERE updated_at < datetime('now', '-{$max} seconds')");
             } else {
                 $db->query("DELETE FROM php_sessions WHERE updated_at < NOW() - INTERVAL '$max seconds'");
             }
