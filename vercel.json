@@ -3,10 +3,10 @@
     { "src": "api/index.php", "use": "vercel-php@0.7.2" }
   ],
   "routes": [
-    { "src": "/assets/(.*)", "dest": "/assets/$1" },
-    { "src": "/format_bast/(.*)", "dest": "/format_bast/$1" },
-    { "src": "/manifest.json", "dest": "/manifest.json" },
-    { "src": "/sw.js", "dest": "/sw.js" },
+    { "src": "/assets/(.*)", "dest": "/api/index.php" },
+    { "src": "/format_bast/(.*)", "dest": "/api/index.php" },
+    { "src": "/manifest.json", "dest": "/api/index.php" },
+    { "src": "/sw.js", "dest": "/api/index.php" },
     { "src": "/(.*)", "dest": "/api/index.php" }
   ]
 }
