@@ -23,43 +23,21 @@ if ($_self !== 'maintenance.php' && $_self !== 'toggle_maintenance.php') {
     }
 }
 
-// ===== PARSE DSN & DEFINE CONSTANTS BEFORE loading db_adapter.php =====
-// Supabase Project: iwxbdnzglypdjimeuzht (ap-southeast-1)
-$raw_dsn  = getenv('SUPABASE_DSN') ?: '';
+// ===== SUPABASE CONNECTION (Force Pooler Port 6543 for Vercel Serverless) =====
 $env_user = getenv('SUPABASE_USER') ?: '';
 $env_pass = getenv('SUPABASE_PASSWORD') ?: '';
 
-if (!empty($raw_dsn) && (str_starts_with($raw_dsn, 'postgresql://') || str_starts_with($raw_dsn, 'postgres://'))) {
-    // Parse postgresql:// URI from Supabase pooler
-    $parsed = parse_url($raw_dsn);
-    $host = $parsed['host'] ?? 'aws-0-ap-southeast-1.pooler.supabase.com';
-    $port = $parsed['port'] ?? '6543';
-    $db   = ltrim($parsed['path'] ?? '/postgres', '/');
-    $user = $env_user !== '' ? $env_user : ($parsed['user'] ?? 'postgres');
-    $pass = $env_pass !== '' ? $env_pass : ($parsed['pass'] ?? '');
-    
-    define('SUPABASE_DSN', "pgsql:host={$host};port={$port};dbname={$db};sslmode=require");
-    define('SUPABASE_USER', $user);
-    define('SUPABASE_PASSWORD', $pass);
-} elseif (!empty($raw_dsn) && str_starts_with($raw_dsn, 'pgsql:')) {
-    // Already in PDO pgsql format
-    define('SUPABASE_DSN', $raw_dsn);
-    define('SUPABASE_USER', $env_user !== '' ? $env_user : 'postgres');
-    define('SUPABASE_PASSWORD', $env_pass !== '' ? $env_pass : '');
-} else {
-    // Default fallback: Supabase Pooler (port 6543) for serverless reliability
-    $host = 'aws-0-ap-southeast-1.pooler.supabase.com';
-    $port = '6543';
-    $db   = 'postgres';
-    $user = $env_user !== '' ? $env_user : 'postgres';
-    $pass = $env_pass;
-    
-    define('SUPABASE_DSN', "pgsql:host={$host};port={$port};dbname={$db};sslmode=require");
-    define('SUPABASE_USER', $user);
-    define('SUPABASE_PASSWORD', $pass);
-}
+$host = 'aws-0-ap-southeast-1.pooler.supabase.com';
+$port = '6543';
+$db   = 'postgres';
+$user = $env_user !== '' ? $env_user : 'postgres.iwxbdnzglypdjimeuzht';
+$pass = $env_pass;
 
-// ===== NOW LOAD ADAPTER (constants already defined) =====
+define('SUPABASE_DSN', "pgsql:host={$host};port={$port};dbname={$db};sslmode=require");
+define('SUPABASE_USER', $user);
+define('SUPABASE_PASSWORD', $pass);
+
+// ===== NOW LOAD ADAPTER =====
 require_once __DIR__ . '/db_adapter.php';
 
 $koneksi = sdb_connect(SUPABASE_DSN, SUPABASE_USER, SUPABASE_PASSWORD, 'postgres');
