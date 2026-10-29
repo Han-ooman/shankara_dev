@@ -10,5 +10,6 @@
     { "src": "/manifest.json", "dest": "/manifest.json" },
     { "src": "/sw.js", "dest": "/sw.js" },
     { "src": "/(.*)", "dest": "/api/index.php" }
-  ]
+  ],
+  "buildCommand": "composer install --no-dev --optimize-autoloader"
 }
