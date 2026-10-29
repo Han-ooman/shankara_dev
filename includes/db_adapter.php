@@ -670,4 +670,8 @@ if (!$mysqli_native) {
     function mysqli_autocommit($c, bool $m): bool { return sdb_autocommit($c, $m); }
     function mysqli_close($c): bool { return sdb_close($c); }
     function mysqli_ping($c): bool { return sdb_ping($c); }
+
+    // DB_MODE-specific connect functions (for backward compatibility)
+    function sdb_connect_pgsql() { return sdb_connect(); }
+    function sdb_connect_mysql() { return sdb_connect(); }
 }

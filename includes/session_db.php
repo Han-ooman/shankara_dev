@@ -33,7 +33,7 @@ if (!class_exists('SdbDbSessionHandler')) {
                     $this->db = $GLOBALS['koneksi'];
                 } else {
                     require_once __DIR__ . '/db_adapter.php';
-                    $this->db = (DB_MODE === 'online') ? sdb_connect_pgsql() : sdb_connect_mysql();
+                    $this->db = sdb_connect();
                 }
             }
             return $this->db;
