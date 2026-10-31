@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/includes/security.php'; // handler sesi DB harus aktif SEBELUM session_start
 session_start();
 include "includes/koneksi.php";
 require_once __DIR__ . '/includes/helper_log.php';

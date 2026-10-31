@@ -26,6 +26,11 @@ if (!role_boleh_akses($_SESSION['role'] ?? '', 'sinkronisasi.php')) {
 
 @set_time_limit(600);
 
+// Koneksi offline (MySQL lokal) hanya ada di mesin developer.
+// Di Vercel (online-only) variabel ini tidak tersedia -> tampilkan info, jangan fatal.
+$ada_offline = isset($koneksi_offline) && ($koneksi_offline instanceof sdb);
+$ada_online  = isset($koneksi_online)  && ($koneksi_online  instanceof sdb);
+
 $daftarTabel = sync_daftar_tabel();
 $hasil   = null;
 $pesan   = '';
@@ -35,7 +40,7 @@ $riwayat = [];
 // ------------------------------------------------------------------
 // Proses sinkronisasi
 // ------------------------------------------------------------------
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $ada_offline && $ada_online) {
     if (!csrf_verify()) {
         http_response_code(403);
         die("Token keamanan tidak valid.");
@@ -102,8 +107,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Data untuk tampilan
 // ------------------------------------------------------------------
 $tabelAktif = sync_tabel_aktif(true);           // semua tabel (termasuk opsional)
-$status     = sync_status_tabel($koneksi_offline, $koneksi_online, $tabelAktif);
-$riwayat    = sync_riwayat($koneksi_offline, 15);
+if ($ada_offline && $ada_online) {
+    $status  = sync_status_tabel($koneksi_offline, $koneksi_online, $tabelAktif);
+    $riwayat = sync_riwayat($koneksi_offline, 15);
+} else {
+    $status  = [];
+    $riwayat = [];
+}
 
 $totalOffline = 0;
 $totalOnline  = 0;
@@ -146,6 +156,18 @@ foreach ($daftarTabel as $nama => $cfg) {
                 Mode aktif: <?= strtoupper(DB_MODE) ?>
             </span>
         </div>
+
+        <?php if (!$ada_offline): ?>
+            <div class="alert alert-info d-flex align-items-start gap-2" role="alert">
+                <i class="bi bi-info-circle-fill mt-1"></i>
+                <div>
+                    <b>Mode online-only.</b>
+                    Sinkronisasi hanya berjalan jika aplikasi dijalankan di komputer lokal yang memiliki
+                    database MySQL (offline). Di server (Vercel), semua data sudah tersimpan langsung di Supabase,
+                    jadi tidak ada yang perlu disinkronkan.
+                </div>
+            </div>
+        <?php endif; ?>
 
         <?php if ($pesan !== ''): ?>
             <div class="alert alert-<?= $alert ?> alert-dismissible fade show" role="alert">

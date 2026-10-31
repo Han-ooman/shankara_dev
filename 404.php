@@ -1,4 +1,5 @@
-<?php session_start(); ?>
+<?php require_once __DIR__ . '/includes/security.php'; // handler sesi DB harus aktif SEBELUM session_start
+session_start(); ?>
 <!DOCTYPE html>
 <html lang="id">
 <head>

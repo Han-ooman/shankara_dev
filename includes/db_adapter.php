@@ -11,28 +11,82 @@ define('DB_ADAPTER_VERSION', '1.0-supabase');
 if (!defined('MYSQLI_ASSOC')) { define('MYSQLI_ASSOC', 1); define('MYSQLI_NUM', 2); define('MYSQLI_BOTH', 3); }
 
 // Kredensial Supabase dibaca dari: (1) ENV vars Vercel, (2) config/local.php (local dev)
-if (!defined('SUPABASE_DSN')) {
-    $env_dsn = getenv('SUPABASE_DSN') ?: ($_ENV['SUPABASE_DSN'] ?? null);
-    if ($env_dsn) define('SUPABASE_DSN', $env_dsn);
-}
-if (!defined('SUPABASE_USER')) {
-    $env_user = getenv('SUPABASE_USER') ?: ($_ENV['SUPABASE_USER'] ?? null);
-    if ($env_user) define('SUPABASE_USER', $env_user);
-}
-if (!defined('SUPABASE_PASSWORD')) {
-    $env_pass = getenv('SUPABASE_PASSWORD') ?: ($_ENV['SUPABASE_PASSWORD'] ?? null);
-    if ($env_pass) define('SUPABASE_PASSWORD', $env_pass);
+// Semua nilai dinormalisasi DI SINI, satu tempat, agar tidak ada konflik konstanta.
+$__cfg = [
+    'dsn'  => (string) (getenv('SUPABASE_DSN') ?: ($_ENV['SUPABASE_DSN'] ?? '')),
+    'user' => (string) (getenv('SUPABASE_USER') ?: ($_ENV['SUPABASE_USER'] ?? '')),
+    'pass' => (string) (getenv('SUPABASE_PASSWORD') ?: ($_ENV['SUPABASE_PASSWORD'] ?? '')),
+];
+
+// Fallback ke config/local.php untuk development lokal.
+// File tsb mendefinisikan variabel $CONFIG_SUPABASE_* (bukan konstanta) supaya
+// ENV selalu menang dan tidak ada "constant already defined".
+$__local_config = dirname(__DIR__) . '/config/local.php';
+if (is_file($__local_config)) {
+    require $__local_config;
+    $__local_map = [
+        'dsn'  => $CONFIG_SUPABASE_DSN ?? '',
+        'user' => $CONFIG_SUPABASE_USER ?? '',
+        'pass' => $CONFIG_SUPABASE_PASSWORD ?? '',
+    ];
+    foreach ($__local_map as $__k => $__v) {
+        if ($__cfg[$__k] === '' && (string) $__v !== '') $__cfg[$__k] = (string) $__v;
+    }
+    unset($__local_map, $__k, $__v);
 }
 
-// Fallback ke config/local.php untuk development lokal
-$__local_config = dirname(__DIR__) . '/config/local.php';
-if (!defined('SUPABASE_DSN') && is_file($__local_config)) {
-    require_once $__local_config;
+// ---- Normalisasi DSN ke format PDO: pgsql:host=...;port=...;dbname=...;sslmode=require ----
+$__PROJECT_REF  = 'iwxbdnzglypdjimeuzht';
+$__POOLER_HOST  = 'aws-0-ap-southeast-1.pooler.supabase.com';
+$__POOLER_PORT  = '6543';
+
+$__dsn = trim($__cfg['dsn']);
+
+if ($__dsn === '') {
+    // Tidak ada DSN sama sekali -> pakai pooler Supabase default
+    $__dsn = "pgsql:host={$__POOLER_HOST};port={$__POOLER_PORT};dbname=postgres;sslmode=require";
+} elseif (str_starts_with($__dsn, 'postgresql://') || str_starts_with($__dsn, 'postgres://')) {
+    // URI gaya Supabase -> pecah jadi komponen
+    $__p    = parse_url($__dsn);
+    $__h    = $__p['host'] ?? $__POOLER_HOST;
+    $__pt   = $__p['port'] ?? $__POOLER_PORT;
+    $__db   = ltrim($__p['path'] ?? '/postgres', '/') ?: 'postgres';
+    if ($__cfg['user'] === '' && !empty($__p['user'])) $__cfg['user'] = urldecode($__p['user']);
+    if ($__cfg['pass'] === '' && isset($__p['pass']))  $__cfg['pass'] = urldecode($__p['pass']);
+
+    // Direct host (db.<ref>.supabase.co) tidak bisa dipakai dari Vercel -> paksa pooler
+    if (str_contains($__h, '.supabase.co') && !str_contains($__h, 'pooler')) {
+        $__h  = $__POOLER_HOST;
+        $__pt = $__POOLER_PORT;
+    }
+    $__dsn = "pgsql:host={$__h};port={$__pt};dbname={$__db};sslmode=require";
+} elseif (!str_starts_with($__dsn, 'pgsql:')) {
+    // Format tidak dikenal -> pakai pooler default (jangan biarkan PDO gagal "could not find driver")
+    $__dsn = "pgsql:host={$__POOLER_HOST};port={$__POOLER_PORT};dbname=postgres;sslmode=require";
 }
-if (!defined('SUPABASE_DSN') || !defined('SUPABASE_USER') || !defined('SUPABASE_PASSWORD')) {
-    throw new RuntimeException('Kredensial database belum diatur. Set env vars SUPABASE_DSN, SUPABASE_USER, SUPABASE_PASSWORD di Vercel, atau salin config/local.example.php menjadi config/local.php lalu isi kredensialnya.');
+
+// Username pooler WAJIB berformat "postgres.<project-ref>" (bukan "postgres" polos)
+if ($__cfg['user'] === '' || strpos($__cfg['user'], '.') === false) {
+    $__cfg['user'] = 'postgres.' . $__PROJECT_REF;
 }
-unset($__local_config);
+
+if (!defined('SUPABASE_DSN'))      define('SUPABASE_DSN', $__dsn);
+if (!defined('SUPABASE_USER'))     define('SUPABASE_USER', $__cfg['user']);
+if (!defined('SUPABASE_PASSWORD')) define('SUPABASE_PASSWORD', $__cfg['pass']);
+
+// Mode koneksi (dipakai sinkronisasi.php / sync.php). Vercel selalu 'online'.
+if (!defined('DB_MODE')) {
+    $__mode_env = strtolower(trim((string) (getenv('DB_MODE') ?: 'online')));
+    define('DB_MODE', in_array($__mode_env, ['online', 'offline'], true) ? $__mode_env : 'online');
+    unset($__mode_env);
+}
+
+unset($__cfg, $__dsn, $__local_config, $__PROJECT_REF, $__POOLER_HOST, $__POOLER_PORT,
+      $__p, $__h, $__pt, $__db);
+
+if (SUPABASE_PASSWORD === '') {
+    throw new RuntimeException('Kredensial database belum diatur. Set env var SUPABASE_PASSWORD di Vercel, atau isi config/local.php untuk development lokal.');
+}
 
 // Deteksi apakah ekstensi mysqli native sudah terload
 $mysqli_native = extension_loaded('mysqli');
@@ -109,7 +163,8 @@ function dbx_scan_replace(string $sql, string $funcName, callable $cb): string {
             $nextNonWs = $after;
             while ($nextNonWs < $len && $sql[$nextNonWs] === ' ') $nextNonWs++;
             if ($nextNonWs < $len && $sql[$nextNonWs] === '(') {
-                $out .= substr($sql, $i, $nextNonWs - $i + 1);
+                // JANGAN menyalin nama fungsi asli: callback mengembalikan ekspresi
+                // pengganti lengkap (mis. DATE_FORMAT -> TO_CHAR(...), TIMESTAMPDIFF -> EXTRACT(...)).
                 $i = $nextNonWs + 1;
                 $depth = 1; $instr = false;
                 $inner = '';
@@ -136,10 +191,13 @@ function dbx_scan_replace(string $sql, string $funcName, callable $cb): string {
     return $out;
 }
 
-// Rewrite view name -> base table
+// Rewrite nama view -> tabel dasar.
+// CATATAN: view_database_utama SUDAH ada di Supabase (join transaksi+konsumen+rumah+cluster)
+// dan punya kolom id_transaksi, name_lengkap, no_blok, dll. Jadi TIDAK boleh di-rewrite
+// ke data_konsumen — rewrite akan menghilangkan kolom dan membuat query error.
 function dbx_rewrite_views(string $sql): string {
     $views = [
-        'view_database_utama' => 'data_konsumen',
+        // (kosong) — view dipakai apa adanya
     ];
     foreach ($views as $v => $t) {
         $sql = preg_replace('/\b' . preg_quote($v, '/') . '\b/i', '"' . $t . '"', $sql);
@@ -156,6 +214,10 @@ function dbx_translate_sql(string $sql): string {
 
     // ---- 0. NOW() -> CURRENT_TIMESTAMP (PG supports NOW() too, but be explicit) ----
     $sql = preg_replace('/\bNOW\s*\(\s*\)/i', 'CURRENT_TIMESTAMP', $sql);
+    // Fungsi tanggal MySQL lain yang tidak ada di PostgreSQL
+    $sql = preg_replace('/\bCURDATE\s*\(\s*\)/i', 'CURRENT_DATE', $sql);
+    $sql = preg_replace('/\bCURTIME\s*\(\s*\)/i', 'LOCALTIME', $sql);
+    $sql = preg_replace('/\bUNIX_TIMESTAMP\s*\(\s*\)/i', "EXTRACT(EPOCH FROM CURRENT_TIMESTAMP)::bigint", $sql);
 
     // ---- 1. SET time_zone MySQL -> SET timezone PG ----
     $sql = preg_replace("/SET\s+time_zone\s*=\s*'\+07:00'/i", "SET timezone = 'Asia/Jakarta'", $sql);
@@ -218,6 +280,46 @@ function dbx_translate_sql(string $sql): string {
         if ($div === 1) return "(EXTRACT(EPOCH FROM ($b) - ($a))::int)";
         return "((EXTRACT(EPOCH FROM ($b) - ($a)) / $div)::int)";
     });
+
+    // ---- 6b. SUM(kondisi_boolean) -> SUM((kondisi)::int) ----
+    // MySQL mengizinkan SUM(hasil_bi = 'Lulus'); PostgreSQL butuh cast ke integer.
+    $sql = dbx_scan_replace($sql, 'SUM', function ($inner) {
+        $t = trim($inner);
+        if (preg_match('/^CASE\b/i', $t)) return "SUM($inner)";
+        if (preg_match('/\b(IN|IS)\b|<>|!=|(?<![<>!])=(?!=)/i', $t)) {
+            return "SUM(($inner)::int)";
+        }
+        return "SUM($inner)";
+    });
+
+    // ---- 6c. IFNULL -> COALESCE, FIELD(...) -> array_position ----
+    $sql = preg_replace('/\bIFNULL\s*\(/i', 'COALESCE(', $sql);
+    $sql = dbx_scan_replace($sql, 'FIELD', function ($inner) {
+        $args = dbx_split_args($inner);
+        if (count($args) < 2) return "FIELD($inner)";
+        $expr = trim(array_shift($args));
+        $list = implode(', ', array_map('trim', $args));
+        return "array_position(ARRAY[$list], $expr)";
+    });
+
+    // ---- 6d. Perbandingan kolom DATE dengan string kosong / '0000-00-00' ----
+    // MySQL mengizinkannya; PostgreSQL error "invalid input syntax for type date".
+    $sql = preg_replace("/\b([A-Za-z_][A-Za-z0-9_.]*)\s+NOT\s+IN\s*\(\s*''\s*,\s*'0000-00-00'\s*\)/i", '$1 IS NOT NULL', $sql);
+    $sql = preg_replace("/\b([A-Za-z_][A-Za-z0-9_.]*)\s+NOT\s+IN\s*\(\s*'0000-00-00'\s*,\s*''\s*\)/i", '$1 IS NOT NULL', $sql);
+    $sql = preg_replace("/\b([A-Za-z_][A-Za-z0-9_.]*)\s+IN\s*\(\s*''\s*,\s*'0000-00-00'\s*\)/i", '$1 IS NULL', $sql);
+    $sql = preg_replace("/\b([A-Za-z_][A-Za-z0-9_.]*)\s+NOT\s+IN\s*\(\s*''\s*\)/i", "NULLIF($1::text, '') IS NOT NULL", $sql);
+    $sql = preg_replace("/\b([A-Za-z_][A-Za-z0-9_.]*)\s+IN\s*\(\s*''\s*\)/i", "(COALESCE($1::text, '')) = ''", $sql);
+    $sql = preg_replace("/\b([A-Za-z_][A-Za-z0-9_.]*)\s*(?:!=|<>)\s*'0000-00-00'/i", '$1 IS NOT NULL', $sql);
+    $sql = preg_replace("/\b([A-Za-z_][A-Za-z0-9_.]*)\s*=\s*'0000-00-00'/i", 'FALSE', $sql);
+    $sql = preg_replace("/\b([A-Za-z_][A-Za-z0-9_.]*)\s*(?:!=|<>)\s*''/i", "NULLIF($1::text, '') IS NOT NULL", $sql);
+    $sql = preg_replace("/\b([A-Za-z_][A-Za-z0-9_.]*)\s*=\s*''/i", "(COALESCE($1::text, '')) = ''", $sql);
+
+    // ---- 6e. CREATE TABLE: AUTO_INCREMENT -> SERIAL, ENUM(...) -> VARCHAR ----
+    $sql = preg_replace('/\b(?:INT|INTEGER|BIGINT)\s+PRIMARY\s+KEY\s+AUTO_INCREMENT\b/i', 'SERIAL PRIMARY KEY', $sql);
+    $sql = preg_replace('/\b(?:INT|INTEGER|BIGINT)\s+AUTO_INCREMENT\b/i', 'SERIAL', $sql);
+    $sql = preg_replace('/\bAUTO_INCREMENT\b/i', '', $sql);
+    $sql = preg_replace("/\bENUM\s*\((?:[^()]|\([^)]*\))*\)/i", 'VARCHAR(50)', $sql);
+    $sql = preg_replace('/\bON\s+UPDATE\s+CURRENT_TIMESTAMP\b/i', '', $sql);
 
     // ---- 7. CAST(x AS UNSIGNED) -> CAST(x AS INTEGER) ----
     $sql = preg_replace('/\bAS\s+UNSIGNED\b/i', 'AS INTEGER', $sql);
@@ -340,7 +442,7 @@ class sdb {
     public $client_version = 180002;
     public $info           = '';
     public $driver         = 'pgsql';
-    private ?PDO $pdo      = null;
+    public ?PDO $pdo       = null;   // publik: dipakai oleh sdb_stmt (prepared statement)
     private bool $inTx     = false;
 
     public function getDriver(): string { return $this->driver; }
@@ -391,6 +493,7 @@ class sdb {
             return new sdb_result($stmt, $cols);
         } catch (Throwable $e) {
             $this->markError($e);
+            error_log('db_adapter SQL: ' . $translated);
             return false;
         }
     }
@@ -576,6 +679,7 @@ class sdb_stmt {
             $this->error = $e->getMessage();
             $this->errno = $e->getCode() ?: 1;
             $this->owner->markError($e);
+            error_log('db_adapter SQL(stmt): ' . $translated);
             return false;
         }
     }

@@ -29,7 +29,9 @@ harden_session();
 
 // ===== ERROR HANDLING: jangan bocorkan detail ke pengguna akhir =====
 ini_set('display_errors', '0');
-error_reporting(E_ALL);
+// Sembunyikan deprecation (mis. htmlspecialchars(null) di PHP 8.2) agar log tetap bersih,
+// tetapi tetap catat warning/error sungguhan.
+error_reporting(E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED);
 ini_set('log_errors', '1');
 ini_set('error_log', __DIR__ . '/php_errors.log');
 

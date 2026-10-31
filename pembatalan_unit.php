@@ -1,5 +1,6 @@
 <?php
 
+require_once __DIR__ . '/includes/security.php'; // handler sesi DB harus aktif SEBELUM session_start
 session_start();
 // Jika belum login atau status login tidak valid, lempar paksa kembali ke halaman login
 if (!isset($_SESSION['status_login']) || $_SESSION['status_login'] !== true) {
