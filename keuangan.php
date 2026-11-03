@@ -392,7 +392,9 @@ document.addEventListener('DOMContentLoaded', function () {
     var btnReset = document.getElementById('btnResetFilter');
     if (btnReset) btnReset.addEventListener('click', function() { filters.forEach(function(el){ el.value = ''; }); applyFilters(); });
 
-    applyFilters();
+    // Ensure all rows visible on initial load (don't auto-filter)
+    rows.forEach(function(row) { row.style.display = ''; });
+    if (counter) counter.textContent = 'Menampilkan ' + rows.length + ' dari ' + rows.length + ' data';
 
     // Modal hapus
     var modalHapus = document.getElementById('modalHapus');

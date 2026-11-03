@@ -549,6 +549,7 @@ class sdb {
     public function stmt_init() { return new sdb_stmt($this, ''); }
     public function close() { $this->pdo = null; return true; }
     public function __destruct() { $this->pdo = null; }
+    public function getPDO() { return $this->pdo; }
 }
 
 /* =========================================================================

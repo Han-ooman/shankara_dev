@@ -188,53 +188,107 @@ if (isset($_POST['simpan_penomoran'])) {
     $pesan_sukses = "Format penomoran berhasil disimpan!";
 }
 
-// 6. HANDLER: BACKUP & RESTORE DATABASE
+// 6. HANDLER: BACKUP & RESTORE DATABASE (PostgreSQL compatible)
 if (isset($_POST['download_backup'])) {
-    $tables = array();
-    $result = sdb_query($koneksi, "SHOW TABLES");
-    while ($row = sdb_fetch_row($result)) { $tables[] = $row[0]; }
+    // Reuse backup.php logic
+    $output = [];
+    $output[] = "-- ========================================================";
+    $output[] = "-- Shankara Dev Database Backup (PostgreSQL / Supabase)";
+    $output[] = "-- Date: " . date('Y-m-d H:i:s');
+    $output[] = "-- ========================================================";
+    $output[] = "";
 
-    $return = "-- BACKUP DATABASE SHANKARA DEV\n-- Tanggal: " . date('Y-m-d H:i:s') . "\n\n";
-    foreach ($tables as $table) {
-        $result = sdb_query($koneksi, "SELECT * FROM " . $table);
-        $num_fields = sdb_num_fields($result);
-        $return .= "DROP TABLE IF EXISTS " . $table . ";";
-        $row2 = sdb_fetch_row(sdb_query($koneksi, "SHOW CREATE TABLE " . $table));
-        $return .= "\n\n" . $row2[1] . ";\n\n";
-
-        while ($row = sdb_fetch_row($result)) {
-            $return .= "INSERT INTO " . $table . " VALUES(";
-            for ($j = 0; $j < $num_fields; $j++) {
-                $row[$j] = addslashes($row[$j]);
-                $row[$j] = preg_replace("/\n/m", "\\n", $row[$j]);
-                if (isset($row[$j])) { $return .= '"' . $row[$j] . '"'; } else { $return .= '""'; }
-                if ($j < ($num_fields - 1)) { $return .= ','; }
-            }
-            $return .= ");\n";
-        }
-        $return .= "\n\n\n";
+    $res_tables = sdb_query($koneksi, "SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE' ORDER BY table_name");
+    $tables = [];
+    while ($row = sdb_fetch_assoc($res_tables)) {
+        $tables[] = $row['table_name'];
     }
+
+    foreach ($tables as $table) {
+        $output[] = "-- --------------------------------------------------------";
+        $output[] = "-- Table structure for table `{$table}`";
+        $output[] = "-- --------------------------------------------------------";
+        $output[] = "DROP TABLE IF EXISTS \"{$table}\" CASCADE;";
+
+        $res_cols = sdb_query($koneksi, "SELECT column_name, data_type, character_maximum_length, is_nullable, column_default FROM information_schema.columns WHERE table_schema='public' AND table_name='{$table}' ORDER BY ordinal_position");
+        $col_defs = [];
+        while ($col = sdb_fetch_assoc($res_cols)) {
+            $def = "\"{$col['column_name']}\" {$col['data_type']}";
+            if ($col['character_maximum_length']) {
+                $def .= "({$col['character_maximum_length']})";
+            }
+            if ($col['is_nullable'] === 'NO') {
+                $def .= " NOT NULL";
+            }
+            if ($col['column_default'] !== null) {
+                $def .= " DEFAULT {$col['column_default']}";
+            }
+            $col_defs[] = $def;
+        }
+
+        $output[] = "CREATE TABLE \"{$table}\" (\n    " . implode(",\n    ", $col_defs) . "\n);";
+        $output[] = "";
+
+        $res_data = sdb_query($koneksi, "SELECT * FROM \"{$table}\"");
+        while ($row = sdb_fetch_assoc($res_data)) {
+            $fields = [];
+            $values = [];
+            foreach ($row as $k => $v) {
+                $fields[] = "\"{$k}\"";
+                if ($v === null) {
+                    $values[] = "NULL";
+                } elseif (is_numeric($v)) {
+                    $values[] = $v;
+                } else {
+                    $values[] = "'" . sdb_real_escape_string($koneksi, $v) . "'";
+                }
+            }
+            $output[] = "INSERT INTO \"{$table}\" (" . implode(", ", $fields) . ") VALUES (" . implode(", ", $values) . ");";
+        }
+        $output[] = "";
+    }
+
+    // Views
+    $res_views = sdb_query($koneksi, "SELECT table_name, view_definition FROM information_schema.views WHERE table_schema='public'");
+    while ($view = sdb_fetch_assoc($res_views)) {
+        $output[] = "-- View: {$view['table_name']}";
+        $output[] = "CREATE OR REPLACE VIEW \"{$view['table_name']}\" AS {$view['view_definition']};";
+        $output[] = "";
+    }
+
     $filename = 'backup_shankara_' . date('Y-m-d_H-i-s') . '.sql';
     header('Content-Type: application/octet-stream');
     header('Content-Disposition: attachment; filename="' . $filename . '"');
-    echo $return;
+    echo implode("\n", $output);
     exit();
 }
 
 if (isset($_POST['restore_database'])) {
     if ($_FILES['file_sql']['error'] == 0) {
         $filename = $_FILES['file_sql']['tmp_name'];
-        $sql_lines = file($filename);
-        $query = '';
-        foreach ($sql_lines as $line) {
-            if (substr($line, 0, 2) == '--' || $line == '') continue;
-            $query .= $line;
-            if (substr(trim($line), -1, 1) == ';') {
+        $sql_content = file_get_contents($filename);
+        
+        // Split by semicolon (simple approach, works for our generated format)
+        $queries = array_filter(array_map('trim', explode(';', $sql_content)));
+        
+        $error_count = 0;
+        foreach ($queries as $query) {
+            $query = trim($query);
+            if (empty($query) || str_starts_with($query, '--')) continue;
+            
+            try {
                 sdb_query($koneksi, $query);
-                $query = '';
+            } catch (Exception $e) {
+                $error_count++;
+                error_log("Restore error: " . $e->getMessage() . " | Query: " . substr($query, 0, 100));
             }
         }
-        $pesan_sukses = "Database berhasil di-restore!";
+        
+        if ($error_count > 0) {
+            $pesan_gagal = "Restore selesai dengan {$error_count} error (cek log).";
+        } else {
+            $pesan_sukses = "Database berhasil di-restore!";
+        }
     } else {
         $pesan_gagal = "Pilih file .sql yang valid!";
     }

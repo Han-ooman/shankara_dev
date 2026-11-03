@@ -111,8 +111,8 @@ if (!class_exists('SdbDbSessionHandler')) {
     }
 }
 
-// Daftarkan handler SEKALI, hanya saat sesi belum berjalan & belum ter-registrasi.
-if (session_status() === PHP_SESSION_NONE && empty($GLOBALS['SDB_DB_SESSION_READY'])) {
+// Daftarkan handler SEKALI, hanya saat sesi belum berjalan, header belum terkirim, & belum ter-registrasi.
+if (session_status() === PHP_SESSION_NONE && !headers_sent() && empty($GLOBALS['SDB_DB_SESSION_READY'])) {
     $GLOBALS['SDB_DB_SESSION_READY'] = true;
     session_set_save_handler(new SdbDbSessionHandler(), true);
 }

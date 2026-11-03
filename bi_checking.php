@@ -1,12 +1,12 @@
 <?php
-include "includes/koneksi.php";
-
+require_once __DIR__ . '/includes/security.php';
 session_start();
 if (!isset($_SESSION['status_login']) || $_SESSION['status_login'] !== true) {
     header("Location: login.php");
     exit();
 }
 include "includes/cek_sesi.php";
+include "includes/koneksi.php";
 
 // Proteksi CSRF global untuk semua aksi POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrf_verify()) {
@@ -26,8 +26,8 @@ if (isset($_POST['simpan_bi'])) {
     $hasil_bi    = sdb_real_escape_string($koneksi, $_POST['hasil_bi']);
     $catatan     = sdb_real_escape_string($koneksi, $_POST['catatan']);
 
-    sdb_query($koneksi, "INSERT INTO data_bi_checking (id_konsumen, id_marketing, tgl_cek, lembaga, no_pengajuan, hasil_bi, catatan)
-                            VALUES ($id_konsumen, $id_marketing, '$tgl_cek', '$lembaga', '$no_pengajuan', '$hasil_bi', '$catatan')");
+    sdb_query($koneksi, "INSERT INTO bi_checking (id_konsumen, id_marketing, tgl_pengajuan, status_bi, hasil, keterangan, lembaga, no_pengajuan)
+                            VALUES ($id_konsumen, $id_marketing, '$tgl_cek', 'TEST', '$hasil_bi', '$catatan', '$lembaga', '$no_pengajuan')");
     header("Location: bi_checking.php?status=success");
     exit();
 }
@@ -45,15 +45,20 @@ if (isset($_POST['edit_bi'])) {
     $hasil_bi     = sdb_real_escape_string($koneksi, $_POST['hasil_bi']);
     $catatan      = sdb_real_escape_string($koneksi, $_POST['catatan']);
 
-    sdb_query($koneksi, "UPDATE data_bi_checking SET
-                            id_konsumen = $id_konsumen,
-                            id_marketing = $id_marketing,
-                            tgl_cek = '$tgl_cek',
-                            lembaga = '$lembaga',
-                            no_pengajuan = '$no_pengajuan',
-                            hasil_bi = '$hasil_bi',
-                            catatan = '$catatan'
-                            WHERE id_bi_checking = $id_bi");
+    $sql = "UPDATE bi_checking SET
+            id_konsumen = $id_konsumen,
+            id_marketing = $id_marketing,
+            tgl_pengajuan = '$tgl_cek',
+            lembaga = '$lembaga',
+            no_pengajuan = '$no_pengajuan',
+            hasil = '$hasil_bi',
+            keterangan = '$catatan'
+            WHERE id_bi = $id_bi";
+    
+    $res = sdb_query($koneksi, $sql);
+    if (!$res) {
+        error_log("BI Checking Update Failed: " . sdb_error($koneksi) . " | SQL: $sql");
+    }
     header("Location: bi_checking.php?status=updated");
     exit();
 }
@@ -67,7 +72,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
         die("Token keamanan tidak valid.");
     }
     $id_hapus = intval($_GET['id']);
-    sdb_query($koneksi, "DELETE FROM data_bi_checking WHERE id_bi_checking = $id_hapus");
+    // Delete from base table bi_checking (view data_bi_checking is read-only in PG)
+    sdb_query($koneksi, "DELETE FROM bi_checking WHERE id_bi = $id_hapus");
     header("Location: bi_checking.php?status=deleted");
     exit();
 }
@@ -89,9 +95,9 @@ $preselect_konsumen = isset($_GET['konsumen']) ? intval($_GET['konsumen']) : 0;
 $stat = ['total'=>0, 'lulus'=>0, 'proses'=>0, 'tidak'=>0];
 $q_stat = sdb_query($koneksi, "SELECT 
     COUNT(*) AS total,
-    SUM(hasil_bi = 'Lulus') AS lulus,
-    SUM(hasil_bi = 'Dalam Proses') AS proses,
-    SUM(hasil_bi IN ('Tidak Lulus','Dipertimbangkan')) AS tidak
+    SUM(CASE WHEN hasil_bi = 'Lulus' THEN 1 ELSE 0 END) AS lulus,
+    SUM(CASE WHEN hasil_bi = 'Dalam Proses' THEN 1 ELSE 0 END) AS proses,
+    SUM(CASE WHEN hasil_bi IN ('Tidak Lulus','Dipertimbangkan') THEN 1 ELSE 0 END) AS tidak
 FROM data_bi_checking");
 if ($s = sdb_fetch_assoc($q_stat)) {
     $stat['total']  = intval($s['total']);

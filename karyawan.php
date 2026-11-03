@@ -20,14 +20,14 @@ sdb_query($koneksi, "UPDATE data_karyawan SET status = 'Selesai Magang' WHERE je
 
 // Tambah Karyawan
 if (isset($_POST['tambah_karyawan'])) {
-    $nama       = sdb_real_escape_string($koneksi, $_POST['nama_lengkap']);
-    $jabatan    = sdb_real_escape_string($koneksi, $_POST['jabatan']);
-    $no_hp      = sdb_real_escape_string($koneksi, $_POST['no_hp']);
-    $email      = sdb_real_escape_string($koneksi, $_POST['email']);
-    $alamat     = sdb_real_escape_string($koneksi, $_POST['alamat']);
-    $jenis      = sdb_real_escape_string($koneksi, $_POST['jenis_karyawan']);
-    $ket_magang = sdb_real_escape_string($koneksi, $_POST['keterangan_magang']);
-    $tgl_mulai  = sdb_real_escape_string($koneksi, $_POST['tgl_mulai']);
+    $nama       = sdb_real_escape_string($koneksi, $_POST['nama_lengkap'] ?? '');
+    $jabatan    = sdb_real_escape_string($koneksi, $_POST['jabatan'] ?? '');
+    $no_hp      = sdb_real_escape_string($koneksi, $_POST['no_hp'] ?? '');
+    $email      = sdb_real_escape_string($koneksi, $_POST['email'] ?? '');
+    $alamat     = sdb_real_escape_string($koneksi, $_POST['alamat'] ?? '');
+    $jenis      = sdb_real_escape_string($koneksi, $_POST['jenis_karyawan'] ?? '');
+    $ket_magang = sdb_real_escape_string($koneksi, $_POST['keterangan_magang'] ?? '');
+    $tgl_mulai  = sdb_real_escape_string($koneksi, $_POST['tgl_mulai'] ?? '');
     $durasi     = intval($_POST['durasi_bulan'] ?? 0);
 
     $tgl_akhir = 'NULL';
@@ -50,16 +50,16 @@ if (isset($_POST['tambah_karyawan'])) {
 
 // Edit Karyawan
 if (isset($_POST['edit_karyawan'])) {
-    $id         = intval($_POST['id_karyawan']);
-    $nama       = sdb_real_escape_string($koneksi, $_POST['nama_lengkap']);
-    $jabatan    = sdb_real_escape_string($koneksi, $_POST['jabatan']);
-    $no_hp      = sdb_real_escape_string($koneksi, $_POST['no_hp']);
-    $email      = sdb_real_escape_string($koneksi, $_POST['email']);
-    $alamat     = sdb_real_escape_string($koneksi, $_POST['alamat']);
-    $jenis      = sdb_real_escape_string($koneksi, $_POST['jenis_karyawan']);
-    $ket_magang = sdb_real_escape_string($koneksi, $_POST['keterangan_magang']);
-    $tgl_mulai  = sdb_real_escape_string($koneksi, $_POST['tgl_mulai']);
-    $status     = sdb_real_escape_string($koneksi, $_POST['status']);
+    $id         = intval($_POST['id_karyawan'] ?? 0);
+    $nama       = sdb_real_escape_string($koneksi, $_POST['nama_lengkap'] ?? '');
+    $jabatan    = sdb_real_escape_string($koneksi, $_POST['jabatan'] ?? '');
+    $no_hp      = sdb_real_escape_string($koneksi, $_POST['no_hp'] ?? '');
+    $email      = sdb_real_escape_string($koneksi, $_POST['email'] ?? '');
+    $alamat     = sdb_real_escape_string($koneksi, $_POST['alamat'] ?? '');
+    $jenis      = sdb_real_escape_string($koneksi, $_POST['jenis_karyawan'] ?? '');
+    $ket_magang = sdb_real_escape_string($koneksi, $_POST['keterangan_magang'] ?? '');
+    $tgl_mulai  = sdb_real_escape_string($koneksi, $_POST['tgl_mulai'] ?? '');
+    $status     = sdb_real_escape_string($koneksi, $_POST['status'] ?? '');
     $durasi     = intval($_POST['durasi_bulan'] ?? 0);
 
     $tgl_akhir = 'NULL';
