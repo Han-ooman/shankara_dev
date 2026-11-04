@@ -30,7 +30,11 @@ if (isset($_POST['tambah_unit'])) {
                     VALUES ('$id_cluster', '$no_blok', '$tipe_rumah', '$no_shm', '$luas_tanah', '$luas_bangunan', '$harga_jual', '$status_unit')";
     
     if (sdb_query($koneksi, $queryInsert)) {
-        header("Location: unit.php");
+        $redirect = "unit.php";
+        if (!empty($id_cluster)) {
+            $redirect .= "?cluster=" . $id_cluster;
+        }
+        header("Location: $redirect");
         exit();
     } else {
         echo "<script>alert('Gagal menambah unit: " . sdb_error($koneksi) . "');</script>";
@@ -61,7 +65,11 @@ if (isset($_POST['edit_unit'])) {
                     WHERE id_rumah = '$id_rumah'";
 
     if (sdb_query($koneksi, $queryUpdate)) {
-        header("Location: unit.php");
+        $redirect = "unit.php";
+        if (!empty($id_cluster)) {
+            $redirect .= "?cluster=" . $id_cluster;
+        }
+        header("Location: $redirect");
         exit();
     } else {
         echo "<script>alert('Gagal mengupdate unit: " . sdb_error($koneksi) . "');</script>";
@@ -76,7 +84,8 @@ if (isset($_GET['hapus'])) {
     }
     $id_hapus = sdb_real_escape_string($koneksi, $_GET['hapus']);
     sdb_query($koneksi, "DELETE FROM rumah WHERE id_rumah = '$id_hapus'");
-    header("Location: unit.php");
+    $redir_cluster = isset($_GET['cluster']) ? sdb_real_escape_string($koneksi, $_GET['cluster']) : '';
+    header("Location: unit.php" . (!empty($redir_cluster) ? "?cluster=$redir_cluster" : ""));
     exit();
 }
 
@@ -332,7 +341,7 @@ $filter_tipe    = isset($_GET['tipe']) ? sdb_real_escape_string($koneksi, $_GET[
                                 <button class="btn btn-sm btn-link text-warning p-0 me-2" data-bs-toggle="modal" data-bs-target="#modalEditUnit<?= $row['id_rumah'] ?>">
                                     <i class="bi bi-pencil-square fs-6"></i>
                                 </button>
-                                <a href="unit.php?hapus=<?= $row['id_rumah'] ?>&token=<?= htmlspecialchars(csrf_token()) ?>" class="btn btn-sm btn-link text-danger p-0" onclick="return confirm('Apakah Anda yakin ingin menghapus unit ini?')">
+                                <a href="unit.php?hapus=<?= $row['id_rumah'] ?>&token=<?= htmlspecialchars(csrf_token()) ?><?= !empty($filter_cluster) ? '&cluster=' . $filter_cluster : '' ?>" class="btn btn-sm btn-link text-danger p-0" onclick="return confirm('Apakah Anda yakin ingin menghapus unit ini?')">
                                     <i class="bi bi-trash fs-6"></i>
                                 </a>
 
