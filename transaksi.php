@@ -39,7 +39,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
             
             // Step C: Kembalikan status unit rumah menjadi 'TERSEDIA'
             if (!empty($id_rumah)) {
-                sdb_query($koneksi, "UPDATE data_rumah SET status_unit = 'TERSEDIA' WHERE id_rumah = $id_rumah");
+                sdb_query($koneksi, "UPDATE rumah SET status_unit = 'TERSEDIA' WHERE id_rumah = $id_rumah");
             }
 
             header("Location: transaksi.php?status=deleted");
@@ -74,9 +74,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['simpan_transaksi']) 
     if (sdb_query($koneksi, $sql_transaksi)) {
         // Cek status konsumen: Jika BATAL maka status unit TERSEDIA, selain itu TERBOOKING
         if ($status_konsumen === 'BATAL') {
-            sdb_query($koneksi, "UPDATE data_rumah SET status_unit = 'TERSEDIA' WHERE id_rumah = $id_rumah");
+            sdb_query($koneksi, "UPDATE rumah SET status_unit = 'TERSEDIA' WHERE id_rumah = $id_rumah");
         } else {
-            sdb_query($koneksi, "UPDATE data_rumah SET status_unit = 'TERBOOKING' WHERE id_rumah = $id_rumah");
+            sdb_query($koneksi, "UPDATE rumah SET status_unit = 'TERBOOKING' WHERE id_rumah = $id_rumah");
         }
 
         header("Location: transaksi.php?status=success");
@@ -123,17 +123,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_transaksi'])) {
     if (sdb_query($koneksi, $update_query)) {
         // Kembalikan unit lama ke TERSEDIA jika beda unit
         if ($id_rumah_lama > 0 && $id_rumah_lama != $id_rumah_baru) {
-            sdb_query($koneksi, "UPDATE data_rumah SET status_unit = 'TERSEDIA' WHERE id_rumah = $id_rumah_lama");
+            sdb_query($koneksi, "UPDATE rumah SET status_unit = 'TERSEDIA' WHERE id_rumah = $id_rumah_lama");
         }
 
         // Update status unit baru
         if ($id_rumah_baru > 0) {
             if ($status_konsumen === 'BATAL') {
-                sdb_query($koneksi, "UPDATE data_rumah SET status_unit = 'TERSEDIA' WHERE id_rumah = $id_rumah_baru");
+                sdb_query($koneksi, "UPDATE rumah SET status_unit = 'TERSEDIA' WHERE id_rumah = $id_rumah_baru");
             } elseif ($status_konsumen === 'ACC - AKAD') {
-                sdb_query($koneksi, "UPDATE data_rumah SET status_unit = 'TERJUAL' WHERE id_rumah = $id_rumah_baru");
+                sdb_query($koneksi, "UPDATE rumah SET status_unit = 'TERJUAL' WHERE id_rumah = $id_rumah_baru");
             } else {
-                sdb_query($koneksi, "UPDATE data_rumah SET status_unit = 'TERBOOKING' WHERE id_rumah = $id_rumah_baru");
+                sdb_query($koneksi, "UPDATE rumah SET status_unit = 'TERBOOKING' WHERE id_rumah = $id_rumah_baru");
             }
         }
 

@@ -28,7 +28,7 @@ if (isset($_POST['simpan'])) {
 
     if ($insert) {
         $status_unit = ($status_konsumen == 'ACC - AKAD') ? 'terjual' : 'terbooking';
-        sdb_query($koneksi, "UPDATE data_rumah SET status_unit = '$status_unit' WHERE id_rumah = '$id_rumah'");
+        sdb_query($koneksi, "UPDATE rumah SET status_unit = '$status_unit' WHERE id_rumah = '$id_rumah'");
         header("Location: index.php");
     } else {
         echo "<script>alert('Gagal menyimpan transaksi!');</script>";

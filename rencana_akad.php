@@ -61,7 +61,7 @@ if (isset($_POST['simpan_rencana'])) {
           VALUES ('$tgl_booking', '$id_konsumen', '$id_rumah', '$skema_bayar', '$skema_akad', '$bank_tujuan', '$status_konsumen', $tanggal_akad)";
     if (sdb_query($koneksi, $q)) {
         $stUnit = ($status_konsumen === 'ACC - AKAD') ? 'TERJUAL' : 'TERBOOKING';
-        sdb_query($koneksi, "UPDATE data_rumah SET status_unit = '$stUnit' WHERE id_rumah = '$id_rumah'");
+        sdb_query($koneksi, "UPDATE rumah SET status_unit = '$stUnit' WHERE id_rumah = '$id_rumah'");
         log_aktivitas($koneksi, 'TAMBAH', 'Rencana Akad', 'Tambah rencana akad: konsumen #' . $id_konsumen . ', unit #' . $id_rumah, ['id_konsumen' => $id_konsumen, 'id_rumah' => $id_rumah, 'skema_bayar' => $skema_bayar, 'tanggal_akad' => $_POST['tanggal_akad'] ?? null]);
     }
     header("Location: rencana_akad.php?bulan=$bulan");
@@ -78,7 +78,7 @@ if (isset($_POST['ubah_rencana'])) {
     $q = "UPDATE data_transaksi SET skema_akad = '$skema_akad', bank_tujuan = '$bank_tujuan', status_konsumen = '$status_konsumen', tanggal_akad = $tanggal_akad WHERE id_transaksi = '$id_transaksi'";
     if (sdb_query($koneksi, $q)) {
         $stUnit = ($status_konsumen === 'ACC - AKAD') ? 'TERJUAL' : 'TERBOOKING';
-        sdb_query($koneksi, "UPDATE data_rumah SET status_unit = '$stUnit' WHERE id_rumah = (SELECT id_rumah FROM data_transaksi WHERE id_transaksi = '$id_transaksi')");
+        sdb_query($koneksi, "UPDATE rumah SET status_unit = '$stUnit' WHERE id_rumah = (SELECT id_rumah FROM data_transaksi WHERE id_transaksi = '$id_transaksi')");
         log_aktivitas($koneksi, 'UBAH', 'Rencana Akad', 'Ubah rencana akad transaksi #' . $id_transaksi, ['id_transaksi' => $id_transaksi, 'skema_akad' => $skema_akad, 'status_konsumen' => $status_konsumen, 'tanggal_akad' => $_POST['tanggal_akad'] ?? null]);
     }
     header("Location: rencana_akad.php?bulan=$bulan");
@@ -88,7 +88,7 @@ if (isset($_POST['ubah_rencana'])) {
 if (isset($_POST['selesai_akad'])) {
     $id_transaksi = intval($_POST['id_transaksi']);
     sdb_query($koneksi, "UPDATE data_transaksi SET status_konsumen = 'ACC - AKAD' WHERE id_transaksi = '$id_transaksi'");
-    sdb_query($koneksi, "UPDATE data_rumah SET status_unit = 'TERJUAL' WHERE id_rumah = (SELECT id_rumah FROM data_transaksi WHERE id_transaksi = '$id_transaksi')");
+    sdb_query($koneksi, "UPDATE rumah SET status_unit = 'TERJUAL' WHERE id_rumah = (SELECT id_rumah FROM data_transaksi WHERE id_transaksi = '$id_transaksi')");
     log_aktivitas($koneksi, 'UBAH', 'Rencana Akad', 'Tandai akad selesai transaksi #' . $id_transaksi, ['id_transaksi' => $id_transaksi, 'status_konsumen' => 'ACC - AKAD']);
     header("Location: rencana_akad.php?bulan=$bulan");
     exit();
@@ -96,7 +96,7 @@ if (isset($_POST['selesai_akad'])) {
 
 if (isset($_POST['hapus_rencana'])) {
     $id_transaksi = intval($_POST['id_transaksi']);
-    sdb_query($koneksi, "UPDATE data_rumah SET status_unit = 'TERBOOKING' WHERE id_rumah = (SELECT id_rumah FROM data_transaksi WHERE id_transaksi = '$id_transaksi')");
+    sdb_query($koneksi, "UPDATE rumah SET status_unit = 'TERBOOKING' WHERE id_rumah = (SELECT id_rumah FROM data_transaksi WHERE id_transaksi = '$id_transaksi')");
     sdb_query($koneksi, "DELETE FROM data_transaksi WHERE id_transaksi = '$id_transaksi'");
     log_aktivitas($koneksi, 'HAPUS', 'Rencana Akad', 'Hapus rencana akad transaksi #' . $id_transaksi, ['id_transaksi' => $id_transaksi]);
     header("Location: rencana_akad.php?bulan=$bulan");

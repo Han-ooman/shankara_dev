@@ -87,7 +87,7 @@ if (isset($_POST['setujui_pembatalan'])) {
         sdb_query($koneksi, "UPDATE data_pembatalan SET status_pembatalan = 'Disetujui' WHERE id_pembatalan = $id_pembatalan");
         // Unit kembali tersedia
         if (!empty($row['id_rumah'])) {
-            sdb_query($koneksi, "UPDATE data_rumah SET status_unit = 'TERSEDIA' WHERE id_rumah = " . intval($row['id_rumah']));
+            sdb_query($koneksi, "UPDATE rumah SET status_unit = 'TERSEDIA' WHERE id_rumah = " . intval($row['id_rumah']));
         }
         // Transaksi ditandai BATAL
         if (!empty($row['id_transaksi'])) {

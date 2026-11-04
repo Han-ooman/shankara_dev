@@ -30,7 +30,7 @@ if (isset($_POST['simpan'])) {
     if ($insert) {
         // Logika update status unit rumah otomatis
         $status_unit = ($status_konsumen == 'ACC - AKAD') ? 'TERJUAL' : 'TERBOOKING';
-        sdb_query($koneksi, "UPDATE data_rumah SET status_unit = '$status_unit' WHERE id_rumah = '$id_rumah'");
+        sdb_query($koneksi, "UPDATE rumah SET status_unit = '$status_unit' WHERE id_rumah = '$id_rumah'");
 
         // Redirect kembali ke dashboard utama
         header("Location: ../index.php");
