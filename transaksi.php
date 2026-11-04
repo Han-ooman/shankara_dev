@@ -212,9 +212,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_transaksi'])) {
         <div class="content-card">
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                 <span id="filterCounter" class="text-muted small fw-semibold">Memuat data...</span>
-                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" id="btnResetFilter">
-                    <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Semua Filter
-                </button>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-sm btn-success rounded-pill px-3" id="btnExportExcelTransaksi">
+                        <i class="bi bi-file-earmark-excel me-1"></i> Export Excel
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" id="btnResetFilter">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Semua Filter
+                    </button>
+                </div>
             </div>
             <div class="table-responsive">
                 <table class="table table-shankara align-middle mb-0" id="tabelTransaksi">
@@ -222,6 +227,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_transaksi'])) {
                         <tr>
                             <th>Tgl Booking</th>
                             <th>Nama Konsumen</th>
+                            <th>Cluster</th>
                             <th>Unit Rumah</th>
                             <th>Skema Bayar</th>
                             <th>Status Konsumen</th>
@@ -238,21 +244,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_transaksi'])) {
                                 <datalist id="dlNama"></datalist>
                             </th>
                             <th>
-                                <input type="text" class="form-control form-control-sm" data-col="2" list="dlUnit" placeholder="Cari unit / blok...">
+                                <select class="form-select form-select-sm" data-col="2" data-static="1">
+                                    <option value="">-- Semua Cluster --</option>
+                                    <?php
+                                    $q_cluster = sdb_query($koneksi, "SELECT * FROM data_cluster ORDER BY cluster_name ASC");
+                                    while ($cl = sdb_fetch_assoc($q_cluster)) {
+                                        echo "<option value='".htmlspecialchars(strtolower($cl['cluster_name']))."'>".htmlspecialchars($cl['cluster_name'])."</option>";
+                                    }
+                                    ?>
+                                </select>
+                            </th>
+                            <th>
+                                <input type="text" class="form-control form-control-sm" data-col="3" list="dlUnit" placeholder="Cari unit / blok...">
                                 <datalist id="dlUnit"></datalist>
                             </th>
                             <th>
-                                <select class="form-select form-select-sm" data-col="3">
+                                <select class="form-select form-select-sm" data-col="4">
                                     <option value="">Semua Skema</option>
                                 </select>
                             </th>
                             <th>
-                                <select class="form-select form-select-sm" data-col="4">
+                                <select class="form-select form-select-sm" data-col="5">
                                     <option value="">Semua Status</option>
                                 </select>
                             </th>
                             <th>
-                                <input type="text" class="form-control form-control-sm" data-col="5" list="dlTglAkad" placeholder="dd/mm/yyyy">
+                                <input type="text" class="form-control form-control-sm" data-col="6" list="dlTglAkad" placeholder="dd/mm/yyyy">
                                 <datalist id="dlTglAkad"></datalist>
                             </th>
                             <th class="text-center" style="min-width:80px;">
@@ -323,7 +340,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_transaksi'])) {
                         <tr>
                             <td><?= date('d/m/Y', strtotime($t['tgl_booking'])) ?></td>
                             <td class="fw-bold text-dark"><?= htmlspecialchars($t['konsumen_nama'] ?? 'Tanpa Nama') ?></td>
-                            <td><?= htmlspecialchars($t['cluster_name'] ?? 'Shankara Residence') ?> - <strong>Blok <?= htmlspecialchars($t['no_blok']) ?></strong></td>
+                            <td><?= htmlspecialchars($t['cluster_name'] ?? 'Shankara Residence') ?></td>
+                            <td><strong>Blok <?= htmlspecialchars($t['no_blok']) ?></strong></td>
                             <td><span class="badge bg-light text-secondary border px-2 py-1"><?= htmlspecialchars($t['skema_bayar']) ?></span></td>
                             <td><span class="badge <?= $badge_status ?> px-2 py-1"><?= htmlspecialchars($t['status_konsumen']) ?></span></td>
                             <td><?= $tgl_akad ?></td>
@@ -695,8 +713,8 @@ document.addEventListener('DOMContentLoaded', function () {
         return Array.from(seen).sort();
     };
 
-    // Isi otomatis dropdown (Skema = col 3, Status = col 4)
-    filters.filter(el => el.tagName === 'SELECT').forEach(sel => {
+    // Isi otomatis dropdown (Skema = col 4, Status = col 5); cluster (col 2) sudah statis dari PHP
+    filters.filter(el => el.tagName === 'SELECT' && el.dataset.static !== '1').forEach(sel => {
         const col = parseInt(sel.dataset.col);
         distinctValues(col).forEach(v => {
             const opt = document.createElement('option');
@@ -718,8 +736,8 @@ document.addEventListener('DOMContentLoaded', function () {
     };
     fillDatalist(0, 'dlTglBooking');
     fillDatalist(1, 'dlNama');
-    fillDatalist(2, 'dlUnit');
-    fillDatalist(5, 'dlTglAkad');
+    fillDatalist(3, 'dlUnit');
+    fillDatalist(6, 'dlTglAkad');
 
     const applyFilters = () => {
         let shown = 0;
@@ -758,6 +776,55 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     applyFilters();
+
+    // ==========================================
+    // EXPORT EXCEL
+    // ==========================================
+    const btnExportExcel = document.getElementById('btnExportExcelTransaksi');
+    if (btnExportExcel) {
+        btnExportExcel.addEventListener('click', () => {
+            // Collect visible rows
+            const visibleRows = rows.filter(r => r.style.display !== 'none');
+            
+            // Build CSV content
+            let csv = 'Tgl Booking,Nama Konsumen,Cluster,Unit Rumah,Skema Bayar,Status Konsumen,Tgl Akad\n';
+            
+            visibleRows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 7) {
+                    // Clean text content (remove HTML tags)
+                    const getText = (cell) => {
+                        const temp = document.createElement('div');
+                        temp.innerHTML = cell.innerHTML;
+                        return temp.textContent.trim().replace(/"/g, '""');
+                    };
+                    
+                    const vals = [
+                        getText(cells[0]), // Tgl Booking
+                        getText(cells[1]), // Nama Konsumen
+                        getText(cells[2]), // Cluster
+                        getText(cells[3]), // Unit Rumah
+                        getText(cells[4]), // Skema Bayar
+                        getText(cells[5]), // Status Konsumen
+                        getText(cells[6])  // Tgl Akad
+                    ];
+                    
+                    csv += '"' + vals.join('","') + '"\n';
+                }
+            });
+            
+            // Download
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'transaksi_' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+    }
 });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
