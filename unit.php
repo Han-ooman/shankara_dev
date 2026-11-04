@@ -26,7 +26,7 @@ if (isset($_POST['tambah_unit'])) {
     $harga_jual = sdb_real_escape_string($koneksi, $_POST['harga_jual']);
     $status_unit= sdb_real_escape_string($koneksi, $_POST['status_unit']);
 
-    $queryInsert = "INSERT INTO data_rumah (id_cluster, no_blok, tipe_rumah, no_shm, luas_tanah, luas_bangunan, harga_jual, status_unit) 
+    $queryInsert = "INSERT INTO rumah (id_cluster, no_blok, tipe_rumah, no_shm, luas_tanah, luas_bangunan, harga_jual, status_unit) 
                     VALUES ('$id_cluster', '$no_blok', '$tipe_rumah', '$no_shm', '$luas_tanah', '$luas_bangunan', '$harga_jual', '$status_unit')";
     
     if (sdb_query($koneksi, $queryInsert)) {
@@ -49,7 +49,7 @@ if (isset($_POST['edit_unit'])) {
     $harga_jual = sdb_real_escape_string($koneksi, $_POST['harga_jual']);
     $status_unit= sdb_real_escape_string($koneksi, $_POST['status_unit']);
 
-    $queryUpdate = "UPDATE data_rumah SET 
+    $queryUpdate = "UPDATE rumah SET 
                     id_cluster = '$id_cluster',
                     no_blok = '$no_blok',
                     tipe_rumah = '$tipe_rumah',
@@ -75,7 +75,7 @@ if (isset($_GET['hapus'])) {
         die("Token keamanan tidak valid.");
     }
     $id_hapus = sdb_real_escape_string($koneksi, $_GET['hapus']);
-    sdb_query($koneksi, "DELETE FROM data_rumah WHERE id_rumah = '$id_hapus'");
+    sdb_query($koneksi, "DELETE FROM rumah WHERE id_rumah = '$id_hapus'");
     header("Location: unit.php");
     exit();
 }
