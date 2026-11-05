@@ -208,6 +208,55 @@ function dbx_rewrite_views(string $sql): string {
 /* =========================================================================
  *  TERJEMAHAN SQL MySQL -> PostgreSQL
  * ========================================================================= */
+function dbx_top_level_keyword_pos(string $sql, string $keyword): ?int {
+    $len = strlen($sql);
+    $depth = 0;
+    $quote = '';
+    $kw = strtoupper($keyword);
+    $klen = strlen($kw);
+    for ($i = 0; $i < $len; $i++) {
+        $c = $sql[$i];
+        if ($quote !== '') {
+            if ($c === '\\') { $i++; continue; }
+            if ($c === $quote) $quote = '';
+            continue;
+        }
+        if ($c === "'" || $c === '"' || $c === '`') { $quote = $c; continue; }
+        if ($c === '(') { $depth++; continue; }
+        if ($c === ')') { $depth = max(0, $depth - 1); continue; }
+        if ($depth === 0 && strtoupper(substr($sql, $i, $klen)) === $kw) {
+            $before = $i === 0 ? ' ' : $sql[$i - 1];
+            $after  = ($i + $klen < $len) ? $sql[$i + $klen] : ' ';
+            if (!preg_match('/[A-Za-z0-9_]/', $before) && !preg_match('/[A-Za-z0-9_]/', $after)) return $i;
+        }
+    }
+    return null;
+}
+
+function dbx_rewrite_empty_string_compares(string $sql): string {
+    $apply = function (string $s): string {
+        $s = preg_replace("/\b([A-Za-z_][A-Za-z0-9_.]*)\s+NOT\s+IN\s*\(\s*''\s*,\s*'0000-00-00'\s*\)/i", '$1 IS NOT NULL', $s);
+        $s = preg_replace("/\b([A-Za-z_][A-Za-z0-9_.]*)\s+NOT\s+IN\s*\(\s*'0000-00-00'\s*,\s*''\s*\)/i", '$1 IS NOT NULL', $s);
+        $s = preg_replace("/\b([A-Za-z_][A-Za-z0-9_.]*)\s+IN\s*\(\s*''\s*,\s*'0000-00-00'\s*\)/i", '$1 IS NULL', $s);
+        $s = preg_replace("/\b([A-Za-z_][A-Za-z0-9_.]*)\s+NOT\s+IN\s*\(\s*''\s*\)/i", "NULLIF($1::text, '') IS NOT NULL", $s);
+        $s = preg_replace("/\b([A-Za-z_][A-Za-z0-9_.]*)\s+IN\s*\(\s*''\s*\)/i", "(COALESCE($1::text, '')) = ''", $s);
+        $s = preg_replace("/\b([A-Za-z_][A-Za-z0-9_.]*)\s*(?:!=|<>)\s*'0000-00-00'/i", '$1 IS NOT NULL', $s);
+        $s = preg_replace("/\b([A-Za-z_][A-Za-z0-9_.]*)\s*=\s*'0000-00-00'/i", 'FALSE', $s);
+        $s = preg_replace("/\b([A-Za-z_][A-Za-z0-9_.]*)\s*(?:!=|<>)\s*''/i", "NULLIF($1::text, '') IS NOT NULL", $s);
+        $s = preg_replace("/\b([A-Za-z_][A-Za-z0-9_.]*)\s*=\s*''/i", "(COALESCE($1::text, '')) = ''", $s);
+        return $s;
+    };
+
+    // UPDATE punya daftar SET berisi assignment `col = ''`. Aturan perbandingan
+    // hanya boleh diterapkan mulai WHERE top-level, bukan pada SET.
+    if (preg_match('/^\s*UPDATE\b/i', $sql)) {
+        $pos = dbx_top_level_keyword_pos($sql, 'WHERE');
+        if ($pos === null) return $sql;
+        return substr($sql, 0, $pos) . $apply(substr($sql, $pos));
+    }
+    return $apply($sql);
+}
+
 function dbx_translate_sql(string $sql): string {
     $sql = trim($sql);
     $origSql = $sql;
@@ -304,15 +353,10 @@ function dbx_translate_sql(string $sql): string {
 
     // ---- 6d. Perbandingan kolom DATE dengan string kosong / '0000-00-00' ----
     // MySQL mengizinkannya; PostgreSQL error "invalid input syntax for type date".
-    $sql = preg_replace("/\b([A-Za-z_][A-Za-z0-9_.]*)\s+NOT\s+IN\s*\(\s*''\s*,\s*'0000-00-00'\s*\)/i", '$1 IS NOT NULL', $sql);
-    $sql = preg_replace("/\b([A-Za-z_][A-Za-z0-9_.]*)\s+NOT\s+IN\s*\(\s*'0000-00-00'\s*,\s*''\s*\)/i", '$1 IS NOT NULL', $sql);
-    $sql = preg_replace("/\b([A-Za-z_][A-Za-z0-9_.]*)\s+IN\s*\(\s*''\s*,\s*'0000-00-00'\s*\)/i", '$1 IS NULL', $sql);
-    $sql = preg_replace("/\b([A-Za-z_][A-Za-z0-9_.]*)\s+NOT\s+IN\s*\(\s*''\s*\)/i", "NULLIF($1::text, '') IS NOT NULL", $sql);
-    $sql = preg_replace("/\b([A-Za-z_][A-Za-z0-9_.]*)\s+IN\s*\(\s*''\s*\)/i", "(COALESCE($1::text, '')) = ''", $sql);
-    $sql = preg_replace("/\b([A-Za-z_][A-Za-z0-9_.]*)\s*(?:!=|<>)\s*'0000-00-00'/i", '$1 IS NOT NULL', $sql);
-    $sql = preg_replace("/\b([A-Za-z_][A-Za-z0-9_.]*)\s*=\s*'0000-00-00'/i", 'FALSE', $sql);
-    $sql = preg_replace("/\b([A-Za-z_][A-Za-z0-9_.]*)\s*(?:!=|<>)\s*''/i", "NULLIF($1::text, '') IS NOT NULL", $sql);
-    $sql = preg_replace("/\b([A-Za-z_][A-Za-z0-9_.]*)\s*=\s*''/i", "(COALESCE($1::text, '')) = ''", $sql);
+    // PENTING: pada UPDATE, jangan sentuh daftar SET (mis. `no_shm = ''`) — aturan
+    // ini hanya untuk perbandingan di WHERE. Kalau diterapkan ke SET, assignment
+    // berubah menjadi ekspresi boolean dan PostgreSQL error 42601.
+    $sql = dbx_rewrite_empty_string_compares($sql);
 
     // ---- 6e. CREATE TABLE: AUTO_INCREMENT -> SERIAL, ENUM(...) -> VARCHAR ----
     $sql = preg_replace('/\b(?:INT|INTEGER|BIGINT)\s+PRIMARY\s+KEY\s+AUTO_INCREMENT\b/i', 'SERIAL PRIMARY KEY', $sql);
