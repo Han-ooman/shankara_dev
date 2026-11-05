@@ -83,6 +83,21 @@ $kategori_pemasukan = ['Penjualan Unit', 'DP Rumah', 'Angsuran', 'Booking Fee', 
 $kategori_pengeluaran = ['Gaji Karyawan', 'Biaya Operasional', 'Biaya Marketing', 'Perawatan', 'Material Bangunan', 'Fee Broker', 'Pajak', 'Lainnya'];
 $metode_bayar_list = ['Tunai', 'Transfer BCA', 'Transfer BRI', 'Transfer Mandiri', 'Transfer BSI', 'Lainnya'];
 
+// Gabungkan kategori & metode yang sudah ada di database (termasuk hasil impor)
+// agar saat diedit nilainya tidak berubah karena tidak ada di daftar dropdown.
+$qkat = sdb_query($koneksi, "SELECT DISTINCT jenis, kategori FROM data_keuangan WHERE kategori IS NOT NULL AND kategori <> ''");
+while ($rk = sdb_fetch_assoc($qkat)) {
+    if ($rk['jenis'] === 'Pemasukan') {
+        if (!in_array($rk['kategori'], $kategori_pemasukan, true)) $kategori_pemasukan[] = $rk['kategori'];
+    } else {
+        if (!in_array($rk['kategori'], $kategori_pengeluaran, true)) $kategori_pengeluaran[] = $rk['kategori'];
+    }
+}
+$qmet = sdb_query($koneksi, "SELECT DISTINCT metode_bayar FROM data_keuangan WHERE metode_bayar IS NOT NULL AND metode_bayar <> ''");
+while ($rm = sdb_fetch_assoc($qmet)) {
+    if (!in_array($rm['metode_bayar'], $metode_bayar_list, true)) $metode_bayar_list[] = $rm['metode_bayar'];
+}
+
 $clusters = [];
 $qcl = sdb_query($koneksi, "SELECT id_cluster, cluster_name FROM data_cluster ORDER BY cluster_name");
 while ($cl = sdb_fetch_assoc($qcl)) $clusters[] = $cl;
@@ -375,7 +390,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 else if (el.type === 'date') {
                     if (col === 0) {
                         var rowDate = cellText(row, 0).replace(/(\d{2})\s(\w{3})\s(\d{4})/, '$3-$2-$1');
-                        var months = {jan:'01',feb:'02',mar:'03',apr:'04',mei:'05',jun:'06',jul:'07',aug:'08',sep:'09',okt:'10',nov:'11',des:'12'};
+                        // PHP date('d M Y') memakai nama bulan Inggris; sertakan juga singkatan Indonesia.
+                        var months = {jan:'01',feb:'02',mar:'03',apr:'04',may:'05',mei:'05',jun:'06',jul:'07',aug:'08',agu:'08',sep:'09',oct:'10',okt:'10',nov:'11',dec:'12',des:'12'};
                         Object.keys(months).forEach(function(m){ rowDate = rowDate.replace(m, months[m]); });
                         if (q && rowDate.indexOf(q) === -1) show = false;
                     }
