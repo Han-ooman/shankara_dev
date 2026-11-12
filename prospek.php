@@ -27,9 +27,18 @@ if (isset($_POST['tambah_prospek'])) {
     $status  = sdb_real_escape_string($koneksi, $_POST['status_followup']);
     $tgl_fu  = !empty($_POST['tanggal_followup']) ? "'" . sdb_real_escape_string($koneksi, $_POST['tanggal_followup']) . "'" : 'NULL';
 
-    sdb_query($koneksi, "INSERT INTO data_prospek (name_lengkap, no_ktp, pekerjaan, no_whatsapp, sumber, cluster_minat, unit_minat, catatan, status_followup, tanggal_followup)
-        VALUES ('$nama','$ktp','$kerja','$wa','$sumber','$cluster','$unit','$catatan','$status',$tgl_fu)");
-    header("Location: prospek.php");
+    $insertSql = "INSERT INTO data_prospek (name_lengkap, no_ktp, pekerjaan, no_whatsapp, sumber, cluster_minat, unit_minat, catatan, status_followup, tanggal_followup)
+        VALUES ('$nama','$ktp','$kerja','$wa','$sumber','$cluster','$unit','$catatan','$status',$tgl_fu)";
+    $insertResult = sdb_query($koneksi, $insertSql);
+    
+    // Cek apakah insert berhasil
+    if ($insertResult) {
+        // Redirect ke halaman prospek dengan parameter refresh agar data tampil
+        header("Location: prospek.php?berhasil=1");
+    } else {
+        // Jika gagal, tampilkan pesan error di halaman sama
+        $errorInsert = "Gagal menyimpan prospek: " . sdb_error($koneksi);
+    }
     exit();
 }
 
@@ -155,6 +164,10 @@ if (isset($_GET['pesan']) && $_GET['pesan'] === 'deal') {
 } elseif (isset($_GET['pesan']) && $_GET['pesan'] === 'duplikat') {
     $pesan = '<div class="alert alert-warning alert-dismissible fade show rounded-4 small mb-3" role="alert">
         <i class="bi bi-exclamation-triangle me-1"></i> Data sudah ada di konsumen (duplikat). Prospek hanya ditandai Deal tanpa menambah data ganda.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+} elseif (isset($_GET['berhasil']) && $_GET['berhasil'] == 1) {
+    $pesan = '<div class="alert alert-success alert-dismissible fade show rounded-4 small mb-3" role="alert">
+        <i class="bi bi-check-circle me-1"></i> Prospek berhasil disimpan.
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
 }
 ?>
