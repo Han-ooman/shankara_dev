@@ -30,16 +30,16 @@ if (isset($_POST['tambah_prospek'])) {
     $insertSql = "INSERT INTO data_prospek (name_lengkap, no_ktp, pekerjaan, no_whatsapp, sumber, cluster_minat, unit_minat, catatan, status_followup, tanggal_followup)
         VALUES ('$nama','$ktp','$kerja','$wa','$sumber','$cluster','$unit','$catatan','$status',$tgl_fu)";
     $insertResult = sdb_query($koneksi, $insertSql);
-    
+
     // Cek apakah insert berhasil
     if ($insertResult) {
         // Redirect ke halaman prospek dengan parameter refresh agar data tampil
         header("Location: prospek.php?berhasil=1");
-    } else {
-        // Jika gagal, tampilkan pesan error di halaman sama
-        $errorInsert = "Gagal menyimpan prospek: " . sdb_error($koneksi);
+        exit();
     }
-    exit();
+    // Jika gagal: JANGAN exit(), agar halaman tetap dirender dan pesan error terlihat
+    // (sebelumnya exit() di sini membuat halaman menjadi blank putih).
+    $errorInsert = "Gagal menyimpan prospek: " . sdb_error($koneksi);
 }
 
 // Edit prospek
@@ -56,12 +56,15 @@ if (isset($_POST['edit_prospek'])) {
     $status  = sdb_real_escape_string($koneksi, $_POST['status_followup']);
     $tgl_fu  = !empty($_POST['tanggal_followup']) ? "'" . sdb_real_escape_string($koneksi, $_POST['tanggal_followup']) . "'" : 'NULL';
 
-    sdb_query($koneksi, "UPDATE data_prospek SET
+    $updateOk = sdb_query($koneksi, "UPDATE data_prospek SET
         name_lengkap='$nama', no_ktp='$ktp', pekerjaan='$kerja', no_whatsapp='$wa',
         sumber='$sumber', cluster_minat='$cluster', unit_minat='$unit', catatan='$catatan',
         status_followup='$status', tanggal_followup=$tgl_fu WHERE id_prospek=$id");
-    header("Location: prospek.php");
-    exit();
+    if ($updateOk) {
+        header("Location: prospek.php?berhasil=edit");
+        exit();
+    }
+    $errorEdit = "Gagal mengubah prospek: " . sdb_error($koneksi);
 }
 
 // Hapus prospek (dengan token CSRF di URL)
@@ -71,8 +74,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
         die("Token keamanan tidak valid.");
     }
     $id_hapus = intval($_GET['id']);
-    sdb_query($koneksi, "DELETE FROM data_prospek WHERE id_prospek = $id_hapus");
-    header("Location: prospek.php");
+    if (sdb_query($koneksi, "DELETE FROM data_prospek WHERE id_prospek = $id_hapus")) {
+        header("Location: prospek.php?berhasil=hapus");
+    } else {
+        header("Location: prospek.php?gagal=" . urlencode(sdb_error($koneksi)));
+    }
     exit();
 }
 
@@ -169,6 +175,30 @@ if (isset($_GET['pesan']) && $_GET['pesan'] === 'deal') {
     $pesan = '<div class="alert alert-success alert-dismissible fade show rounded-4 small mb-3" role="alert">
         <i class="bi bi-check-circle me-1"></i> Prospek berhasil disimpan.
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+} elseif (isset($_GET['berhasil']) && $_GET['berhasil'] === 'edit') {
+    $pesan = '<div class="alert alert-success alert-dismissible fade show rounded-4 small mb-3" role="alert">
+        <i class="bi bi-check-circle me-1"></i> Prospek berhasil diperbarui.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+} elseif (isset($_GET['berhasil']) && $_GET['berhasil'] === 'hapus') {
+    $pesan = '<div class="alert alert-success alert-dismissible fade show rounded-4 small mb-3" role="alert">
+        <i class="bi bi-check-circle me-1"></i> Prospek berhasil dihapus.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+} elseif (isset($_GET['gagal']) && $_GET['gagal'] !== '') {
+    $pesan = '<div class="alert alert-danger alert-dismissible fade show rounded-4 small mb-3" role="alert">
+        <i class="bi bi-exclamation-triangle me-1"></i> Gagal memproses data: ' . htmlspecialchars($_GET['gagal']) . '
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+}
+
+// Pesan error dari proses POST (insert/edit) yang tidak melakukan redirect
+$errorPost = '';
+if (!empty($errorInsert)) {
+    $errorPost = '<div class="alert alert-danger alert-dismissible fade show rounded-4 small mb-3" role="alert">
+        <i class="bi bi-exclamation-triangle me-1"></i> ' . htmlspecialchars($errorInsert) . '
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+} elseif (!empty($errorEdit)) {
+    $errorPost = '<div class="alert alert-danger alert-dismissible fade show rounded-4 small mb-3" role="alert">
+        <i class="bi bi-exclamation-triangle me-1"></i> ' . htmlspecialchars($errorEdit) . '
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
 }
 ?>
 <!DOCTYPE html>
@@ -215,6 +245,7 @@ if (isset($_GET['pesan']) && $_GET['pesan'] === 'deal') {
     </div>
 
     <?= $pesan ?>
+    <?= $errorPost ?>
 
     <!-- STATISTIK -->
     <div class="row g-3 mb-4">
