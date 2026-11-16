@@ -384,6 +384,7 @@ function dbx_translate_sql(string $sql): string {
 
 /* Resolusi ON DUPLICATE KEY UPDATE -> ON CONFLICT */
 function dbx_rewrite_on_duplicate_key(string $sql): string {
+    $origSql = $sql;
     // Hanya proses jika mengandung ON DUPLICATE KEY UPDATE
     if (!preg_match('/\bON\s+DUPLICATE\s+KEY\s+UPDATE\b/i', $sql)) return $sql;
 
@@ -392,41 +393,60 @@ function dbx_rewrite_on_duplicate_key(string $sql): string {
         return $sql;
     }
 
-    $table = $m[1];
+    $table    = $m[1];
     $colsPart = $m[2] ?? '';
-    $valsPart = $m[3];
-    $updPart = $m[4];
+    $updPart  = $m[4];
+
+    // Kolom yang di-INSERT (dipakai untuk memilih unique index yang cocok)
+    $insertCols = [];
+    if ($colsPart !== '') {
+        foreach (explode(',', $colsPart) as $c) {
+            $c = trim($c, " \t\n\r\"`");
+            if ($c !== '') $insertCols[] = $c;
+        }
+    }
 
     // Cari unique index / primary key dari tabel untuk build ON CONFLICT
     global $dbxLastPDO;
     $targetCols = null;
+    $pkCols = null;
+    $uniqueSets = [];
+    $dbInfo = false;
     if ($dbxLastPDO instanceof PDO) {
         try {
             $st = $dbxLastPDO->prepare(
-                "SELECT a.attname
+                "SELECT i.indexrelid, i.indisprimary, a.attname
                  FROM pg_index i
                  JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
-                 WHERE i.indrelid = ?::regclass AND i.indisunique AND i.indisprimary
-                 ORDER BY a.attnum");
+                 WHERE i.indrelid = ?::regclass AND i.indisunique
+                 ORDER BY i.indisprimary DESC, i.indexrelid, a.attnum");
             $st->execute([$table]);
-            $targetCols = $st->fetchAll(PDO::FETCH_COLUMN);
-            if (!$targetCols) {
-                $st2 = $dbxLastPDO->prepare(
-                    "SELECT a.attname
-                     FROM pg_index i
-                     JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
-                     WHERE i.indrelid = ?::regclass AND i.indisunique
-                     ORDER BY a.attnum");
-                $st2->execute([$table]);
-                $targetCols = $st2->fetchAll(PDO::FETCH_COLUMN);
+            $sets = [];
+            foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $sets[$row['indexrelid']]['pk'] = (bool)$row['indisprimary'];
+                $sets[$row['indexrelid']]['cols'][] = $row['attname'];
             }
+            foreach ($sets as $s) {
+                if ($s['pk']) $pkCols = $s['cols'];
+                else $uniqueSets[] = $s['cols'];
+            }
+            $dbInfo = true;
         } catch (Throwable $e) {
-            $targetCols = null;
+            $dbInfo = false;
         }
     }
-    if (!$targetCols && $colsPart) {
-        $targetCols = array_map('trim', explode(',', $colsPart));
+
+    // Prioritas: unique index (non-PK) yang seluruh kolomnya ada di daftar INSERT.
+    // Contoh: data_gaji punya unique (id_karyawan, periode) -> upsert per karyawan+periode,
+    // bukan ke primary key id_gaji yang tidak di-INSERT.
+    if ($insertCols) {
+        foreach ($uniqueSets as $u) {
+            if (!array_diff($u, $insertCols)) { $targetCols = $u; break; }
+        }
+        if (!$targetCols && $pkCols && !array_diff($pkCols, $insertCols)) $targetCols = $pkCols;
     }
+    if (!$targetCols && $pkCols) $targetCols = $pkCols;
+    if (!$targetCols && !$dbInfo && $insertCols) $targetCols = $insertCols;
     if (!$targetCols) return $origSql;
 
     // Terjemahkan assignment: VALUES(col) -> EXCLUDED.col

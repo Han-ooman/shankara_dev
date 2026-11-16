@@ -32,12 +32,18 @@ if (isset($_POST['tambah_gaji'])) {
     $keterangan  = sdb_real_escape_string($koneksi, trim($_POST['keterangan'] ?? ''));
 
     if ($id_karyawan > 0 && !empty($periode)) {
-        sdb_query($koneksi, "INSERT INTO data_gaji (id_karyawan, periode, gaji_pokok, tunjangan_makan, tunjangan_transport, tunjangan_jabatan, bonus, potongan, keterangan_potongan, tanggal_gaji, keterangan)
+        $insertOk = sdb_query($koneksi, "INSERT INTO data_gaji (id_karyawan, periode, gaji_pokok, tunjangan_makan, tunjangan_transport, tunjangan_jabatan, bonus, potongan, keterangan_potongan, tanggal_gaji, keterangan)
                                 VALUES ($id_karyawan, '$periode', $pokok, $makan, $transport, $jabatan, $bonus, $potongan, " . ($ket_pot !== '' ? "'$ket_pot'" : 'NULL') . ", $tanggal, " . ($keterangan !== '' ? "'$keterangan'" : 'NULL') . ")
                                 ON DUPLICATE KEY UPDATE gaji_pokok=VALUES(gaji_pokok), tunjangan_makan=VALUES(tunjangan_makan), tunjangan_transport=VALUES(tunjangan_transport), tunjangan_jabatan=VALUES(tunjangan_jabatan), bonus=VALUES(bonus), potongan=VALUES(potongan), keterangan_potongan=VALUES(keterangan_potongan), tanggal_gaji=VALUES(tanggal_gaji), keterangan=VALUES(keterangan)");
+        if ($insertOk) {
+            header("Location: gaji.php?berhasil=1");
+            exit();
+        }
+        // Jangan exit() saat gagal: halaman tetap dirender agar pesan error terlihat.
+        $errorPost = "Gagal menyimpan slip gaji: " . sdb_error($koneksi);
+    } else {
+        $errorPost = "Gagal menyimpan slip gaji: karyawan dan periode wajib diisi.";
     }
-    header("Location: gaji.php");
-    exit();
 }
 
 // Edit slip gaji
@@ -54,9 +60,12 @@ if (isset($_POST['edit_gaji'])) {
     $ket_pot     = sdb_real_escape_string($koneksi, trim($_POST['keterangan_potongan'] ?? ''));
     $keterangan  = sdb_real_escape_string($koneksi, trim($_POST['keterangan'] ?? ''));
 
-    sdb_query($koneksi, "UPDATE data_gaji SET periode='$periode', gaji_pokok=$pokok, tunjangan_makan=$makan, tunjangan_transport=$transport, tunjangan_jabatan=$jabatan, bonus=$bonus, potongan=$potongan, keterangan_potongan=" . ($ket_pot !== '' ? "'$ket_pot'" : 'NULL') . ", tanggal_gaji=$tanggal, keterangan=" . ($keterangan !== '' ? "'$keterangan'" : 'NULL') . " WHERE id_gaji=$id_gaji");
-    header("Location: gaji.php");
-    exit();
+    $updateOk = sdb_query($koneksi, "UPDATE data_gaji SET periode='$periode', gaji_pokok=$pokok, tunjangan_makan=$makan, tunjangan_transport=$transport, tunjangan_jabatan=$jabatan, bonus=$bonus, potongan=$potongan, keterangan_potongan=" . ($ket_pot !== '' ? "'$ket_pot'" : 'NULL') . ", tanggal_gaji=$tanggal, keterangan=" . ($keterangan !== '' ? "'$keterangan'" : 'NULL') . " WHERE id_gaji=$id_gaji");
+    if ($updateOk) {
+        header("Location: gaji.php?berhasil=edit");
+        exit();
+    }
+    $errorPost = "Gagal mengubah slip gaji: " . sdb_error($koneksi);
 }
 
 // Hapus slip gaji
@@ -65,8 +74,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id']))
         http_response_code(403);
         die("Token keamanan tidak valid.");
     }
-    sdb_query($koneksi, "DELETE FROM data_gaji WHERE id_gaji = " . intval($_GET['id']));
-    header("Location: gaji.php");
+    $id_hapus = intval($_GET['id']);
+    if (sdb_query($koneksi, "DELETE FROM data_gaji WHERE id_gaji = $id_hapus")) {
+        header("Location: gaji.php?berhasil=hapus");
+    } else {
+        header("Location: gaji.php?gagal=" . urlencode(sdb_error($koneksi)));
+    }
     exit();
 }
 
@@ -99,6 +112,28 @@ function nama_bulan($ym) {
     $p = explode('-', $ym);
     return $b[$p[1]] . ' ' . $p[0];
 }
+
+// Notifikasi sukses / error
+$pesan = '';
+if (isset($_GET['berhasil'])) {
+    $map = ['1' => 'Slip gaji berhasil disimpan.', 'edit' => 'Slip gaji berhasil diperbarui.', 'hapus' => 'Slip gaji berhasil dihapus.'];
+    $msg = $map[(string)$_GET['berhasil']] ?? '';
+    if ($msg !== '') {
+        $pesan = '<div class="alert alert-success alert-dismissible fade show rounded-4 small mb-3" role="alert">
+            <i class="bi bi-check-circle me-1"></i> ' . htmlspecialchars($msg) . '
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+    }
+} elseif (isset($_GET['gagal']) && $_GET['gagal'] !== '') {
+    $pesan = '<div class="alert alert-danger alert-dismissible fade show rounded-4 small mb-3" role="alert">
+        <i class="bi bi-exclamation-triangle me-1"></i> Gagal memproses data: ' . htmlspecialchars($_GET['gagal']) . '
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+}
+$errorAlert = '';
+if (!empty($errorPost)) {
+    $errorAlert = '<div class="alert alert-danger alert-dismissible fade show rounded-4 small mb-3" role="alert">
+        <i class="bi bi-exclamation-triangle me-1"></i> ' . htmlspecialchars($errorPost) . '
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -130,6 +165,9 @@ function nama_bulan($ym) {
                 <i class="bi bi-plus-lg me-1"></i> Tambah Slip Gaji
             </button>
         </div>
+
+        <?= $pesan ?>
+        <?= $errorAlert ?>
 
         <!-- STAT CARDS -->
         <div class="row g-3 mb-4">
