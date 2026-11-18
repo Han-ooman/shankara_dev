@@ -19,16 +19,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrf_verify()) {
 
 // Logika Update Pemberkasan
 if (isset($_POST['update_pemberkasan'])) {
-    $id_transaksi    = sdb_real_escape_string($koneksi, $_POST['id_transaksi']);
-    $status_bank     = sdb_real_escape_string($koneksi, $_POST['status_bank']);
+    $id_transaksi    = intval($_POST['id_transaksi'] ?? 0);
+    $status_bank     = sdb_real_escape_string($koneksi, $_POST['status_bank'] ?? '');
     $bank_tujuan     = sdb_real_escape_string($koneksi, $_POST['bank_tujuan'] ?? '');
-    $deadline_berkas = sdb_real_escape_string($koneksi, $_POST['deadline_berkas']);
+    $deadline_berkas = sdb_real_escape_string($koneksi, $_POST['deadline_berkas'] ?? '');
     $tgl_wawancara   = sdb_real_escape_string($koneksi, $_POST['tgl_wawancara'] ?? '');
-    
-    $berkas_input = isset($_POST['berkas']) ? $_POST['berkas'] : [];
+    $scrollId        = intval($_POST['scroll_to'] ?? 0);
+
+    if ($id_transaksi <= 0) {
+        header("Location: pemberkasan.php?gagal=" . urlencode('ID transaksi tidak valid.'));
+        exit();
+    }
+
+    $berkas_input = isset($_POST['berkas']) ? (array)$_POST['berkas'] : [];
     $pemberkasan_json = sdb_real_escape_string($koneksi, json_encode($berkas_input));
 
-    $qInfo = sdb_query($koneksi, "SELECT skema_bayar, pekerjaan FROM view_database_utama WHERE id_transaksi = '$id_transaksi'");
+    $qInfo = sdb_query($koneksi, "SELECT skema_bayar, pekerjaan FROM view_database_utama WHERE id_transaksi = $id_transaksi");
     if ($qInfo && $rowInfo = sdb_fetch_assoc($qInfo)) {
         $skema_info = $rowInfo['skema_bayar'] ?? 'Cash';
         $progres = hitungProgresBerkas($berkas_input, $skema_info, $master_dokumen);
@@ -48,11 +54,13 @@ if (isset($_POST['update_pemberkasan'])) {
                     tgl_wawancara = $wawancara_sql,
                     skema_akad = $skema_akad_sql,
                     pemberkasan_json = '$pemberkasan_json'
-                    WHERE id_transaksi = '$id_transaksi'";
+                    WHERE id_transaksi = $id_transaksi";
 
-    sdb_query($koneksi, $queryUpdate);
-    $scrollId = intval($_POST['scroll_to'] ?? 0);
-    header("Location: pemberkasan.php?s=1&sid=" . $scrollId);
+    if (sdb_query($koneksi, $queryUpdate)) {
+        header("Location: pemberkasan.php?s=1&sid=" . $scrollId);
+    } else {
+        header("Location: pemberkasan.php?gagal=" . urlencode(sdb_error($koneksi)) . "&sid=" . $scrollId);
+    }
     exit();
 }
 
@@ -70,11 +78,24 @@ if (isset($_POST['bulk_update_pemberkasan'])) {
         if (!empty($_POST['bulk_tgl_wawancara'])) { $v = sdb_real_escape_string($koneksi, $_POST['bulk_tgl_wawancara']); $fields[] = "tgl_wawancara = '$v'"; }
         if (!empty($fields)) {
             $sql = "UPDATE data_transaksi SET " . implode(', ', $fields) . " WHERE id_transaksi IN ($id_str)";
-            sdb_query($koneksi, $sql);
+            if (sdb_query($koneksi, $sql)) {
+                header("Location: pemberkasan.php?s=1");
+            } else {
+                header("Location: pemberkasan.php?gagal=" . urlencode(sdb_error($koneksi)));
+            }
+            exit();
         }
     }
     header("Location: pemberkasan.php?s=1");
     exit();
+}
+
+// Notifikasi error (mis. gagal simpan karena masalah database)
+$errorAlert = '';
+if (isset($_GET['gagal']) && $_GET['gagal'] !== '') {
+    $errorAlert = '<div class="alert alert-danger alert-dismissible fade show rounded-4 small mb-3" role="alert">
+        <i class="bi bi-exclamation-triangle me-1"></i> Gagal menyimpan pemberkasan: ' . htmlspecialchars($_GET['gagal']) . '
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
 }
 
 include "includes/cek_sesi.php";
@@ -166,6 +187,8 @@ include "includes/cek_sesi.php";
                 <p class="text-muted small mb-0">Kelola kelengkapan 29 berkas KPR Subsidi/Komersil, verifikasi bank, & deadline.</p>
             </div>
         </div>
+
+        <?= $errorAlert ?>
 
         <!-- TABEL DATA PEMBERKASAN -->
         <div class="content-card">
