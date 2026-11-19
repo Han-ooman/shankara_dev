@@ -456,6 +456,10 @@ function dbx_rewrite_on_duplicate_key(string $sql): string {
         if ($as === '') continue;
         if (preg_match('/^(\w+)\s*=\s*VALUES\s*\(\s*(\w+)\s*\)$/is', $as, $am)) {
             $assigns[] = "\"{$am[1]}\" = EXCLUDED.\"{$am[2]}\"";
+        } elseif (preg_match('/^"?(\w+)"?\s*=\s*"?(\w+)"?$/is', $as, $am) && strcasecmp($am[1], $am[2]) === 0) {
+            // MySQL `col = col` = pertahankan nilai lama. Di PostgreSQL nama kolom
+            // tanpa kualifikasi ambigu antara baris lama dan EXCLUDED, jadi kualifikasi tabel.
+            $assigns[] = "\"{$am[1]}\" = \"{$table}\".\"{$am[2]}\"";
         } elseif (preg_match('/^(\w+)\s*=\s*\'((?:\\\\.|[^\'\\\\])*)\'$/is', $as, $am)) {
             $assigns[] = "\"{$am[1]}\" = " . dbx_pgq($am[2]);
         } elseif (preg_match('/^"?([\w]+)"?\s*=\s*/', $as)) {

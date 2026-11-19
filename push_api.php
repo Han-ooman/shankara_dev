@@ -73,10 +73,15 @@ switch ($action) {
         $p = sdb_real_escape_string($koneksi, $p256dh);
         $s = sdb_real_escape_string($koneksi, $auth);
         $u = sdb_real_escape_string($koneksi, $ua);
-        $q = "INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth, user_agent, active)
-              VALUES ($uid, '$e', '$p', '$s', '$u', 1)
-              ON DUPLICATE KEY UPDATE p256dh = '$p', auth = '$s', user_agent = '$u', active = 1, created_at = created_at";
-        $ok = sdb_query($koneksi, $q);
+
+        // Upsert eksplisit: tabel memakai unique index (user_id, md5(endpoint)),
+        // yang tidak bisa dijadikan target ON CONFLICT biasa dari sintaks MySQL.
+        $qCek = sdb_query($koneksi, "SELECT id FROM push_subscriptions WHERE user_id = $uid AND endpoint = '$e' LIMIT 1");
+        if ($qCek && sdb_num_rows($qCek) > 0) {
+            $ok = sdb_query($koneksi, "UPDATE push_subscriptions SET p256dh = '$p', auth = '$s', user_agent = '$u', active = 1 WHERE user_id = $uid AND endpoint = '$e'");
+        } else {
+            $ok = sdb_query($koneksi, "INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth, user_agent, active) VALUES ($uid, '$e', '$p', '$s', '$u', 1)");
+        }
         echo json_encode(['success' => (bool)$ok, 'message' => $ok ? 'Subscription tersimpan.' : 'Gagal menyimpan subscription.']);
         exit();
     }
