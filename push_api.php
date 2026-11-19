@@ -5,6 +5,7 @@
 //  ?a=unsubscribe -> POST {endpoint}                (CSRF + login)
 //  ?a=test        -> POST {}                        (kirim tes ke sub aktif saya, CSRF + login)
 // Dipanggil oleh service worker push_client.js.
+require_once __DIR__ . '/includes/security.php'; // handler sesi DB & display_errors harus aktif SEBELUM session_start
 session_start();
 include "includes/koneksi.php";
 require_once __DIR__ . '/includes/push_helper.php';

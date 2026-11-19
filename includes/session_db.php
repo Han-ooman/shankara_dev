@@ -98,6 +98,7 @@ if (!class_exists('SdbDbSessionHandler')) {
         {
             $db = $this->conn();
             if (!$db) return 0;
+            $max = max(0, (int)$max_lifetime);
             // MySQL: INTERVAL n SECOND; PostgreSQL/Supabase: INTERVAL '$max seconds'
             $driver = $db->getDriver();
             if ($driver === 'mysql') {
