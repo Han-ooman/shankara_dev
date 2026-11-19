@@ -228,15 +228,36 @@ if (!function_exists('push_der_sig_to_raw')) {
     function push_der_sig_to_raw(string $der): ?string {
         // ECDSA-Sig-Value ::= SEQUENCE { r INTEGER, s INTEGER }
         if ($der === '' || $der[0] !== "\x30") return null;
-        $p = 2;
-        $readLen = function () use ($der, &$p) {
+        $len = strlen($der);
+        $p = 1;
+        $readLen = function () use ($der, $len, &$p) {
+            if ($p >= $len) return -1;
             $l = ord($der[$p]); $p++;
-            if ($l & 0x80) { $n = $l & 0x7F; $l = 0; while ($n--) { $l = ($l << 8) | ord($der[$p++]); } }
+            if ($l & 0x80) {
+                $n = $l & 0x7F;
+                if ($n < 1 || $n > 3 || $p + $n > $len) return -1;
+                $l = 0;
+                while ($n--) { $l = ($l << 8) | ord($der[$p++]); }
+            }
             return $l;
         };
-        $total = $readLen();
-        $r = $readLen(); $rInt = substr($der, $p, $r); $p += $r;
-        $s = $readLen(); $sInt = substr($der, $p, $s); $p += $s;
+
+        $seqLen = $readLen();
+        if ($seqLen < 0) return null;
+
+        // INTEGER r
+        if ($p >= $len || $der[$p] !== "\x02") return null;
+        $p++;
+        $r = $readLen();
+        if ($r < 0 || $p + $r > $len) return null;
+        $rInt = substr($der, $p, $r); $p += $r;
+
+        // INTEGER s
+        if ($p >= $len || $der[$p] !== "\x02") return null;
+        $p++;
+        $s = $readLen();
+        if ($s < 0 || $p + $s > $len) return null;
+        $sInt = substr($der, $p, $s); $p += $s;
 
         $to32 = function ($b) {
             if (strlen($b) > 32) $b = substr($b, -32); // hapus leading 0x00
